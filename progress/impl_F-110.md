@@ -154,3 +154,55 @@ Tras T19: `54 passed` (con F-104 y F-077). Sin códigos nuevos de error: un `dto
 **T15 · documentación** — `docs/ARCHITECTURE.md` regla 19 (viñeta «Precio y descuento a Sigrid (F-110)»), `sv9.md`
 (sección «Descuento por línea», «Llaves» y «Reglas») y `azure-apps/albaranes.md` §10 (commit local `3b09da9` en
 `azure-apps`, sin push). `azure-apps/sigrid_api.md` no se toca.
+
+**T16 · mutación** — `python -m harness.mutacion --feature F-110 --base dev --max-mutantes 0` (4 workers, sin otra
+suite en marcha): **108 mutantes, 90 muertos, 18 supervivientes**, 0 timeouts, 4145,6 s. 15 eran huecos reales: 13
+tests nuevos `test_f110_t16_*` (comun, sv9 petición y script, sv4 ficha). Cada mutante se reaplicó a mano y su test
+falla (`1 failed`). 3 son equivalentes justificados. Análisis uno a uno en `progress/mutacion_F-110.md`; fila nueva
+en `progress/inventario_mutacion_F-039.md` (la pedía `test_f039_r2…`).
+
+## Ficheros tocados (40, `git diff --stat ee32a55..HEAD`)
+
+- **comun** (0.12.0): `ruesma_comun/alta_sigrid.py` (`LITERAL_ENVIAR_DTO`, `enviar_dto_activo`, `LineaASigrid`,
+  `linea_a_sigrid` con §5), `pyproject.toml`, `__init__.py`; tests `f110_casos.json` (tabla compartida con el JS),
+  `test_f110_linea_a_sigrid.py`, `test_f115_pertenencia.py` (desviación 3).
+- **sv9**: `config/settings.py`, `interface_adapters/composition.py`, `main_worker.py` (log de la guarda),
+  `.env.example`, `domain/models/alta_models.py` (`LineaPeticion.dto`), `domain/services/validador_alta.py` (R7–R9),
+  `domain/services/comparador_previa.py` (`dto_distinto`), `scripts/listar_altas_descuadradas_f106.py` (R19),
+  `sv9.md`; tests `test_f110_{config,infra,peticion,previa,script}.py`.
+- **sv4**: `config/settings.py`, `domain/models/alta_sigrid_models.py` (columna «Dto %», textos `dto_distinto` y avisos
+  v8.4), `domain/models/review_models.py` (`a_sigrid_de_fila`), `infrastructure/database/review_repository.py`,
+  `interface_adapters/web/app.py`, `templates/document_detail.html`, `templates/_alta_sigrid.html`, `static/app.js`;
+  tests `test_f110_{ficha,js,panel,avisos_v84}.py`.
+- **infra**: `00_capps_vars.ps1` (`ALTA_SIGRID_ENVIAR_DTO = "false"` en `AltaSigridEnvComun`), `set_alta_sigrid.ps1`.
+- **docs y arnés**: `docs/ARCHITECTURE.md` (regla 19), `azure-apps/albaranes.md` §10 (otro repo, commit `3b09da9`),
+  `harness/features.json` (F-110 `in_progress`), `progress/current.md`, `progress/inventario_mutacion_F-039.md`,
+  `specs/F-110-descuento-linea-sigrid/tasks.md`.
+
+## Fuera de alcance y pendiente (sin marcar en `tasks.md`)
+
+- **La guarda nace apagada** (`ALTA_SIGRID_ENVIAR_DTO = "false"` en `00_capps_vars.ps1`, `.env.example` vacío): hasta
+  que el humano la encienda tras desplegar, producción manda lo de F-106.
+- **T1** (líder, lectura de PostgreSQL de Azure): repetir las lecturas de design §3.
+- **T17** (líder, Chrome con el pipeline local y la guarda encendida): ficha CECOIS y panel «Dto %».
+- **T18** (líder): contrastar v8.4 con design §4. Para T19 ya se usó el contrato publicado. **Aviso 2**, por revisar
+  aquí: una vinculada enviada **sin** `dto` (guarda apagada o d no aplicable) puede volver de la previa con el `dto`
+  copiado del `ctrpro` (opción C). R11 no lo compara (solo las pedidas con `dto`), pero el `total` de la previa
+  puede apartarse del importe y dar `importe_distinto` (tolerancia 0,05) ⇒ `revisar`. No se añadió lógica: lo decide
+  el líder.
+- **T20** (líder): listar las altas ya grabadas en neto (design §9); el humano decide (D5).
+- **T21** (humano): despliegue en dos pasos y encender la llave. **T22** (líder): primera alta real con descuento.
+- El *junction* `services/albaranes-front/.venv` del worktree apunta a la del árbol principal: quitarlo con
+  `cmd /c rmdir` antes de borrar el worktree (no borrar con `rm -rf`, que entraría en la venv real).
+
+## Evidencias
+
+| Evidencia | Valor real |
+|---|---|
+| Tests (init.sh, `ARNES_SIN_CACHE=1`) | raíz 419 · sv1 236 · sv2 496 · sv3 1608 · sv4 2447 · sv5 125 · sv6 506 (+1 skip) · sv9 1186 · comun 1406, todos verdes |
+| Tests nuevos de F-110 | comun 64 · sv9 113 (config, infra, petición, previa, script) · sv4 61 (ficha, JS, panel, avisos) |
+| Cobertura de líneas cambiadas | `PUERTA COBERTURA: 98.3% de 174 líneas cambiadas cubiertas (171/174, umbral 80%, nivel critico)` |
+| Mutación (completa, sin tope) | 108 generados · 90 muertos · 18 supervivientes ⇒ 15 matados después con tests nuevos, 3 equivalentes |
+| Tiempo de la suite | sv4 322,6 s · comun 66,2 s · sv9 52,7 s · raíz 91,5 s (el resto < 37 s) |
+| Tiempo de la campaña | 4145,6 s (38,4 s por mutante) |
+| `PUERTA TAMAÑO` | requirements 116/150 · design 189/250 · impl dentro de 220 |
