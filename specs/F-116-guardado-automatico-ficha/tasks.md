@@ -3,7 +3,7 @@
 
 Rama `feature/F-116-guardado-automatico-ficha`. Un commit por tarea (`F-116 Tn: ...`). Tests antes o junto al código (fase RED en el informe).
 
-- [ ] T1: `CabeceraEditBody` en `domain/models/review_models.py` (design §4.1)  |  Verificación: `pytest services/albaranes-front/tests/test_f116_cabecera_api.py -k "r5"`
+- [x] T1: `CabeceraEditBody` en `domain/models/review_models.py` (design §4.1)  |  Verificación: `pytest services/albaranes-front/tests/test_f116_cabecera_api.py -k "r5"`
 - [ ] T2: `update_cabecera_campos` en el repositorio (§4.2) con sus tests sobre SQLite (R1–R4)  |  Verificación: `pytest services/albaranes-front/tests/test_f116_cabecera_api.py -k "r1 or r2 or r3 or r4"`
 - [ ] T3: `editar_cabecera` en el servicio con su deshacer y `PATCH /api/documents/{id}/cabecera` en `app.py` (§4.3; R1–R6)  |  Verificación: `pytest services/albaranes-front/tests/test_f116_cabecera_api.py`
 - [ ] T4: Test de R18 (PATCH de fila sin `bloquear`: no bloquea, edición sin `bloqueada`, deshacer «Editar línea») y R19 en sv6 (citar el existente o añadirlo)  |  Verificación: `pytest services/albaranes-front/tests/test_f116_lineas_api.py` y `pytest services/albaran-valoracion-persist/tests/test_f106_reaplicar.py`
