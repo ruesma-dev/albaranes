@@ -112,3 +112,4 @@ E     At index 0 diff: 'A Sigrid: 12 × 0,645 €' != 'A Sigrid: 12 × 0,645 €
 test_f051_almacen_front.py:1239: ValueError: substring not found      (dtoDifiere aún no existe en app.js)
 17 failed in 4.11s
 ```
+Tras T11: `34 passed` (`test_f110_js.py` y `test_f106_js.py`, este sin tocar).
