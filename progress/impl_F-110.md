@@ -73,3 +73,16 @@ FAILED tests/test_f110_peticion.py::test_f110_aviso1_el_dto_solo_va_por_el_modo_
 (Los 12 que pasan en RED son los de R6, la guarda apagada y las claves del modo extendido: fijan lo de hoy.)
 Tras T7: `27 passed`. Un caso del RED se corrigió (no el código): la vinculada con conversión llevaba P en la unidad
 del albarán y F-106 R17 (que compara con la convertida) la paraba; P va en la unidad del contrato (25,0).
+
+**T8 · sv9 previa** — `python -m pytest tests/test_f110_previa.py -q --tb=line`, extracto:
+
+```
+test_f110_previa.py:129: AssertionError: assert <EstadoAlta.INCIERTO: 'incierto'> is <EstadoAlta.REVISAR: 'revisar'>
+FAILED tests/test_f110_previa.py::test_f110_r11_difiere_mas_de_0005[7.006-7,006]
+FAILED tests/test_f110_previa.py::test_f110_r11_sin_dto_en_la_previa - Assert...
+FAILED tests/test_f110_previa.py::test_f110_r11_dto_ilegible[None] - Assertio...
+FAILED tests/test_f110_previa.py::test_f110_r11_en_el_servicio_va_a_revisar_sin_grabar
+14 failed, 8 passed in 1.09s
+```
+(Sin `dto_distinto`, la previa sin `dto` pasaba y el servicio seguía a grabar.) Tras T8, con `test_f053_comparador.py`:
+`52 passed`.
