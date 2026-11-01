@@ -96,3 +96,34 @@ def test_f110_r19_csv_con_las_columnas_nuevas_al_final():
     (sin,) = filas_csv(comparar_alta([_linea(precio=0.645, dto=None)], {"7": _fila()}))
     assert (sin["dto_enviado"], sin["dto_difiere"]) == ("", "no")
     assert list(fila) == list(script.COLUMNAS_CSV)
+
+
+# ------------------------------------------------- T16 · supervivientes
+def test_f110_t16_descuadre_nace_sin_dto_difiere():
+    import dataclasses
+
+    (campo,) = [f for f in dataclasses.fields(script.Descuadre) if f.name == "dto_difiere"]
+    assert campo.default is False
+
+
+def test_f110_t16_dto_cero_con_d_cero_sale():
+    """Un ``dto`` 0 enviado frente a una fila al 0 % no es un descuento aplicable."""
+    fila = _fila(descuento_albaran_aplicado=0.0, importe_calculado=7.74)
+    (d,) = comparar_alta([_linea(dto=0.0)], {"7": fila})
+    assert (d.dto_difiere, d.precio_difiere) == (True, False)
+
+
+def test_f110_t16_dto_se_compara_con_d_a_dos_decimales():
+    """d 7,444 ⇒ 7,44; el 7,449 enviado se aparta 0,009 (a 7,444 serían 0,005)."""
+    fila = _fila(descuento_albaran_aplicado=7.444, importe_calculado=7.16)
+    (d,) = comparar_alta([_linea(dto=7.449)], {"7": fila})
+    assert (d.dto_difiere, d.precio_difiere, d.no_cuadra) == (True, False, False)
+
+
+@pytest.mark.parametrize("precio, sale", [(1.00398, False), (1.0041, True)])
+def test_f110_t16_el_precio_distinto_pesa_sobre_el_importe_descontado(precio, sale):
+    """10 × 1 −50 %: 0,0398 de diferencia bruta son 0,0199 € descontados (< 0,02)."""
+    fila = _fila(cantidad_albaran=10.0, precio_unitario_final=1.0,
+                 descuento_albaran_aplicado=50.0, importe_calculado=5.00)
+    salida = comparar_alta([_linea(precio=precio, dto=50.0, cantidad=10.0)], {"7": fila})
+    assert bool(salida) is sale

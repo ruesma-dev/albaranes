@@ -222,3 +222,21 @@ def test_f110_r16_data_alta_dto_en_el_precio(
     assert 'data-factor-alta="1.0"' in entrada
     assert ('data-alta-dto="1"' in entrada) is guarda
     assert "data-alta-dto" in entrada or not guarda
+
+
+# =================================================================== #
+# T16 · supervivientes de la mutación: los defectos nacen apagados
+# =================================================================== #
+def test_f110_t16_marcar_cuadre_nace_sin_descuento():
+    import inspect
+
+    from infrastructure.database.review_repository import AlbaranReviewRepository
+
+    firma = inspect.signature(AlbaranReviewRepository._marcar_cuadre)
+    assert firma.parameters["con_descuento"].default is False
+
+
+def test_f110_t16_la_ficha_nace_sin_data_alta_dto():
+    from domain.models.review_models import DocumentDetailPayload
+
+    assert DocumentDetailPayload.model_fields["alta_enviar_dto"].default is False

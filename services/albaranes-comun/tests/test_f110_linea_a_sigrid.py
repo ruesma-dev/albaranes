@@ -260,3 +260,38 @@ def test_f110_t3_version_0120():
     assert ruesma_comun.__version__ == "0.12.0"
     pyproject = (Path(ruesma_comun.__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
     assert 'version = "0.12.0"' in pyproject
+
+
+# ------------------------------------------------- T16 · supervivientes
+def test_f110_t16_se_ve_como_la_tupla_de_dos_de_f106():
+    """La tupla guarda tres valores, pero mide y se recorre como la de F-106."""
+    linea = LineaASigrid(12.0, 0.645, 7.0)
+    assert len(linea) == 2
+    assert list(linea) == [12.0, 0.645]
+
+
+def test_f110_t16_sin_con_descuento_es_lo_de_f106():
+    """El defecto de ``con_descuento`` es apagado: neto y sin ``dto``."""
+    linea = linea_a_sigrid(vinculada=False, cantidad_albaran=12.0, cantidad_convertida=None,
+                           importe=7.20, precio=0.645, descuento=7.0)
+    assert (linea.cantidad, linea.precio, linea.dto) == (12.0, 0.6, None)
+
+
+def test_f110_t16_precio_booleano_no_es_p():
+    """``True`` no es un precio (sería 1,0 y cuadraría al céntimo): se despeja."""
+    linea = linea_a_sigrid(vinculada=False, cantidad_albaran=30.0, cantidad_convertida=None,
+                           importe=27.904, precio=True, descuento=7.0, con_descuento=True)
+    assert (linea.precio, linea.dto) == (round(27.904 / (30 * 0.93), 6), 7.0)
+
+
+def test_f110_t16_dto_por_debajo_de_uno_se_envia():
+    linea = linea_a_sigrid(vinculada=False, cantidad_albaran=10.0, cantidad_convertida=None,
+                           importe=9.95, precio=1.0, descuento=0.5, con_descuento=True)
+    assert (linea.precio, linea.dto) == (1.0, 0.5)
+
+
+def test_f110_t16_p_va_a_seis_decimales():
+    """P con 7 decimales que cuadra: se manda redondeado a 6 (contrato v8.4)."""
+    linea = linea_a_sigrid(vinculada=False, cantidad_albaran=12.0, cantidad_convertida=None,
+                           importe=7.20, precio=0.6451234, descuento=7.0, con_descuento=True)
+    assert (linea.precio, linea.dto) == (0.645123, 7.0)

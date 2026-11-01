@@ -283,3 +283,21 @@ def test_f110_aviso1_la_peticion_siempre_lleva_las_claves_del_extendido():
         cuerpo = _peticion(_cecois(1), config=config).a_dict()
         assert {"lineas", "referencia_externa"} <= set(cuerpo)
         assert "lineas_recibidas" not in cuerpo
+
+
+# ------------------------------------------------- T16 · supervivientes
+def test_f110_t16_cantidad_en_el_epsilon_no_mira_r8():
+    """1e-9 ya es ``cantidad_no_valida``: R8 no añade el «no se puede despejar»."""
+    linea = _cecois(cantidad_albaran=1e-9, importe_calculado=0.01)
+    assert validar_y_construir(datos(linea), ENCENDIDA, HOY, USU) == [
+        Motivo("cantidad_no_valida", "", "7"),
+    ]
+
+
+def test_f110_t16_detalle_no_despejable_con_el_dto_a_dos_decimales():
+    """d 99,996 va como 100 %: el detalle dice el ``dto`` que se mandaría."""
+    linea = _cecois(cantidad_albaran=10.0, importe_calculado=0.01, precio_unitario_final=10.0,
+                    descuento_albaran_aplicado=99.996)
+    assert validar_y_construir(datos(linea), ENCENDIDA, HOY, USU) == [
+        Motivo("linea_no_cuadra", "a Sigrid: el precio no se puede despejar con un dto del 100 %", "7"),
+    ]
