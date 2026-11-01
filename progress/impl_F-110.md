@@ -128,3 +128,12 @@ Tras T12: `122 passed` (`test_f110_panel.py`, `test_f077_motivos_alta.py`, `test
 
 **T13 · regresión sv4** — `.venv/Scripts/python.exe -m pytest -q` en sv4: `2441 passed in 226.63s`, sin tocar
 aserciones de tests anteriores.
+
+**T14 · script R18/R19** — `python -m pytest tests/test_f110_script.py -q --tb=line` (sv9), extracto:
+
+```
+FAILED tests/test_f110_script.py::test_f110_r19_con_dto_bruto_y_dto_correctos_no_sale
+FAILED tests/test_f110_script.py::test_f110_r19_sin_dto_como_f106 - Attribute...
+FAILED tests/test_f110_script.py::test_f110_r19_csv_con_las_columnas_nuevas_al_final
+15 failed, 2 passed in 0.91s
+```
