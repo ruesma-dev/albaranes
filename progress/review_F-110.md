@@ -8,28 +8,24 @@ Revisión completa (pasada 1) · `git diff dev...HEAD` sobre `755b048` (base com
 **Nivel de rigor:** `critico`, declarado en `harness/features.json`. Exige fase RED, cobertura de lo cambiado ≥ 80 %,
 campaña de mutación sin tope con cero supervivientes sin test o sin justificación, RM5 y las MANUAL (humano) listadas.
 
-Fuera de esta revisión, como pidió el líder: T1, T17, T18 (con el aviso 2 de sigrid-api), T20 y T22, que son del
-líder, y T21, que es del humano. Siguen sin marcar en `tasks.md`, y es lo esperado.
+Fuera de esta revisión (mandato del líder): T1, T17, T18 (con el aviso 2), T20 y T22 (líder) y T21 (humano).
 
 ## Entorno
 
 `bash harness/init.sh` con `PYTHONPATH=…/albaranes-F-110/services/albaranes-comun` y `ARNES_SIN_CACHE=1`, sobre
 `755b048`: **exit 0, `ENTORNO LISTO`**. Raíz 1919 · sv1 236 · sv2 496 · sv3 1608 · sv4 2447 · sv5 125 · sv6 506 (+1 skip)
 · sv9 1186 · comun 1406, todo en verde. `PUERTA COBERTURA: 98.3% de 174 líneas (171/174)`. Tamaño dentro de los topes.
-Rutas sensibles: N/A. Antes de lanzarlo no había ninguna suite ni campaña de **albaranes** en marcha. Sí estaba
-corriendo una campaña de mutación de **otro proyecto**, `facturas` F-078 (desde las 01:33, con 1 worker), en otro
-repositorio y sin ficheros compartidos. No esperé a que terminara, y lo dejo dicho aquí.
+Rutas sensibles: N/A. Ninguna suite ni campaña de albaranes en marcha; sí una campaña de **otro proyecto** (`facturas`
+F-078, desde las 01:33, 1 worker, sin ficheros compartidos): no esperé a que terminara, y lo dejo dicho.
 
 ## Lo que pidió el líder
 
 1. **El bruto con `dto` solo sale por el modo extendido.** sv9 tiene una única ruta de alta, `RUTA_ALBARAN =
    "/api/sigrid/albaran"` (`sigrid_api_alta_client.py:53`). El clásico y `albaran-directo` no aparecen en ningún sitio
    del código (lo comprobé con grep). `PeticionAlbaran` nunca lleva `lineas_recibidas`. El test que lo fija es
-   `test_f110_aviso1_el_dto_solo_va_por_el_modo_extendido`: monta el cliente real sobre un `MockTransport` y comprueba
-   la ruta, `referencia_externa` y `lineas`, la ausencia de `lineas_recibidas`, el `dto` en la línea con descuento y su
-   ausencia en la otra. Lo completa `…_la_peticion_siempre_lleva_las_claves_del_extendido`, con la guarda encendida y
-   con la guarda apagada.
-2. **Guarda apagada = F-106.** Lo comprobé en el código. Con `con_descuento=False`, `linea_a_sigrid` hace la misma
+   `test_f110_aviso1_el_dto_solo_va_por_el_modo_extendido` (cliente real sobre `MockTransport`: ruta, `referencia_externa`
+   y `lineas`, sin `lineas_recibidas`, `dto` solo en la línea con descuento), más `…_siempre_lleva_las_claves_del_extendido`.
+2. **Guarda apagada = F-106**, comprobado en el código. Con `con_descuento=False`, `linea_a_sigrid` hace la misma
    cuenta que antes y deja `dto` en `None`. `_detalle_no_cuadra_a_sigrid` solo se evalúa si `config.enviar_dto` está
    encendida. `a_dict` omite `dto` cuando es nulo. `_dto_distinto` no compara si no se pidió `dto`. En sv4, `difiere`
    añade el `dto` solo con la guarda, y el JS sin `conDto` devuelve `{cantidad, precio}`, igual que antes. Tests:
@@ -96,7 +92,7 @@ repositorio y sin ficheros compartidos. No esperé a que terminara, y lo dejo di
   `test_f110_t16_dto_por_debajo_de_uno_se_envia`. Apliqué el n.º 1 (`validador_alta.py:283`, `>` → `>=`):
   `1 failed, 28 passed`, falla `test_f110_t16_cantidad_en_el_epsilon_no_mira_r8`. En los dos casos, el test que
   declara el informe.
-- **RM3.** Ninguno de los equivalentes sale como muerto: los tres están en la lista de supervivientes.
+- **RM3.** Ningún equivalente sale como muerto: los tres son supervivientes.
 - **Los tres equivalentes, comprobados con un script ejecutable** (en el scratchpad, no versionado):
   - **N.º 16** (`review_models.py:983`, `> 1e-6` → `>= 1e-6`). **Equivalente para cualquier float.**
     `dto_sigrid = round(d, 2) ≥ 0,01` (el 0 ya se descarta antes) y está a ≤ 0,005 de `d`, así que la resta es exacta
@@ -140,8 +136,6 @@ Ninguno.
   `ALTA_SIGRID_ENVIAR_DTO = "true"` + `.\set_alta_sigrid.ps1`. Hoy `current.md` solo dice «T21 (humano)».
 - **O2.** El rigor `critico` exige que el humano acepte los 3 equivalentes (6, 15 y 16). Yo los doy por buenos; lo
   traslada el líder.
-- **O3.** Diferencia menor entre sv9 y el panel de sv4. sv9 compara el `dto` con `Decimal` y `<= 0,005`; el panel de
-  sv4 redondea a 6 decimales. Solo divergen con un `dto` de 7 o más decimales, que el contrato no produce.
-- **O4.** El redondeo del JS (`Math.round`, mitad hacia arriba) y el de Python (`round`) pueden diferir en empates
-  exactos a medio céntimo. La tabla compartida no contiene ninguno. Es la misma situación que ya tenía F-106.
+- **O3.** sv9 compara el `dto` con `Decimal` y el panel de sv4 redondea a 6: solo divergen con 7 o más decimales.
+- **O4.** JS (`Math.round`) y Python (`round`) pueden diferir en empates a medio céntimo; ninguno en la tabla (como F-106).
 - **O5.** Antes de `git worktree remove`, quitar la *junction* `.venv` de sv4 con `cmd /c rmdir`.
