@@ -44,3 +44,16 @@ ERROR tests/test_f110_linea_a_sigrid.py
 1 error in 1.16s
 ```
 Tras T3: `58 passed in 0.95s`; suite de comun `1401 passed` (F-106 sin tocar aserciones).
+
+**T4 · sv9 config e infra** — `python -m pytest tests/test_f110_config.py tests/test_f110_infra.py -q --tb=line`
+(desde `services/albaranes-alta-sigrid`), extracto:
+
+```
+test_f110_infra.py:49: assert '"ALTA_SIGRID_ENVIAR_DTO=$($Global:ALTA_SIGRID_ENVIAR_DTO)"' in 'function Global:AltaSigridEnvComun() {...'
+test_f110_infra.py:55: assert '"ALTA_SIGRID_ENVIAR_DTO"' in '"ALTA_SIGRID_DESDE_UTC", "ALTA_SIGRID_ESPERA_INCIERTO_MIN", "ALTA_SIGRID_PRODUCTO_POR_DEFECTO"'
+FAILED tests/test_f110_config.py::test_f110_r5_apagada_por_defecto - Attribut...
+FAILED tests/test_f110_config.py::test_f110_r5_config_alta_nace_apagada - Att...
+FAILED tests/test_f110_config.py::test_f110_r5_log_dice_encendida - ValueErro...
+FAILED tests/test_f110_infra.py::test_f110_r20_vars_versiona_la_guarda_apagada
+20 failed, 20 passed in 3.07s
+```
