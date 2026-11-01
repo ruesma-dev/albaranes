@@ -1,7 +1,7 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-108 · `blocked` (2026-11-01): review APPROVED, M1 (Chrome), M-D (sv4 `r20261101-0929`) y M2 hechas; espera M3 (humano: `ae044452…`, `6ae1d618…`, D5), la prueba en Edge (humano) y T11** — fecha y número de albarán editables con calendario. Spec en `specs/F-108-fecha-numero-editables/`.
+**F-108 · CERRADA (`done`, 2026-11-01).** Resumen en `history.md`.
 
 - **Implementer (2026-10-31), hecho:** T1–T10 (un commit por tarea). Informe `progress/impl_F-108.md`, mutación `progress/mutacion_F-108.md`. Pendientes MANUAL: M1 (líder, Chrome/Edge con sv4 local), M-D (humano, despliegue de sv4 sola), M2 (líder, solo lectura en producción), M3 (humano, las 2 fechas `dd/mm/aaaa`), T11.
 - **Desviaciones justificadas** (detalle en el informe §3): (1) R11 se comprueba lo ÚLTIMO al pasar a aprobado (tras líneas y contrato), para que los avisos de F-065/F-078/F-106/F-115 sigan saliendo igual; (2) los fixtures compartidos `f053_sv4_bbdd` y `f065_bbdd` ganan fecha y número, y 3 tests ajustan su payload (ninguna aserción relajada); (3) tres tests de JS viejos añaden las funciones nuevas a su lista de funciones extraídas; (4) la `<dd>` de solo lectura que cita design §3 es la de las vistas crudas: sigue sin filtro (R23, §4.4).
