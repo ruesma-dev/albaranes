@@ -5,6 +5,10 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-108 · Fecha y número de albarán editables con calendario (cerrada 2026-11-01)
+
+Solo sv4. La fecha se ve `dd/mm/aaaa`, se guarda `AAAA-MM-DD` y admite varios formatos al escribirla; botón «Calendario»; fecha imposible ⇒ rojo, aviso y no se guarda; no se aprueba sin fecha ni número (R11). Review APPROVED (pasada 1, `progress/review_F-108.md`). M1 en Chrome (líder); desplegado el 2026-11-01, sv4 `r20261101-0929`; M2 en producción en solo lectura (líder); Edge y M3 confirmados por el humano. Petición nueva del humano al cerrar: que fecha y número se guarden solos, sin pulsar Guardar (feature aparte).
+
 ## F-113 · El MIME real del adjunto manda sobre el que declara Graph (cerrada 2026-11-01)
 
 Las fotos de WhatsApp llegaban como `application/octet-stream` y OpenAI las rechazaba. `ruesma_comun.mime` (comun 0.9.1) detecta el tipo por el contenido y corrige nombre y MIME en sv1 y sv2. Review APPROVED (pasada 1, `progress/review_F-113.md`; O3 y O4 sin bloqueo). T9 (30-10): 6 documentos atascados, todos del 2026-10-30, se recuperan a mano. Desplegado el 2026-10-31: sv1 `r20261031-0052`, sv2 `r20261031-0054`. T11 (2026-11-01, solo lectura): 0 casos nuevos; siguen solo los 6 del 30-10. Pendiente del humano: recuperar esos 6 y publicar `azure-apps` `cff9063`.

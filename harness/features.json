@@ -1337,7 +1337,7 @@
       "id": "F-108",
       "title": "Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha",
       "description": "ORIGEN: el humano, 2026-10-28: «los campos de fecha, numero de albaran tiene que poder editarse con normalidad (fecha con un desplegable de calendario como adicional)». HOY (leído por el líder): en `document_detail.html` los dos son `input type=text` editables salvo con el documento no editable (aprobado / dado de alta); no se ve en el código nada que bloquee el teclado. A RESOLVER EN LA SPEC: el síntoma exacto (preguntado al humano: no deja escribir / se pierde al guardar / formato de la fecha) reproduciéndolo en solo lectura; cómo se guardan y validan (`fecha` en el PUT de la ficha, formato ISO frente a dd/mm/aaaa) y su efecto en sv9 (`fecha_albaran` AAAAMMDD, `fecha_no_plausible`); calendario adicional sin perder la escritura a mano (botón junto al campo de texto que abre el selector de fecha del navegador).",
-      "status": "blocked",
+      "status": "done",
       "sdd": true,
       "rigor": "estandar",
       "priority": 2,
