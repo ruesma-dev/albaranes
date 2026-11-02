@@ -2805,6 +2805,121 @@
 
     wireFechaAlbaran();
 
+    // --------------------------------------------------------------- //
+    // F-116 R7–R12, R26 · autoguardado de la cabecera: al salir de fecha,
+    // número, forma de pago o notas con un valor admitido distinto de lo
+    // guardado, se encola el PATCH de ese campo solo, sin recargar. Fallos
+    // sin ``alert`` (D8 = a): marca en el campo y ``#autoguardado-estado``.
+    // --------------------------------------------------------------- //
+    function avisarAutoguardado(texto) {
+        const estado = document.getElementById("autoguardado-estado");
+        if (estado) { estado.textContent = texto; }
+    }
+
+    // La etiqueta del campo para los avisos (la de la ficha).
+    function etiquetaCampoCabecera(id) {
+        return ({
+            fecha: "Fecha",
+            numero_albaran: "Número albarán",
+            forma_pago: "Forma de pago",
+            review_notes: "Notas de revisión",
+        })[id] || id;
+    }
+
+    // R7: lo que viajaría: la fecha en ``AAAA-MM-DD`` (no admitida ⇒ ``ok``
+    // falso; vacía ⇒ null) y los textos recortados (vacío ⇒ null).
+    function valorCabeceraParaGuardar(campo) {
+        if (campo.id === "fecha") {
+            const iso = parseFechaEs(campo.value);
+            if (iso === null) { return { ok: false, valor: null }; }
+            return { ok: true, valor: iso || null };
+        }
+        const texto = String(campo.value || "").trim();
+        return { ok: true, valor: texto || null };
+    }
+
+    // Lo guardado (``data-guardado``), normalizado como lo que viajaría (una
+    // fecha vieja ``dd/mm/aaaa`` cuenta como su ISO).
+    function valorGuardadoCabecera(campo) {
+        const guardado = String(campo.dataset.guardado || "").trim();
+        if (campo.id === "fecha") { return parseFechaEs(guardado) || guardado || null; }
+        return guardado || null;
+    }
+
+    // R7, R10, R11, R26. Se compara con lo último ENCOLADO si lo hay (si no,
+    // con lo guardado): cambiar y volver a lo de antes con el primero aún en
+    // la Cola también viaja. Un fallo no se reintenta solo: el siguiente
+    // ``blur`` con cambios (o los botones) lo hace.
+    function autoguardarCampoCabecera(campo) {
+        if (!campo || !document.getElementById("autoguardado-estado")) { return null; }
+        const v = valorCabeceraParaGuardar(campo);
+        if (!v.ok) { return null; }  // R9: la marca de F-108 ya la puso su ``blur``
+        const referencia = campo._enCola !== undefined ? campo._enCola : valorGuardadoCabecera(campo);
+        if (v.valor === referencia) { return null; }
+        const cuerpo = {};
+        cuerpo[campo.id] = v.valor;
+        const turno = {};
+        campo._enCola = v.valor;
+        campo._turnoCola = turno;
+        const etiqueta = etiquetaCampoCabecera(campo.id);
+        return encolar(async function () {
+            let motivo = null;
+            let guardado = v.valor;
+            try {
+                const resp = await fetchRed(`/api/documents/${documentId}/cabecera`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(cuerpo),
+                });
+                if (!resp.ok) {
+                    motivo = await motivoDeRespuesta(resp);
+                } else {
+                    try {
+                        const b = await resp.json();
+                        if (b && b.cabecera && campo.id in b.cabecera) { guardado = b.cabecera[campo.id]; }
+                    } catch (_) {}
+                }
+            } catch (_) {
+                motivo = "error de red";
+            }
+            if (campo._turnoCola === turno) { campo._enCola = undefined; }
+            if (motivo !== null) {
+                campo.classList.remove("campo-guardado");
+                campo.classList.add("campo-no-guardado");
+                campo.title = motivo;
+                avisarAutoguardado("No se pudo guardar " + etiqueta.toLowerCase() + ": " + motivo);
+                return false;
+            }
+            campo.dataset.guardado = guardado === null ? "" : guardado;
+            campo.classList.remove("campo-no-guardado");
+            campo.classList.add("campo-guardado");
+            campo.title = "Guardado automáticamente";
+            avisarAutoguardado(etiqueta + " guardado");
+            document.dispatchEvent(new Event("autoguardado"));
+            return true;
+        });
+    }
+
+    // R7, R8, R12: ``blur`` de los cuatro campos y ``change`` del calendario,
+    // enganchados DESPUÉS de ``wireFechaAlbaran`` (su ``blur`` ya reescribió o
+    // marcó la fecha). Al volver a teclear se quita la marca de guardado.
+    function wireAutoguardadoCabecera() {
+        if (!document.getElementById("autoguardado-estado")) { return; }
+        ["fecha", "numero_albaran", "forma_pago", "review_notes"].forEach(function (id) {
+            const campo = document.getElementById(id);
+            if (!campo) { return; }
+            campo.addEventListener("blur", function () { autoguardarCampoCabecera(campo); });
+            campo.addEventListener("input", function () { campo.classList.remove("campo-guardado"); });
+        });
+        const cal = document.getElementById("fecha_calendario");
+        const fecha = document.getElementById("fecha");
+        if (cal && fecha) {
+            cal.addEventListener("change", function () { autoguardarCampoCabecera(fecha); });
+        }
+    }
+
+    wireAutoguardadoCabecera();
+
     function collectSelectedContratoCodigo() {
         const el = document.getElementById("selected_contrato_codigo");
         if (!el) return null;
