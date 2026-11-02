@@ -1342,15 +1342,45 @@
         return Math.round((imp / divisor) * 1e6) / 1e6;
     }
 
-    // F-106 R15: lo que mandará sv9 (``linea_a_sigrid`` de comun): la cantidad
-    // a Sigrid es Q × |factor| (el del servidor: cantidad a Sigrid / Q) con el
-    // signo del importe, y el precio |I| / |cantidad| a 6 decimales. null si la
-    // fila no es a registrar (importe vacío o 0) o no hay cantidad.
-    function precioASigrid(cant, imp, factor) {
+    // F-106 R15, F-110 R15: lo que mandará sv9 (``linea_a_sigrid`` de comun):
+    // la cantidad a Sigrid es Q × |factor| (el del servidor: cantidad a Sigrid /
+    // Q) con el signo del importe. Sin ``conDto`` (la guarda, ``data-alta-dto``)
+    // o sin descuento aplicable, el precio es |I| / |cantidad| a 6 decimales
+    // (neto). Con ella y 0 < d ≤ 100: ``dto`` = d a 2 decimales y el precio, P a
+    // 6 si da el importe al céntimo; si no, el bruto despejado. null si la fila
+    // no es a registrar (importe vacío o 0), no hay cantidad o no se despeja.
+    function precioASigrid(cant, imp, factor, pu, dto, conDto) {
         if (cant === null || imp === null || imp === 0 || factor === null || isNaN(factor)) { return null; }
         const q = Math.abs(cant * factor);
         if (q <= 1e-9) { return null; }
-        return { cantidad: imp < 0 ? -q : q, precio: Math.round((Math.abs(imp) / q) * 1e6) / 1e6 };
+        const cantidad = imp < 0 ? -q : q;
+        const absImp = Math.abs(imp);
+        const d = (conDto && typeof dto === "number" && dto > 0 && dto <= 100)
+            ? Math.round(dto * 100) / 100 : null;
+        if (!conDto) {
+            return { cantidad: cantidad, precio: Math.round((absImp / q) * 1e6) / 1e6 };
+        }
+        if (d === null || d <= 0) {
+            return { cantidad: cantidad, precio: Math.round((absImp / q) * 1e6) / 1e6, dto: null };
+        }
+        if (typeof pu === "number" && isFinite(pu)) {
+            const p6 = Math.round(pu * 1e6) / 1e6;
+            const calculado = importeDeFila(q, p6, d);
+            if (Math.round(Math.abs(calculado - absImp) * 100) / 100 < 0.01) {
+                return { cantidad: cantidad, precio: p6, dto: d };
+            }
+        }
+        const despejado = precioDespejado(absImp, q, d);
+        return despejado === null ? null : { cantidad: cantidad, precio: despejado, dto: d };
+    }
+
+    // F-110 R15: ¿el dto a Sigrid no es el d de la fila? Un d no aplicable
+    // (vacío, ≤ 0 o > 100) cuenta como «sin descuento».
+    function dtoDifiere(dtoSigrid, d) {
+        const ficha = (typeof d === "number" && d > 0 && d <= 100) ? d : null;
+        const sigrid = (dtoSigrid === null || dtoSigrid === undefined) ? null : dtoSigrid;
+        if (sigrid === null || ficha === null) { return (sigrid === null) !== (ficha === null); }
+        return Math.abs(sigrid - ficha) > 1e-6;
     }
 
     // F-106 R15: el precio como lo pinta la plantilla (``precio_es``): hasta 6
@@ -1377,9 +1407,10 @@
         return signo + entero + "," + partes[1];
     }
 
-    // F-106 R15: «A Sigrid: 48 × 2,17 €».
+    // F-106 R15: «A Sigrid: 48 × 2,17 €»; con dto (F-110), «… € −7 %».
     function textoASigrid(a) {
-        return "A Sigrid: " + cantidadEs(a.cantidad) + " × " + precioEs(a.precio) + " €";
+        const dto = (a.dto === null || a.dto === undefined) ? "" : " \u2212" + cantidadEs(a.dto) + " %";
+        return "A Sigrid: " + cantidadEs(a.cantidad) + " × " + precioEs(a.precio) + " €" + dto;
     }
 
     // F-106 R13: «≠ albarán: 104,16» si el importe ya no es el del albarán
@@ -1510,7 +1541,10 @@
             }
             const sigrid = tr.querySelector(".js-a-sigrid");
             if (puEl && puEl.dataset.factorAlta !== undefined) {
-                const a = precioASigrid(cant, imp, parseFloat(puEl.dataset.factorAlta));
+                // F-110 R15, R16: con la guarda, la misma regla de comun (bruto y dto).
+                const conDto = puEl.dataset.altaDto === "1";
+                const pu = parseNumEs(puEl.value);
+                const a = precioASigrid(cant, imp, parseFloat(puEl.dataset.factorAlta), pu, dto, conDto);
                 const texto = a ? textoASigrid(a) : null;
                 const lineas = String(puEl.title || "").split("\n").filter(function (l) {
                     return l && l.indexOf("A Sigrid:") !== 0;
@@ -1518,9 +1552,9 @@
                 if (texto) { lineas.push(texto); }
                 puEl.title = lineas.join("\n");
                 if (sigrid) {
-                    const pu = parseNumEs(puEl.value);
                     if (texto) { sigrid.textContent = texto; }
-                    sigrid.hidden = !a || (pu !== null && Math.abs(a.precio - pu) <= 1e-6);
+                    sigrid.hidden = !a || (pu !== null && Math.abs(a.precio - pu) <= 1e-6
+                        && !(conDto && dtoDifiere(a.dto, dto)));
                 }
             }
         }

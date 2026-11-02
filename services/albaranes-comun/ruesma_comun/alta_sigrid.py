@@ -22,6 +22,12 @@ from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 
 from ruesma_comun.contratos.familias import familia_efectiva
+from ruesma_comun.importes import (
+    clasificar_descuento,
+    difieren,
+    importe_de_linea,
+    unitario_despejado,
+)
 
 #: Estados del alta (``albaran_altas_sigrid.estado``) que bloquean el documento:
 #: sv4 no deja tocarlo (R25) y sv3 no lo borra al reingresar su PDF (R45). Son
@@ -147,21 +153,123 @@ def es_linea_a_registrar(importe_calculado: float | None) -> bool:
     return importe_calculado is not None and abs(float(importe_calculado)) > _EPSILON
 
 
+#: (F-110 R5, R14) Único valor de ``ALTA_SIGRID_ENVIAR_DTO`` que enciende la
+#: guarda del descuento por línea (como ``ALTA_SIGRID_COMMIT``).
+LITERAL_ENVIAR_DTO = "true"
+
+
+def enviar_dto_activo(valor: str | None) -> bool:
+    """(F-110 R5, R14) ¿Encendida la guarda? Solo con el literal ``true``: sin
+    ``strip`` ni mayúsculas. sv4 y sv9 la leen con esta función."""
+    return valor == LITERAL_ENVIAR_DTO
+
+
+class LineaASigrid(tuple):
+    """(F-110 R1) Cantidad, precio y ``dto`` que sv9 pone en la línea.
+
+    Es la tupla ``(cantidad, precio)`` de F-106 (se desempaqueta y se compara
+    igual) con el atributo ``dto`` (``None`` = sin descuento). Con ``dto``, solo
+    es igual a otra ``LineaASigrid`` con el mismo ``dto``: nunca a la tupla de
+    F-106. Inmutable.
+    """
+
+    __slots__ = ()
+
+    def __new__(cls, cantidad: float, precio: float, dto: float | None = None) -> LineaASigrid:
+        return super().__new__(cls, (cantidad, precio, dto))
+
+    # La tupla guarda los tres; se ve (y se desempaqueta) como la de F-106.
+    def __len__(self) -> int:
+        return 2
+
+    def __iter__(self):  # type: ignore[override]
+        return iter((self.cantidad, self.precio))
+
+    def __getitem__(self, indice):  # type: ignore[override]
+        return (self.cantidad, self.precio)[indice]
+
+    @property
+    def cantidad(self) -> float:
+        return tuple.__getitem__(self, 0)
+
+    @property
+    def precio(self) -> float:
+        return tuple.__getitem__(self, 1)
+
+    @property
+    def dto(self) -> float | None:
+        return tuple.__getitem__(self, 2)
+
+    def _clave(self) -> tuple[float, float, float | None]:
+        return (self.cantidad, self.precio, self.dto)
+
+    def __eq__(self, otro: object) -> bool:
+        if isinstance(otro, LineaASigrid):
+            return self._clave() == otro._clave()
+        if isinstance(otro, tuple):
+            return self.dto is None and (self.cantidad, self.precio) == otro
+        return NotImplemented
+
+    def __ne__(self, otro: object) -> bool:
+        igual = self.__eq__(otro)
+        return igual if igual is NotImplemented else not igual
+
+    def __hash__(self) -> int:
+        if self.dto is None:
+            return hash((self.cantidad, self.precio))
+        return hash(self._clave())
+
+    def __repr__(self) -> str:
+        return f"LineaASigrid(cantidad={self.cantidad!r}, precio={self.precio!r}, dto={self.dto!r})"
+
+
+def _finito(valor: object) -> float | None:
+    """``float`` finito o ``None`` (nulo, booleano, ilegible, NaN o infinito)."""
+    if valor is None or isinstance(valor, bool):
+        return None
+    try:
+        numero = float(valor)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return numero if math.isfinite(numero) else None
+
+
+def _dto_a_sigrid(descuento: object) -> float | None:
+    """(F-110 R3, D6) ``round(d, 2)`` si el descuento es aplicable y no se
+    queda en 0 al redondear; si no, ``None`` (la línea va como hoy)."""
+    estado, valor = clasificar_descuento(descuento)
+    if estado != "aplicable" or valor is None:
+        return None
+    dto = round(valor, 2)
+    return dto if dto > 0 else None
+
+
 def linea_a_sigrid(
     *,
     vinculada: bool,
     cantidad_albaran: float | None,
     cantidad_convertida: float | None,
     importe: float | None,
-) -> tuple[float, float] | None:
-    """(F-106 R2) Cantidad y precio que sv9 pone en la línea de la petición.
+    precio: object = None,
+    descuento: object = None,
+    con_descuento: bool = False,
+) -> LineaASigrid | None:
+    """(F-106 R2, F-110 R1–R4) La línea que sv9 pone en la petición.
 
     La cantidad es la convertida si la línea va vinculada (``ctrpro_ide``, en
-    la unidad del contrato) y la del albarán si no, con el signo del importe;
-    el precio, ``|importe| / |cantidad|`` a 6 decimales (neto, H14), de modo
-    que ``cantidad · precio`` = importe. ``None`` sin cantidad (nula o 0) o sin
-    importe legible. Es la ÚNICA definición de «a Sigrid»: sv9 la manda y sv4
-    la enseña (R15). F-095 cambiará solo esta función.
+    la unidad del contrato) y la del albarán si no, con el signo del importe.
+
+    - Sin ``con_descuento`` (la guarda apagada) o sin descuento aplicable: el
+      precio es ``|importe| / |cantidad|`` a 6 decimales (neto, H14) y ``dto``
+      nulo: lo de F-106.
+    - Con ``con_descuento`` y descuento aplicable: ``dto = round(d, 2)`` y el
+      precio es ``round(P, 6)`` si con ese ``dto`` y la cantidad a Sigrid da el
+      importe al céntimo (``importes.difieren``); si no, el bruto despejado
+      (``importes.unitario_despejado``).
+
+    ``None`` sin cantidad (nula o 0), sin importe legible o con un precio que
+    no se puede despejar (100 %). Nunca lanza. Es la ÚNICA definición de «a
+    Sigrid»: sv9 la manda y sv4 la enseña.
     """
     cantidad = cantidad_convertida if vinculada else cantidad_albaran
     if cantidad is None or importe is None:
@@ -176,7 +284,22 @@ def linea_a_sigrid(
     if cantidad_num <= _EPSILON:
         return None
     con_signo = -cantidad_num if importe_num < 0 else cantidad_num
-    return con_signo, round(abs(importe_num) / cantidad_num, 6)
+    importe_abs = abs(importe_num)
+    dto = _dto_a_sigrid(descuento) if con_descuento else None
+    if dto is None:
+        return LineaASigrid(con_signo, round(importe_abs / cantidad_num, 6))
+    precio_num = _finito(precio)
+    if precio_num is not None:
+        precio_p = round(precio_num, 6)
+        calculado = importe_de_linea(
+            cantidad=cantidad_num, precio_unitario=precio_p, descuento_pct=dto,
+        )
+        if calculado is not None and not difieren(calculado, importe_abs):
+            return LineaASigrid(con_signo, precio_p, dto)
+    despejado = unitario_despejado(importe=importe_abs, cantidad=cantidad_num, descuento_pct=dto)
+    if despejado is None:
+        return None
+    return LineaASigrid(con_signo, despejado, dto)
 
 
 def clasificacion_documento(

@@ -13,6 +13,10 @@ su petición (``peticion_json``: ``referencia_linea`` = id de la fila valorada,
   que tolera el cuadre (``TOLERANCIA_CUADRE_EUR``) en el importe de la línea
   (``|enviado − neto| × |cantidad enviada|``): el redondeo a céntimos del importe
   no cuenta como diferencia. Sin descuento aplicable, el neto es P.
+- (F-110 R19) En las líneas enviadas **con** ``dto`` el precio es el bruto: se
+  compara con P (con la misma tolerancia, sobre el importe ya descontado) y el
+  ``dto`` enviado con ``round(d, 2)`` (``dto difiere`` si se aparta más de 0,005
+  o la fila ya no tiene un descuento aplicable).
 
 Una línea sin fila (revalorada después) o ilegible no se compara. El script NO
 corrige nada: el humano decide qué hacer con las listadas (D6).
@@ -68,7 +72,7 @@ _COLUMNAS_FILA = ("id", "cantidad_albaran", "cantidad_convertida", "precio_unita
 
 COLUMNAS_CSV = ("document_id", "con_ide", "cod", "referencia_linea", "cantidad_enviada",
                 "precio_enviado", "cantidad", "precio", "descuento", "importe", "precio_neto",
-                "no_cuadra", "precio_difiere")
+                "no_cuadra", "precio_difiere", "dto_enviado", "dto_difiere")
 SALIDA_POR_DEFECTO = "altas_f106.csv"
 
 
@@ -89,6 +93,9 @@ class Descuadre:
     precio_neto: float | None
     no_cuadra: bool
     precio_difiere: bool
+    #: (F-110 R19) El ``dto`` enviado (``None`` sin él) y si no es el de la fila.
+    dto_enviado: float | None = None
+    dto_difiere: bool = False
     document_id: str | None = None
     con_ide: int | None = None
     cod: str | None = None
@@ -113,9 +120,29 @@ def precio_neto(precio: object, descuento: object) -> float | None:
     return p * (1 - valor / 100) if estado == "aplicable" and valor is not None else p
 
 
+#: (F-110 R19) Margen del ``dto`` enviado frente a ``round(d, 2)``.
+TOLERANCIA_DTO = 0.005
+
+
+def _dto_enviado(valor: object) -> float | None:
+    """El ``dto`` de la línea enviada si es un número JSON finito (no texto ni
+    booleano); si no, la línea se trata como enviada sin ``dto``."""
+    if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        return None
+    return float(valor) if math.isfinite(valor) else None
+
+
+def _dto_difiere(dto_env: float, descuento: object) -> bool:
+    estado, valor = clasificar_descuento(descuento)
+    if estado != "aplicable" or valor is None:
+        return True
+    return round(abs(dto_env - round(valor, 2)), 6) > TOLERANCIA_DTO
+
+
 def comparar_alta(lineas: Iterable[Any], filas: Mapping[str, Mapping[str, Any]]) -> list[Descuadre]:
     """(R18) Las líneas de una petición (``lineas``) que no cuadran o cuyo precio
-    enviado no es el neto, contra sus filas (por ``referencia_linea``)."""
+    enviado no es el neto, contra sus filas (por ``referencia_linea``). (F-110
+    R19) Las enviadas con ``dto``: precio frente a P y ``dto`` frente a d."""
     salida: list[Descuadre] = []
     for linea in lineas:
         if not isinstance(linea, Mapping):
@@ -133,17 +160,27 @@ def comparar_alta(lineas: Iterable[Any], filas: Mapping[str, Mapping[str, Any]])
         d = fila.get("descuento_albaran_aplicado")
         i = fila.get("importe_calculado")
         no_cuadra = cuadra_linea(q, p, d, i) is False
-        neto = precio_neto(p, d)
+        dto_env = _dto_enviado(linea.get("dto"))
+        if dto_env is None:
+            neto = precio_neto(p, d)
+            factor = 1.0
+            dto_difiere = False
+        else:
+            neto = _numero(p)
+            factor = 1 - dto_env / 100
+            dto_difiere = _dto_difiere(dto_env, d)
         difiere = (
             neto is not None
-            and abs(abs(precio_env) - abs(neto)) * abs(cantidad_env) > TOLERANCIA_CUADRE_EUR
+            and abs(abs(precio_env) - abs(neto)) * abs(cantidad_env) * factor
+            > TOLERANCIA_CUADRE_EUR
         )
-        if no_cuadra or difiere:
+        if no_cuadra or difiere or dto_difiere:
             salida.append(Descuadre(
                 referencia_linea=referencia, cantidad_enviada=cantidad_env,
                 precio_enviado=precio_env, cantidad=_numero(q), precio=_numero(p),
                 descuento=_numero(d), importe=_numero(i), precio_neto=neto,
                 no_cuadra=no_cuadra, precio_difiere=difiere,
+                dto_enviado=dto_env, dto_difiere=dto_difiere,
             ))
     return salida
 
@@ -194,6 +231,8 @@ def filas_csv(descuadres: Iterable[Descuadre]) -> list[dict[str, str]]:
             "importe": _es(d.importe), "precio_neto": _es(d.precio_neto),
             "no_cuadra": "sí" if d.no_cuadra else "no",
             "precio_difiere": "sí" if d.precio_difiere else "no",
+            "dto_enviado": _es(d.dto_enviado),
+            "dto_difiere": "sí" if d.dto_difiere else "no",
         }
         for d in descuadres
     ]

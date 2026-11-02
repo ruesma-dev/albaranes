@@ -82,7 +82,7 @@
                 <thead>
                 <tr>
                     <th>Línea</th><th>Producto</th><th>Descripción</th><th>Partida</th>
-                    <th>Cantidad</th><th>Precio</th><th>Total previa</th><th>Motivos</th>
+                    <th>Cantidad</th><th>Precio</th><th>Dto %</th><th>Total previa</th><th>Motivos</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -94,6 +94,8 @@
                         <td>{{ l.partida or 'almacén' }}</td>
                         <td>{{ l.cantidad if l.cantidad is not none else '—' }}</td>
                         <td>{{ l.precio if l.precio is not none else '—' }}</td>
+                        {# F-110 R17: el dto pedido y, si la previa devolvió otro, el suyo. #}
+                        <td>{{ l.dto_texto }}{% if l.dto_sigrid_texto is not none %} (Sigrid: {{ l.dto_sigrid_texto }}){% endif %}</td>
                         <td>{{ l.total | importe_eur }}</td>
                         <td>
                             {% for m in l.motivos %}

@@ -193,6 +193,9 @@ class LineaPeticion:
     descripcion: str | None = None
     unidad: str | None = None
     partida: str | None = None
+    #: (F-110 R7, R10) % de descuento de la línea; con él, ``precio`` es el
+    #: bruto. Nulo = sin la clave (las peticiones de antes no la traen).
+    dto: float | None = None
 
     def a_dict(self) -> dict[str, Any]:
         orden = (
@@ -203,6 +206,7 @@ class LineaPeticion:
             ("unidad", self.unidad),
             ("cantidad", self.cantidad),
             ("precio", self.precio),
+            ("dto", self.dto),
             ("partida", self.partida),
         )
         return {clave: valor for clave, valor in orden if valor is not None}

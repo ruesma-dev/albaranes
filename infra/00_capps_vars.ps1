@@ -50,6 +50,12 @@ $Global:SIGRID_DB = "ruesma"   # SIGRID_API_DATABASE del piloto
 # mano y con autorizacion (MANUAL T29). Ningun script lo pone a true.
 $Global:ALTA_SIGRID_DESDE_UTC            = "2026-10-15T11:55:00Z"   # T51 paso 2 (2026-10-15, por el lider a peticion del humano): simulacion encendida
 $Global:ALTA_SIGRID_ESPERA_INCIERTO_MIN  = "15"
+# F-110 - guarda del descuento por linea (sv4 Y sv9, mismo valor). "true" = las
+# lineas con descuento van a Sigrid con el precio bruto y su dto; cualquier otro
+# valor = precio neto sin dto (F-106). Solo la enciende el humano, despues de
+# desplegar F-110 y con la F-018 de sigrid-api desplegada (contrato v8.4); la
+# vuelta atras es ponerla a "false" y relanzar set_alta_sigrid.ps1.
+$Global:ALTA_SIGRID_ENVIAR_DTO           = "false"
 # Mapeo familia -> producto (JSON con clave "*"). VACIO = el defecto del codigo,
 # igual en sv4 y sv9: {"alquiler_maquinaria": "QA9999", "medios_auxiliares":
 # "XA9999", "*": "MA9999"}. Si lo cambias, set_alta_sigrid.ps1 lo pasa con las
@@ -77,11 +83,12 @@ function Global:EscaparJsonNativo($texto) {
     $texto
 }
 
-# Pares CLAVE=valor comunes a sv4 y sv9 (los tres que deben coincidir).
+# Pares CLAVE=valor comunes a sv4 y sv9 (los cuatro que deben coincidir).
 function Global:AltaSigridEnvComun() {
     $pares = @(
         "ALTA_SIGRID_DESDE_UTC=$($Global:ALTA_SIGRID_DESDE_UTC)",
-        "ALTA_SIGRID_ESPERA_INCIERTO_MIN=$($Global:ALTA_SIGRID_ESPERA_INCIERTO_MIN)"
+        "ALTA_SIGRID_ESPERA_INCIERTO_MIN=$($Global:ALTA_SIGRID_ESPERA_INCIERTO_MIN)",
+        "ALTA_SIGRID_ENVIAR_DTO=$($Global:ALTA_SIGRID_ENVIAR_DTO)"
     )
     $mapeo = [string]$Global:ALTA_SIGRID_PRODUCTO_POR_DEFECTO
     if ($mapeo) {

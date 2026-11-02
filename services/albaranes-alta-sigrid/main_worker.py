@@ -114,6 +114,10 @@ def main() -> int:
         NOMBRE_WORKER, settings.modo, settings.desde, settings.espera_incierto_min,
         settings.tolerancia_eur, sorted(settings.avisos_bloqueantes), visibilidad_s,
     )
+    # F-110 R5: si la petición lleva el ``dto`` de las líneas con descuento.
+    logger.info("[%s] ALTA_SIGRID_ENVIAR_DTO %s", NOMBRE_WORKER,
+                "encendida: las líneas con descuento van con precio bruto y dto"
+                if settings.enviar_dto else "apagada: precio neto, sin dto (F-106)")
     # F-069 R3: solo el número (las Entradas son excepciones; vacía es lo normal).
     logger.info("[%s] Lista de equivalencias (%s): %s Entradas", NOMBRE_WORKER,
                 VARIABLE_LISTA, len(settings.equivalencias))

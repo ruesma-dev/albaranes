@@ -17,6 +17,7 @@ apagada: sv4 se comporta como antes de F-053 (R3), salvo R37, que vale siempre.
 """
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -89,6 +90,8 @@ TEXTOS_MOTIVO_ALTA: dict[str, str] = {
     "registrado_distinto": "Lo registrado en Sigrid no coincide con lo aprobado",
     "partida_distinta": "Sigrid devolvió otra partida",
     "aviso_bloqueante": "Sigrid dio un aviso que impide el alta",
+    # F-110 R11, R18: se pidió un dto y la previa no lo trae (o trae otro).
+    "dto_distinto": "Sigrid no aplica el descuento pedido",
     # Servicio de sv9 (alta_sigrid_service.py).
     "alta_a_mano": "Ya hay un alta a mano en Sigrid para este albarán",
     "respuesta_inesperada": "Sigrid devolvió una respuesta inesperada",
@@ -138,6 +141,10 @@ TEXTOS_MOTIVO_ALTA: dict[str, str] = {
     # el panel los pinta en «Avisos de Sigrid» con su mensaje (F-104 R8).
     "retencion_del_contrato": "Sigrid aplicó la retención del contrato",
     "cabecera_sin_dato": "Sigrid dejó vacío algún dato de pago de la cabecera",
+    # Avisos de línea del contrato v8.4 (F-018 de sigrid-api; F-110 T19): una
+    # vinculada con dto se escribe como se pide; informativos, no bloquean.
+    "precio_distinto_del_contrato": "Sigrid avisa: el precio no es el del contrato",
+    "dto_distinto_del_contrato": "Sigrid avisa: el descuento no es el del contrato",
     # Tipo de fallo sin código ni HTTP (TipoFallo, alta_models.py).
     "rechazo": "Sigrid rechazó el alta",
     "autorizacion": "sigrid-api no autorizó la petición",
@@ -149,6 +156,38 @@ TEXTOS_MOTIVO_ALTA: dict[str, str] = {
 }
 
 _HTTP = re.compile(r"http_(\d{3})")
+
+#: (F-110 R17) Diferencia a partir de la cual el ``dto`` de la previa es «otro»
+#: (la misma tolerancia que el ``dto_distinto`` de sv9).
+TOLERANCIA_DTO = 0.005
+
+
+def _dto_numero(valor: Any) -> float | None:
+    """Un ``dto`` legible (número JSON finito, no booleano) o ``None``."""
+    if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        return None
+    return float(valor) if math.isfinite(valor) else None
+
+
+def _dto_es(valor: float) -> str:
+    """«7», «7,46»: sin ceros finales y con coma decimal."""
+    return f"{valor:.6f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def _dto_columnas(pedido: Any, sigrid: Any) -> dict[str, Any]:
+    """(F-110 R17) La columna «Dto %» de una línea del panel: el pedido («—»
+    sin él) y el de la previa solo si es otro."""
+    dto = _dto_numero(pedido)
+    dto_sigrid = _dto_numero(sigrid)
+    otro = dto_sigrid is not None and (
+        dto is None or round(abs(dto_sigrid - dto), 6) > TOLERANCIA_DTO
+    )
+    return {
+        "dto": dto,
+        "dto_sigrid": sigrid if dto_sigrid is not None else None,
+        "dto_texto": "—" if dto is None else _dto_es(dto),
+        "dto_sigrid_texto": _dto_es(dto_sigrid) if otro else None,  # type: ignore[arg-type]
+    }
 
 
 #: F-069 R16: clave de ``peticion_json`` con el rastro de la resolución de
@@ -279,6 +318,8 @@ class ConfigAltaSigrid:
     mapeo: Mapping[str, str] = field(
         default_factory=lambda: dict(MAPEO_PRODUCTO_POR_DEFECTO),
     )
+    #: F-110 R14: la guarda ``ALTA_SIGRID_ENVIAR_DTO`` (apagada por defecto).
+    enviar_dto: bool = False
 
     @property
     def activa(self) -> bool:
@@ -463,7 +504,8 @@ class AltaSigridVista(BaseModel):
     @property
     def lineas(self) -> list[dict[str, Any]]:
         """Líneas de la petición con lo que devolvió la previa (por
-        ``referencia_linea``): producto, partida, cantidad, precio y total."""
+        ``referencia_linea``): producto, partida, cantidad, precio, ``dto``
+        (F-110 R17: el pedido y el de Sigrid si es otro) y total."""
         pedidas = (self.peticion or {}).get("lineas") or []
         devueltas = {
             str(linea.get("referencia_linea")): linea
@@ -484,6 +526,7 @@ class AltaSigridVista(BaseModel):
                 "partida": pedida.get("partida"),
                 "cantidad": pedida.get("cantidad"),
                 "precio": pedida.get("precio"),
+                **_dto_columnas(pedida.get("dto"), devuelta.get("dto")),
                 "total": devuelta.get("total"),
                 "motivos": [
                     _con_texto(m) for m in self.motivos

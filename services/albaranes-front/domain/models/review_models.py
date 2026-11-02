@@ -973,6 +973,16 @@ class ASigrid:
     factor: float | None
 
 
+def _dto_difiere(dto_sigrid: float | None, descuento: object) -> bool:
+    """(F-110 R15) ¿El ``dto`` a Sigrid no es el d de la ficha? Un d no
+    aplicable cuenta como «sin descuento»."""
+    estado, valor = clasificar_descuento(descuento)
+    d_ficha = valor if estado == "aplicable" else None
+    if dto_sigrid is None or d_ficha is None:
+        return (dto_sigrid is None) != (d_ficha is None)
+    return abs(dto_sigrid - d_ficha) > TOLERANCIA_PRECIO_SIGRID
+
+
 def a_sigrid_de_fila(
     *,
     vinculada: bool,
@@ -980,24 +990,31 @@ def a_sigrid_de_fila(
     cantidad_convertida: float | None,
     precio: float | None,
     importe: float | None,
+    descuento: object = None,
+    con_descuento: bool = False,
 ) -> ASigrid | None:
-    """(F-106 R15) La línea que mandará sv9 (``linea_a_sigrid`` de comun, la
-    misma función) de una fila a registrar; ``None`` si no lo es o no hay
-    línea (sin cantidad)."""
+    """(F-106 R15, F-110 R15) La línea que mandará sv9 (``linea_a_sigrid`` de
+    comun, la misma función y la misma guarda ``con_descuento``) de una fila a
+    registrar; ``None`` si no lo es o no hay línea (sin cantidad o, con
+    ``dto``, sin precio despejable). Con ``dto``, «A Sigrid: 12 × 0,645 € −7 %»;
+    ``difiere`` si el precio no es P o, con la guarda, el ``dto`` no es d."""
     if not es_linea_a_registrar(importe):
         return None
     linea = linea_a_sigrid(
         vinculada=vinculada, cantidad_albaran=cantidad_albaran,
         cantidad_convertida=cantidad_convertida, importe=importe,
+        precio=precio, descuento=descuento, con_descuento=con_descuento,
     )
     if linea is None:
         return None
-    cantidad, precio_sigrid = linea
+    cantidad, precio_sigrid, dto = linea.cantidad, linea.precio, linea.dto
     q_ficha = _finito(cantidad_convertida if cantidad_convertida is not None else cantidad_albaran)
     p_ficha = _finito(precio)
+    texto_dto = f" −{_numero_corto(dto)} %" if dto is not None else ""
+    difiere = p_ficha is None or abs(precio_sigrid - p_ficha) > TOLERANCIA_PRECIO_SIGRID
     return ASigrid(
-        texto=f"A Sigrid: {_numero_corto(cantidad)} × {precio_es(precio_sigrid)} €",
-        difiere=p_ficha is None or abs(precio_sigrid - p_ficha) > TOLERANCIA_PRECIO_SIGRID,
+        texto=f"A Sigrid: {_numero_corto(cantidad)} × {precio_es(precio_sigrid)} €{texto_dto}",
+        difiere=difiere or (con_descuento and _dto_difiere(dto, descuento)),
         factor=cantidad / q_ficha if q_ficha else None,
     )
 
@@ -2030,6 +2047,8 @@ class DocumentDetailPayload(BaseModel):
     pie_cuota: float | None = None
     pie_total: float | None = None
     alta_sigrid_activa: bool = False
+    #: F-110 R16: la guarda ``ALTA_SIGRID_ENVIAR_DTO`` (``data-alta-dto``).
+    alta_enviar_dto: bool = False
     alta_sigrid: AltaSigridVista | None = None
     alta_puede_solicitar: bool = False
     #: F-053 v8 (R30, O1 = a): «Reintentar adjunto».
