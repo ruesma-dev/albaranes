@@ -159,8 +159,9 @@ albaranes-review-web/
 | `GET`  | `/health`                                              | —                                 | Estado: BBDD, page sizes, preview, refetch wired, etc.                                          |
 | `GET`  | `/api/documents/{id}?view=...`                         | —                                 | `DocumentDetailPayload` completo (campos + líneas + display_lines + contratos + valuation).    |
 | `PUT`  | `/api/documents/{id}`                                  | `MergeDocumentUpdatePayload`      | Guardar cambios. Update in-place de líneas + edición de sintéticas + recálculo de importes.    |
+| `PATCH`| `/api/documents/{id}/cabecera`                         | subconjunto de `fecha`, `numero_albaran`, `forma_pago`, `review_notes` | (F-116 R1–R6) Autoguardado de la cabecera al salir de un campo: guarda SOLO los campos que vienen (ausente = no cambia; `null`/vacío = vaciar; fecha y número con la normalización de F-108), sella `last_modified_at_utc` y `reviewed_at_utc` y deja una entrada de «Deshacer» (`cabecera`). No toca proveedor, CIF, obra, contrato, aprobación ni motivos, ni relanza la búsqueda. `{"ok", "document_id", "cabecera": {campo: guardado}}`; 422 texto con fecha no admitida o número de más de 128, 422 con un campo que no es de los cuatro; 409 aprobado o con alta bloqueante; 404 sin documento; `{}` ⇒ 200 sin escribir. |
 | `POST` | `/api/documents/{id}/re-fetch-contratos`               | `{}`                              | Re-buscar contratos en el ERP y actualizar BBDD. 503 si SIGRID no está configurado.            |
-| `PATCH`| `/api/documents/{id}/lines/{vid}/conciliacion/campos`  | campos cambiados, `importe`, `cuadrar` | (F-065, F-106 R4–R10) Edita UNA fila: Q, P o d ⇒ recalcula I (`calculated`); `importe` ⇒ despeja P (6 decimales); `cuadrar` = botones «Recalcular importe/precio» de una fila que no cuadra. 422 con precio e importe a la vez o sin divisor; 409 aprobado, fila guardada o fila que una revaloración ya reemplazó («La valoración ha cambiado: recarga la ficha», F-106 R28). Registra la edición de la fila (`edicion_manual_json`, F-106 R20). |
+| `PATCH`| `/api/documents/{id}/lines/{vid}/conciliacion/campos`  | campos cambiados, `importe`, `cuadrar` | (F-065, F-106 R4–R10) Edita UNA fila: Q, P o d ⇒ recalcula I (`calculated`); `importe` ⇒ despeja P (6 decimales); `cuadrar` = botones «Recalcular importe/precio» de una fila que no cuadra. 422 con precio e importe a la vez o sin divisor; 409 aprobado, fila guardada o fila que una revaloración ya reemplazó («La valoración ha cambiado: recarga la ficha», F-106 R28). Registra la edición de la fila (`edicion_manual_json`, F-106 R20). Con `?bloquear=1` («Guardar» de la ficha) además bloquea; sin él es el autoguardado de F-116 (al salir de cada celda): guarda sin bloquear. |
 | `POST` | `/api/documents/{id}/lines/{vid}/volver-a-calculado`   | —                                 | (F-106 R30) Restaura lo que calculó sv6 (`calculado` de la edición), borra la edición, desbloquea y recalcula el total, con «Deshacer». 404 sin edición o en una `fila_entera`; 409 aprobado o con alta bloqueante. |
 | `GET`  | `/api/sigrid/proveedores/todos?q=`                     | —                                 | (F-114) Búsqueda global del combo de proveedor con «Solo de la obra» desmarcado: `{ok, items:[{cif, nombre, fichas}], mas}` con los proveedores vivos de Sigrid (`con.tip 5`, `emp 1`, `fecbaj 0`) cuyo nombre o CIF contienen `q`; mínimo 3 caracteres (si no, `ok=false` sin llamar), 50 resultados, sin CIF propios, `NO_TOLERA`. Sin Sigrid o con error, 200 `ok=false` como `/api/sigrid/proveedores`. Solo lectura, fuera del esquema OpenAPI. |
 | `GET`  | `/api/documents/{id}/alta-sigrid/fase`                 | —                                 | (F-077 R18) `{"fase": "en_curso" \| "sin_respuesta" \| "resultado"}` del panel «Alta en Sigrid»; la ficha la sondea cada 3 s mientras está «en curso». Solo lectura (ni escribe el alta ni publica); 404 sin documento; con `ALTA_SIGRID_DESDE_UTC` vacía, `resultado`. Uso interno del JS de sv4 (fuera del esquema OpenAPI). |
@@ -560,6 +561,13 @@ DEFAULT_REVIEWER="Equipo Ruesma"
 > F-077: desde la ficha, «Guardar» y «Guardar y aprobar» mandan ANTES el PATCH
 > de cada fila con cambios (`.../lines/{vid}/conciliacion/campos?bloquear=1`);
 > si alguno falla no se envía este PUT (regla 20 de `docs/ARCHITECTURE.md`).
+>
+> F-116: además de las filas con cambios, mandan con `?bloquear=1` (cuerpo `{}`
+> si no queda nada) las filas autoguardadas en esa carga. El autoguardado (al
+> salir de cada celda, PATCH de fila SIN `?bloquear=1`; al salir de fecha,
+> número, forma de pago o notas, `PATCH /api/documents/{id}/cabecera`) no usa
+> este PUT. Toda escritura de la ficha va por una cola en serie en `app.js`
+> (`instalarColaEscrituras`): estos botones empiezan cuando la cola está vacía.
 
 ```
 1. PUT /api/documents/{id} { campos + lines + valuation_line_updates + approved? }
