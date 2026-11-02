@@ -210,3 +210,8 @@ en `progress/inventario_mutacion_F-039.md` (la pedía `test_f039_r2…`).
 **T23 · `bash harness/init.sh`** (`PYTHONPATH` a la comun del worktree y `ARNES_SIN_CACHE=1`, sobre `d789d5e`):
 `ENTORNO LISTO. Puedes trabajar.` La primera pasada dio KO en la raíz por `test_f039_r2…` (faltaba la fila de F-110 en
 el inventario de mutación); con la fila añadida, verde.
+
+## MANUALES del líder (2026-11-01, solo lectura) · detalle en `progress/manual_F-110.md` (este informe va a 218/220)
+- **§T1**: d > 0 en 132 líneas (48 docs), 0 inválidos ni > 2 dec; sin vincular 123 = 114 exactas + 2 a 1–2 cént. + 7; vinculadas las mismas 9 de FEYMACO, `ctrpro.dto` vacío leído en Sigrid. D1, D3 y D6 **sin cambios**.
+- **§T18**: v8.4 encaja con §4 en nombre, tipo, rango (0–100 con bordes ⊇ el nuestro), previa (`dto`/`precio_bruto` solo con descuento), precio sin redondear y vinculadas (nunca rechaza, avisos informativos); **no hay que PARAR**. Aviso 2: 0 líneas afectadas (41 `ctrpro` de las 111 vinculadas y 1577 de la caché, todos sin dto); se deja como está.
+- **§T20**: 16 altas `registrado` real con 37 líneas d > 0 en neto (FEYMACO 5, CECOIS 7, RONDÓN 4); falta la decisión del humano (D5).
