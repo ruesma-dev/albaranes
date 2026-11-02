@@ -5,6 +5,10 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-116 · Guardado automático de la ficha al salir de cada campo, sin bloquear (cerrada 2026-11-02)
+
+Solo sv4. Cabecera (fecha, número, forma de pago, notas) por un `PATCH /api/documents/{id}/cabecera` parcial; cada fila editable se guarda al salir de una celda con el PATCH de siempre sin `?bloquear=1` (recálculo de F-106, «✋», sin bloquear). Los botones Guardar / Guardar todas / Guardar y aprobar siguen bloqueando, ahora también las filas autoguardadas, y esperan a una Cola en serie que envuelve `fetch`. Fallos sin `alert`, aviso al salir con escrituras en curso, una entrada de deshacer por autoguardado. Review APPROVED (pasada 1, `progress/review_F-116.md`; O1–O3 sin bloqueo). M1 en Chrome (líder, `progress/impl_F-116.md` §8); desplegado el 2026-11-02, sv4 `r20261102-1328`; M2 en producción en solo lectura (líder). Pendiente menor: con la fecha en rojo el `title` sigue diciendo «Guardado automáticamente».
+
 ## F-108 · Fecha y número de albarán editables con calendario (cerrada 2026-11-01)
 
 Solo sv4. La fecha se ve `dd/mm/aaaa`, se guarda `AAAA-MM-DD` y admite varios formatos al escribirla; botón «Calendario»; fecha imposible ⇒ rojo, aviso y no se guarda; no se aprueba sin fecha ni número (R11). Review APPROVED (pasada 1, `progress/review_F-108.md`). M1 en Chrome (líder); desplegado el 2026-11-01, sv4 `r20261101-0929`; M2 en producción en solo lectura (líder); Edge y M3 confirmados por el humano. Petición nueva del humano al cerrar: que fecha y número se guarden solos, sin pulsar Guardar (feature aparte).
