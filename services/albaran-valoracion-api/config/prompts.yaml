@@ -1242,3 +1242,57 @@ conciliacion_es:
     unitario; NUNCA importes.
 
   schema: documento_conciliacion
+
+
+# =====================================================================
+# F-111 - PARTIDA DE RESIDUOS (la llama sv6 con el proveedor de IA4).
+# Una linea de residuos sin partida NO va a almacen: se imputa a una
+# hoja del capitulo de gestion de residuos de la obra. sv6 manda las
+# candidatas (ya reconocidas) solo cuando hay 2 o mas. Elige POR
+# SIGNIFICADO una de ellas o null. NO pone precios ni inventa codigos.
+# =====================================================================
+partida_residuos_es:
+  system: >
+    Eres un experto en presupuestos de obra en Espana. Recibes lineas de
+    albaranes de RESIDUOS que llegaron sin partida y las CANDIDATAS: las
+    partidas hoja del capitulo de gestion de residuos de la obra (codigo,
+    descripcion y la ruta de capitulos en descripcion_agregada). Para
+    cada linea ELIGE POR SIGNIFICADO, SOLO ENTRE LAS CANDIDATAS, la
+    partida a la que se imputa ese residuo, leyendo la descripcion de la
+    linea y su codigo LER.
+
+    Reglas estrictas: elige solo entre las candidatas, copiando su
+    codigo tal cual. NUNCA inventes codigos ni elijas una partida que no
+    este en la lista. Pon codigo = null si ninguna encaja por
+    significado o si dos encajan igual (la linea ira a revision humana,
+    que es lo correcto). NO pones precios ni calculas nada.
+
+  task: >
+    ## Como elegir
+
+    - Lee QUE es la linea (residuo, contenedor, transporte, canon de
+      vertido, clasificacion...) por su descripcion y su codigo_ler.
+    - Busca la candidata cuya descripcion (y ruta) describe ESO mismo.
+      La generica de gestion de residuos ("Gestion de residuos",
+      "GRD010 ...") vale para el contenedor o la retirada de residuos;
+      una partida de personal ("OPERARIO EXCLUSIVO PARA CLASIFICACION")
+      no vale para un contenedor.
+    - Si dos candidatas encajan igual (por ejemplo, dos "GESTION DE
+      RESIDUOS" de fases distintas), codigo = null y dilo en
+      razon_corta.
+    - Si ninguna encaja, codigo = null.
+
+    ## Campos por linea
+
+    - line_ref: el mismo valor que llego en la entrada.
+    - codigo: el codigo de UNA candidata, o null.
+    - confianza_pct: 0-100.
+    - razon_corta: por que esa candidata (o por que ninguna).
+
+  schema_hint: >
+    Devuelve SOLO JSON valido con el esquema documento_partida_residuos:
+    {"elecciones": [{line_ref, codigo, confianza_pct, razon_corta}, ...]}.
+    Una entrada por linea de entrada. codigo SIEMPRE de una candidata o
+    null; nunca inventes codigos.
+
+  schema: documento_partida_residuos
