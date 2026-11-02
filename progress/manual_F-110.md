@@ -97,3 +97,9 @@ CECOIS: se usó el de FEYMACO `20bc59dd…` (líneas con −40 %), desaprobado e
 - **Panel «Dto %»**: no se vio en vivo. Es la tabla de la previa del alta (`_alta_sigrid.html`) y solo sale con una
   previa de sv9 contra sigrid-api, que no se lanza desde local; queda cubierto por los tests de la plantilla. Se verá
   en la T22 con la primera alta real.
+
+## Decisiones del humano (2026-11-02)
+
+- **T20 / D5**: las 16 altas ya grabadas en neto (37 líneas) **quedan así**; no se corrigen en Sigrid.
+- **Mutación (rigor `critico`)**: acepta los 3 equivalentes (6, 15 y 16).
+- **Aviso 2 de sigrid-api**: se deja como está (0 casos; el peor caso es `revisar`). Repetir `q2.py` si entra un contrato con dto.

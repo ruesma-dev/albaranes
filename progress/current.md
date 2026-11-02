@@ -1,7 +1,7 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-110 · `in_progress` (implementer, 2026-11-01).** Rama `feature/F-110-descuento-linea-sigrid`, worktree `../albaranes-F-110`, con `dev` fusionado (`ee32a55`, 169 commits: F-106, F-108, F-113–F-116; comun 0.11.0). Tarea en curso y decisiones: `progress/impl_F-110.md`. Entorno: `PYTHONPATH=C:\Users\pgris\PycharmProjects\albaranes-F-110\services\albaranes-comun`, `ARNES_SIN_CACHE=1`; *junction* `.venv` de sv4 al árbol principal (quitarla con `cmd /c rmdir` antes de `git worktree remove`). `ALTA_SIGRID_ENVIAR_DTO` nace apagada.
+**F-110 · `blocked` (2026-11-02): review APPROVED (`progress/review_F-110.md`), T1/T17/T18/T20 hechas (`progress/manual_F-110.md`), equivalentes 6, 15 y 16 aceptados por el humano; altas en neto se quedan así. Espera T21 (humano): `.\deploy.ps1 -Only sv9,sv4` → `.\check_deploy.ps1` con la guarda apagada; después `ALTA_SIGRID_ENVIAR_DTO = "true"` en `infra/00_capps_vars.ps1` y `.\set_alta_sigrid.ps1`. Luego T22 (líder, solo lectura: primera alta real con dto).**
 
 - **Implementer, hecho (2026-11-01):** T0, T2–T16, T19, T23 (un commit por tarea; último `1b11ab4`). Mutación completa `progress/mutacion_F-110.md` (108 mutantes; 15 supervivientes cubiertos con tests nuevos, 3 equivalentes). init.sh verde. Pendientes MANUAL: T1, T17, T18 (incluye el aviso 2), T20, T21 (humano), T22. Siguiente paso: reviewer.
 
