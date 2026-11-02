@@ -42,6 +42,8 @@ expansión de abreviaturas). Si no casa, lo dice y la lectura se queda.
   siendo el cod; el completo es lo que ve el humano y una forma más de casar
   una lectura con su hoja (motivo ``completa``): :func:`misma_partida`,
   :func:`mostrar_partida` y :meth:`CachePartidasObra.consultar`.
+- (F-111) :func:`candidatas_residuos`: las hojas del capítulo de gestión de
+  residuos de la obra (reconoce, no elige: H1 sigue intacta).
 """
 from __future__ import annotations
 
@@ -715,6 +717,57 @@ def mostrar_partida(lista: ListaPartidasObra | None, cod: str | None) -> str | N
     if len(completos) == 1:
         return completos.pop()
     return cod
+
+
+# ------------------------------------------------------------------ #
+# F-111 · las hojas del capítulo de gestión de residuos
+# ------------------------------------------------------------------ #
+#: (F-111 R17, D10 = a) Un antecesor es el capítulo de residuos si su texto,
+#: sin tildes ni mayúsculas, tiene «GESTION» y una palabra que EMPIEZA por
+#: «RESIDUO» (no «RESIDUAL»). En las 17 obras medidas el 2026-10-29: «GESTIÓN
+#: RESIDUOS (SEGÚN EGRC)», «PLAN DE GESTIÓN DE RESIDUOS», «GESTIÓN DE LOS
+#: RESIDUOS EN OBRA/RSD-01».
+PATRON_CAPITULO_RESIDUOS = re.compile(r"(?=.*\bGESTION)(?=.*\bRESIDUO)")
+#: (F-111 R18) Las hojas de ajuste («Ajuste decimales»: 32.99, 23.03) no son
+#: candidatas.
+PREFIJO_AJUSTE = "AJUSTE"
+#: Separador de la ruta de ``descripcion_agregada`` (:func:`_hojas`).
+_SEPARADOR_RUTA = " › "
+
+
+def _sin_tildes(texto: str) -> str:
+    """Mayúsculas y sin tildes ni espacios exteriores, para reconocer textos."""
+    descompuesto = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in descompuesto if not unicodedata.combining(c)).upper().strip()
+
+
+def _antecesores(hoja: PartidaObra) -> list[str]:
+    """Los tramos de la ruta raíz→hoja SIN la propia hoja."""
+    tramos = (hoja.descripcion_agregada or "").split(_SEPARADOR_RUTA)
+    if hoja.descripcion and tramos and tramos[-1] == hoja.descripcion:
+        tramos = tramos[:-1]
+    return [t for t in tramos if t]
+
+
+def candidatas_residuos(lista: ListaPartidasObra | None) -> tuple[PartidaObra, ...]:
+    """(F-111 R17–R19) Las hojas que cuelgan del capítulo de gestión de residuos.
+
+    Una hoja es candidata si ALGÚN ANTECESOR (no ella) casa con
+    :data:`PATRON_CAPITULO_RESIDUOS`, leído de ``descripcion_agregada``, y su
+    descripción no empieza por :data:`PREFIJO_AJUSTE`. Reconocer no es elegir
+    (H1 de F-049): devuelve TODAS, en el orden de la lista; quien valora decide
+    con una sola, con la IA o mandando a revisión. Sin lista o sin hojas, tupla
+    vacía. No toca :func:`casar_partida` ni :func:`resolver_partida_obra`.
+    """
+    if lista is None:
+        return ()
+    candidatas: list[PartidaObra] = []
+    for hoja in lista.hojas:
+        if _sin_tildes(hoja.descripcion or "").startswith(PREFIJO_AJUSTE):
+            continue
+        if any(PATRON_CAPITULO_RESIDUOS.search(_sin_tildes(t)) for t in _antecesores(hoja)):
+            candidatas.append(hoja)
+    return tuple(candidatas)
 
 
 @dataclass

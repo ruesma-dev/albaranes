@@ -23,7 +23,7 @@ Resuelve la duplicación con deriva detectada en el análisis de código
 | `ruesma_comun.markdown` *(entrega 4)* | Conversión de contratos (PDF/Word) a **Markdown** con markitdown: `a_markdown`, `combinar_a_markdown` (conserva tablas de tarifas; degrada al texto de fallback) | — (capacidad nueva) |
 | `ruesma_comun.sigrid` *(0.7.0, F-052)* | Lectura de sigrid-api sin truncados silenciosos: `PoliticaTruncado`, `SigridRespuestaTruncada`, `comprobar_truncado`, `con_paginacion`, `leer_paginado`, `MAX_FILAS_POR_PETICION` (500.000) y `PAGINA_MAXIMA` (499.999). Sin HTTP ni SQL: la SQL de cada servicio es suya | el `truncated` que nadie miraba en sv3 y sv4 |
 | `ruesma_comun.obras` *(0.7.0, F-052)* | `normalizar_codigo_obra`: el código de obra canónico que se envía a Sigrid y se sella (semántica de sv3) | las 2 copias divergentes de sv3 y sv4 |
-| `ruesma_comun.sigrid.partidas` *(0.8.0, F-076; 0.9.0, F-098)* | Partidas HOJA de una obra (SQL de sv4 + `emp = 1`), `normalizar_partida` (`CI.04.18` ≡ `CI.4.18`), `casar_partida`, `resolver_partida_obra` (guarda de no hoja) y `CachePartidasObra` (TTL, LRU, fallo recordado). F-098: cada hoja con `ide`, capítulo (raíz de su cadena) y `codigo_completo` (`CD.99.01.64` para el cod `99.01.64` de CD), `ListaPartidasObra.capitulos`, motivo `completa`, `misma_partida`, `mostrar_partida` y `CachePartidasObra.consultar`. Subconjunto aprobado de F-049; excepción consciente a D2 de F-052 | la copia de la SQL y del cálculo de hojas de sv4 |
+| `ruesma_comun.sigrid.partidas` *(0.8.0, F-076; 0.9.0, F-098; 0.13.0, F-111)* | Partidas HOJA de una obra (SQL de sv4 + `emp = 1`), `normalizar_partida` (`CI.04.18` ≡ `CI.4.18`), `casar_partida`, `resolver_partida_obra` (guarda de no hoja) y `CachePartidasObra` (TTL, LRU, fallo recordado). F-098: cada hoja con `ide`, capítulo (raíz de su cadena) y `codigo_completo` (`CD.99.01.64` para el cod `99.01.64` de CD), `ListaPartidasObra.capitulos`, motivo `completa`, `misma_partida`, `mostrar_partida` y `CachePartidasObra.consultar`. F-111: `candidatas_residuos` (las hojas del capítulo de gestión de residuos; reconoce, no elige). Subconjunto aprobado de F-049; excepción consciente a D2 de F-052 | la copia de la SQL y del cálculo de hojas de sv4 |
 | `ruesma_comun.edicion_manual` *(0.10.0, F-106)* | Lo editado a mano en una fila (`EdicionManual`, `registrar_edicion`, `leer_edicion`, `aplicar_edicion`, `es_fila_manual`) y `recalcular_fila` (precio e importe tras una edición). Lo escribe sv4 y lo reaplica sv6 al revalorar | — |
 | `ruesma_comun.mime` *(0.9.1, F-113)* | MIME real por los bytes: `detectar_mime` (firma > declarado específico > extensión con tabla fija > `application/octet-stream`; JPEG, PNG, GIF, WebP, TIFF, HEIC/HEIF y PDF), `nombre_coherente` (extensión acorde al MIME real), `es_mime_generico`, `MIME_PDF`. Funciones puras, solo stdlib. `normalizar_adjuntos` de `ruesma_comun.llm` lo aplica a cada adjunto | el `contentType` de Graph tomado tal cual (`application/octet-stream` en fotos de WhatsApp) |
 
@@ -70,6 +70,12 @@ firma en lo que ya había. Se reconstruyen sv6 → sv9 → sv4, en ese orden.
 `canonizar_codigo_obra`; un lado del contrato vacío no descalifica, uno del
 albarán sí). Función pura nueva, sin cambios de firma en lo que ya había. La
 importan sv3 y sv4: se reconstruyen sv3 → sv4, en ese orden.
+
+**0.13.0** (F-111, 2026-11-02): `ruesma_comun.sigrid.candidatas_residuos` (las
+hojas con algún antecesor «GESTIÓN … RESIDUO…», sin las de ajuste; devuelve
+todas, en el orden de la lista: reconoce, no elige) y sus constantes
+`PATRON_CAPITULO_RESIDUOS` y `PREFIJO_AJUSTE`. Función pura nueva, sin cambios
+de firma en lo que ya había. La importa sv6: se reconstruyen sv5 → sv6.
 
 ## Instalación en local (PyCharm)
 

@@ -257,9 +257,11 @@ def test_f110_r1_unica_definicion_en_comun():
 def test_f110_t3_version_0120():
     import ruesma_comun
 
-    assert ruesma_comun.__version__ == "0.12.0"
+    # F-111 sube a 0.13.0 (su test exige la exacta): desde 0.12.0, nunca menos,
+    # como hizo F-110 con el de F-115. Paquete y pyproject, iguales.
+    assert tuple(int(x) for x in ruesma_comun.__version__.split(".")) >= (0, 12, 0)
     pyproject = (Path(ruesma_comun.__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
-    assert 'version = "0.12.0"' in pyproject
+    assert f'version = "{ruesma_comun.__version__}"' in pyproject
 
 
 # ------------------------------------------------- T16 · supervivientes
