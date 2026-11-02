@@ -1345,6 +1345,9 @@ class ValuationBuilder:
         # Residuos sin nº de contenedores calculable → revisión manual.
         if residuos_calc is not None and residuos_calc.num_contenedores is None:
             review_required = True
+        # (F-111 R9) El tamaño elegido no es el de la línea casada.
+        if residuos_calc is not None and residuos_calc.revision:
+            review_required = True
         # (jul 2026) Volumen implausible (posibles Tn coladas en el
         # campo de volumen): el número se calcula igual, pero la
         # línea SIEMPRE va a revisión con la sospecha en reasons.

@@ -359,3 +359,43 @@ def test_f111_r11_builder_una_linea_que_no_es_de_residuos_no_cuenta_contenedores
     # Sin regla de residuos: la cantidad es la del albarán (8 m³), no 1.
     assert base.cantidad_albaran == 8.0
     assert not any(r.startswith("residuos_") for r in base.review_reasons)
+
+
+def _valorar_sin_choque_de_unidad(escenario):
+    """El escenario con la línea ya en unidades (UD): solo R9 puede mandarla a
+    revisión, así se ve el efecto de ``ResultadoContenedores.revision``."""
+    from tests.f027_escenarios import construir_builder
+    from tests.f036_escenarios_residuos import construir_envelope
+
+    env = construir_envelope(escenario)
+    linea = env.data.lineas[0]
+    linea.unidad_category_match = True
+    linea.unidad_categoria_albaran = "count"
+    ctx = env.context.lineas_albaran[0]
+    ctx.unidad_medida = "UD"
+    ctx.unidad_categoria = "count"
+    return construir_builder().build(envelope=env, existing_document_already_valued=False)
+
+
+def test_f111_r9_builder_la_revision_del_tamano_marca_la_linea_y_la_cabecera():
+    from tests.f036_escenarios_residuos import base_de, linea_contrato
+
+    c6 = linea_contrato(7101, "CONTENEDOR RCD 6 M3", 120.0)
+    c8 = linea_contrato(7102, "CONTENEDOR RCD 8 M3", 150.0)
+    cab, regs = _valorar_sin_choque_de_unidad(
+        _escenario_builder(m3=7.0, contrato=[c6, c8], matched_id=7101, precio=120.0)
+    )
+    base = base_de(regs)
+    assert base.review_required is True
+    assert cab.review_required is True
+
+
+def test_f111_r9_builder_sin_distinto_de_casada_no_hay_revision():
+    from tests.f036_escenarios_residuos import base_de, linea_contrato
+
+    c6 = linea_contrato(7101, "CONTENEDOR RCD 6 M3", 120.0)
+    c8 = linea_contrato(7102, "CONTENEDOR RCD 8 M3", 150.0)
+    _cab, regs = _valorar_sin_choque_de_unidad(
+        _escenario_builder(m3=8.0, contrato=[c6, c8], matched_id=7102, precio=150.0)
+    )
+    assert base_de(regs).review_required is False
