@@ -4351,6 +4351,7 @@
             almacen: "Almacén",
             producto: "Producto",
             dividir: "Dividir",
+            cabecera: "Cabecera",  // F-116 R28: el autoguardado de la cabecera
         })[a] || "Cambio";
     }
 
@@ -4411,6 +4412,9 @@
         });
         panel.addEventListener("click", function (ev) { ev.stopPropagation(); });
     }
+    // F-116 R28: cada autoguardado que va bien es una entrada más del
+    // historial; el widget se refresca sin recargar la ficha.
+    document.addEventListener("autoguardado", refrescar);
     refrescar();
 })();
 
