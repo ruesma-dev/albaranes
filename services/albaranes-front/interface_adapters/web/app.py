@@ -31,6 +31,7 @@ from domain.models.alta_sigrid_models import (
 from domain.models.contrato_refetch_models import ContratoRefetchOutcome
 from domain.models.review_models import (
     AlbaranAprobadoError,
+    CabeceraEditBody,
     CabeceraIncompletaError,
     ConciliacionEditBody,
     ConciliacionOverridePayload,
@@ -1533,6 +1534,21 @@ def build_app(settings: Settings) -> FastAPI:
             "selected_at_utc": now_utc,
             "message": message,
         }
+
+    # F-116 R1–R6 (D1 = a): autoguardado de la cabecera al salir de un campo.
+    # Solo los campos que vienen; el PUT entero pisaría lo que sv3 escribió
+    # después de abrir la ficha (contrato auto-seleccionado, dirección).
+    # Fecha/número no admitidos ⇒ 422 texto; aprobado o alta ⇒ 409; no existe
+    # ⇒ 404: los manejan los ``exception_handler`` de abajo.
+    @app.patch("/api/documents/{document_id}/cabecera")
+    def editar_cabecera_api(
+        document_id: str,
+        payload: CabeceraEditBody = Body(...),
+    ) -> dict:
+        guardado = review_service.editar_cabecera(
+            document_id=document_id, campos=payload.campos(),
+        )
+        return {"ok": True, "document_id": document_id, "cabecera": guardado}
 
     @app.patch(
         "/api/documents/{document_id}/lines/{valuation_line_id}/conciliacion"

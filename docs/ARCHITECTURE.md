@@ -558,6 +558,21 @@ anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
       la libera; las dos acciones tienen «Deshacer». Aprobar no exige filas
       bloqueadas. Revalorar las conserva tal como estaban, bloqueo incluido
       (F-106 fase B, más abajo; absorbe F-058).
+    - **Guardar y bloquear son independientes** (F-116, nov 2026): la ficha
+      editable guarda sola, sin botón y sin recargar, al salir de CADA celda
+      de una fila (el mismo PATCH de fila sin `?bloquear=1`: aplica con el
+      recálculo de F-106, registra su edición y su «Deshacer», NO bloquea, y
+      revalorar la conserva como cualquier fila editada) y al salir de cada
+      campo de cabecera escrito a mano (fecha, número, forma de pago y notas:
+      `PATCH /api/documents/{id}/cabecera`, solo ese campo, nunca el PUT
+      entero, que pisaría lo que sv3 escribió después de abrir la ficha).
+      Bloquear sigue siendo solo de los botones: «Guardar» de la fila,
+      «Guardar todas», «Guardar» y «Guardar y aprobar», que bloquean las filas
+      con cambios pendientes MÁS las autoguardadas en esa carga. Toda
+      escritura de la ficha pasa por una cola en serie (`fetch` envuelto en
+      `app.js`): los botones esperan a los autoguardados en curso, y salir de
+      la página con escrituras sin terminar pide confirmación. Los fallos del
+      autoguardado se marcan en el campo o la fila, sin `alert`.
     - **«Guardar» y «Guardar y aprobar» guardan antes las filas** (F-077,
       sustituye al aviso «Hay N líneas con cambios sin guardar» de F-065 R19):
       el PATCH de cada fila con cambios, en orden y con la misma validación de

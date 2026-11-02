@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **113 features**, 77 abiertas (0 en curso, 8 con la spec lista, 10 bloqueadas y 59 en backlog) y 36 terminadas.
+Resumen: **113 features**, 77 abiertas (0 en curso, 7 con la spec lista, 12 bloqueadas y 58 en backlog) y 36 terminadas.
 
 ## En curso
 
@@ -13,7 +13,6 @@ _Ninguna feature en curso._
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-110 | El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS) | 2 | critico | `feature/F-110-descuento-linea-sigrid` |
 | F-111 | Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén | 2 | critico | `feature/F-111-residuos-contenedores-y-partida` |
 | F-112 | Año del albarán mal leído: la IA lee la fecha con la del correo como referencia | 2 | estandar | `feature/F-112-anio-fecha-albaran` |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 43 | critico |  |
@@ -26,6 +25,8 @@ _Ninguna feature en curso._
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
+| F-116 | Guardado automático de la ficha al salir de cada campo, sin bloquear la línea | 1 | estandar | `feature/F-116-guardado-automatico-ficha` |
+| F-110 | El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS) | 2 | critico | `feature/F-110-descuento-linea-sigrid` |
 | F-104 | sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos | 3 | critico | `feature/F-104-codigos-contrato-v83` |
 | F-098 | Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64» | 5 | critico | `feature/F-098-partidas-por-capitulo` |
 | F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 6 | critico | `feature/F-086-opus-ia3` |
@@ -41,7 +42,6 @@ _Ninguna feature en curso._
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-116 | Guardado automático de la ficha al salir de cada campo, sin bloquear la línea | 1 | estandar | `feature/F-116-guardado-automatico-ficha` |
 | F-095 | Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto | 8 | critico |  |
 | F-105 | Traer a IA3 todos los documentos de contrato (PDF y anexos) de cada contrato, no solo el de gra_rep_ide | 9 | critico |  |
 | F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 10 | critico |  |
@@ -146,13 +146,13 @@ _Ninguna feature en curso._
 
 ### F-116 · Guardado automático de la ficha al salir de cada campo, sin bloquear la línea
 
-estado **pendiente** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-116-guardado-automatico-ficha`
+estado **bloqueada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-116-guardado-automatico-ficha`
 
 ORIGEN: el humano, 2026-11-01, al cerrar F-108: «al escribir la fecha sea de la forma que sea, deberia guardarse solo sin darle a guardar, igual con numero de albaran»; después lo amplía: «en general, quiero que todos los campos se guarden automaticamente», y precisa: «no quites guardar. ese boton ademas bloquea la linea. lo que quiero simplemente es que al salir de cada celda guarde lo escrito, pero no que bloquee. son 2 comportamientos independientes. los botones de guardar y guardar todos siguen igual». ALCANCE (solo sv4): (1) cabecera editable (fecha, número de albarán, forma de pago, notas de revisión y cualquier otro campo de texto de la cabecera que hoy solo se guarde con «Guardar»): al salir del campo, si el valor es válido y ha cambiado, se guarda solo, sin recargar la página, con una marca discreta de guardado; endpoint propio si hace falta (no tiene por qué ser el mismo que el de las líneas). Fecha no válida: no se guarda, rojo y aviso (F-108). (2) líneas: al salir de CADA celda editada se guarda lo escrito (con el recálculo de F-106), SIN bloquear la línea: el bloqueo es otro comportamiento, independiente, que sigue haciéndose solo con los botones. Partida fuera de la lista: no se guarda, rojo (como hoy). (3) Sin cambios: botones «Guardar» de cada fila, «Guardar todas» y «Guardar» general siguen igual (y siguen bloqueando lo que bloquean hoy); proveedor, obra y contrato ya se guardan solos. «Guardar y aprobar» espera a los guardados en curso. A RESOLVER EN LA SPEC: qué es exactamente «bloquear» hoy (`?bloquear=1` de `conciliacion/campos`, marca «✋» y `edicion_manual_json` de F-106) y si un guardado sin bloqueo conserva o no la edición al revalorar; qué campos de cabecera existen y cuáles ya se guardan solos; carreras entre guardado automático, botones y aprobar; «Deshacer» con el guardado automático. FUERA: dos pestañas editando el mismo albarán; el listado.
 
 ### F-110 · El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS)
 
-estado **spec lista** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-110-descuento-linea-sigrid`
+estado **bloqueada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-110-descuento-linea-sigrid`
 
 ORIGEN: el humano, 2026-10-28 («si a F-110»): en las líneas con descuento (albaranes de CECOIS) Sigrid recibe el unitario con el descuento ya aplicado. DEBE recibir lo mismo que la línea de la plataforma: precio unitario SIN descuento, el % de descuento como campo de Sigrid (`dcapro.dto`), la cantidad y el importe con el descuento aplicado. CAUSA (leída por el líder): sv9 calcula `precio = round(abs(importe)/cantidad, 6)` (`validador_alta.py`, `_linea_peticion`) y el alta de sigrid-api (`sigrid/albaran` extendido) no admite descuento por línea (solo `cantidad` y `precio`). QUÉ SE PIDE: (1) sigrid-api acepta `dto?` por línea y lo escribe en `dcapro.dto` con `pre` bruto (cambio SUYO: albaranes no edita sigrid-api; petición enviada a su sesión el 2026-10-28 con el sí del humano); (2) sv9 manda `precio` = precio unitario final sin descuento, `dto` = % de la línea y comprueba cantidad × precio × (1 − dto/100) = importe (tolerancia como F-106 D5); (3) sv4 y el panel del alta muestran lo enviado. DEPENDE de F-106 (misma función de sv9 y misma regla de edición: cantidad/precio/dto mueven el importe) y del contrato nuevo de sigrid-api; azure-apps (albaranes y el consumo de sigrid-api) al día.
 

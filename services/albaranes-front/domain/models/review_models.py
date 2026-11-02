@@ -1420,6 +1420,29 @@ def aviso_reparto(numero_linea: int, suma: float | None, leida: float | None) ->
     )
 
 
+class CabeceraEditBody(BaseModel):
+    """(F-116 R1, R5) Cuerpo del PATCH de autoguardado de la cabecera.
+
+    Solo los cuatro campos que se escriben a mano en la ficha; cualquier otro
+    es un 422 (``extra="forbid"``). Un campo AUSENTE no cambia; uno presente a
+    ``null`` (o vacío) se vacía. Sin validador de fecha (daría un 422 en
+    lista, F-108 §6): la valida y normaliza el repositorio.
+
+    A nivel de módulo, como :class:`ConciliacionEditBody` (ForwardRef)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    fecha: str | None = None
+    numero_albaran: str | None = None
+    forma_pago: str | None = None
+    review_notes: str | None = None
+
+    def campos(self) -> dict[str, str | None]:
+        """Los campos que vinieron en el cuerpo, con su valor tal cual
+        (``None`` = vaciar)."""
+        return {nombre: getattr(self, nombre) for nombre in sorted(self.model_fields_set)}
+
+
 class ConciliacionEditBody(BaseModel):
     """(R8) Cuerpo del PATCH de edición de una fila.
 

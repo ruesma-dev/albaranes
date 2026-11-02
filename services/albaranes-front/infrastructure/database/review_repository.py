@@ -4570,6 +4570,52 @@ class AlbaranReviewRepository:
             detail = detail.model_copy(update={"contrato_retirado": contrato_retirado})
         return detail, paso_a_aprobado
 
+    #: (F-116 R1) Los campos de cabecera que se escriben a mano y se autoguardan.
+    CAMPOS_CABECERA_AUTOGUARDADO = ("fecha", "numero_albaran", "forma_pago", "review_notes")
+
+    def update_cabecera_campos(
+        self, *, document_id: str, campos: dict[str, str | None],
+    ) -> dict[str, str | None]:
+        """(F-116 R1–R4) Autoguardado de la cabecera: escribe SOLO las claves de
+        ``campos`` (ausente = no cambia; ``None`` o vacío = vaciar) y sella
+        ``last_modified_at_utc`` y ``reviewed_at_utc``, como el PUT.
+
+        A diferencia de :meth:`update_document_y_transicion` (que reescribe la
+        cabecera entera con lo que manda el navegador), no toca proveedor, CIF,
+        obra, contrato, aprobación ni motivos, ni relanza nada (R2): sv3 puede
+        haberlos escrito después de abrir la ficha (design §1.4).
+
+        Lo no admitido (fecha, número de más de 128) lanza su error de F-108
+        ANTES de asignar nada (R3); un aprobado o un alta bloqueante, el suyo
+        (R4); un documento que no existe, ``KeyError``. Devuelve los valores
+        guardados de esas claves. Sin campos, no abre sesión y devuelve ``{}``."""
+        desconocidos = set(campos) - set(self.CAMPOS_CABECERA_AUTOGUARDADO)
+        if desconocidos:
+            raise ValueError(f"Campos de cabecera no admitidos: {sorted(desconocidos)}")
+        if not campos:
+            return {}
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            self._exigir_editable(session, document_id)
+            document = session.get(AlbaranDocumentMergeOrm, document_id)
+            if document is None:
+                raise KeyError(f"Documento no encontrado: {document_id}")
+            guardado: dict[str, str | None] = {}
+            for campo, valor in campos.items():
+                if campo == "fecha":
+                    guardado[campo] = normalizar_fecha_albaran(valor)
+                elif campo == "numero_albaran":
+                    guardado[campo] = normalizar_numero_albaran(valor)
+                else:
+                    guardado[campo] = self._clean_text(valor)
+            for campo, valor in guardado.items():
+                setattr(document, campo, valor)
+            ahora = self._utc_iso()
+            document.last_modified_at_utc = ahora
+            document.reviewed_at_utc = ahora
+            session.commit()
+        return guardado
+
     @staticmethod
     def _es_del_albaran_in_session(
         session: Any,

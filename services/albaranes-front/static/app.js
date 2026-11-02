@@ -92,6 +92,67 @@
     const refetchStatus = document.getElementById("refetch-status");
 
     // --------------------------------------------------------------- //
+    // F-116 R24, R27 (D3 = a) · la Cola de escritura de la ficha: TODA
+    // petición que escribe (PUT, POST, PATCH, DELETE) espera a que termine
+    // la anterior y sale en el orden en que se pidió; los GET no esperan.
+    // Así el autoguardado (al salir de un campo) y los botones no se pisan:
+    // el ``blur`` encola su PATCH antes de que corra el ``click`` que lo
+    // provocó (R25). Se instala envolviendo ``fetch`` (``globalThis`` es
+    // ``window`` en el navegador): entran sin tocarlas todas las vías de la
+    // ficha y el deshacer global. Solo en la ficha editable.
+    // --------------------------------------------------------------- //
+    function _estadoCola() {
+        if (!globalThis.__colaEscrituras) {
+            globalThis.__colaEscrituras = { cola: Promise.resolve(), pendientes: 0, red: null };
+        }
+        return globalThis.__colaEscrituras;
+    }
+
+    // El ``fetch`` de verdad (sin la Cola): lo usan las tareas de la Cola,
+    // que si llamaran al envuelto se esperarían a sí mismas.
+    function fetchRed(url, init) {
+        const red = _estadoCola().red;
+        return red ? red(url, init) : fetch(url, init);
+    }
+
+    // Pone ``tarea`` (función que devuelve un valor o una promesa) al final
+    // de la Cola y devuelve su resultado. Un fallo no rompe la cadena.
+    function encolar(tarea) {
+        const estado = _estadoCola();
+        estado.pendientes += 1;
+        const resultado = estado.cola.then(function () { return tarea(); });
+        const hecho = function () { estado.pendientes -= 1; };
+        estado.cola = resultado.then(hecho, hecho);
+        return resultado;
+    }
+
+    function hayEscriturasEnCurso() {
+        return _estadoCola().pendientes > 0;
+    }
+
+    function instalarColaEscrituras() {
+        const estado = _estadoCola();
+        if (estado.red) { return; }
+        const red = globalThis.fetch.bind(globalThis);
+        estado.red = red;
+        globalThis.fetch = function (url, init) {
+            const metodo = String((init && init.method) || "GET").toUpperCase();
+            if (metodo === "GET" || metodo === "HEAD") { return red(url, init); }
+            return encolar(function () { return red(url, init); });
+        };
+        // R27 (D6 = a): salir o recargar con escrituras sin terminar pide la
+        // confirmación nativa del navegador.
+        window.addEventListener("beforeunload", function (ev) {
+            if (!hayEscriturasEnCurso()) { return; }
+            ev.preventDefault();
+            ev.returnValue = "";
+        });
+    }
+
+    // R12: solo la ficha editable trae ``#autoguardado-estado``.
+    if (document.getElementById("autoguardado-estado")) { instalarColaEscrituras(); }
+
+    // --------------------------------------------------------------- //
     // Renumerar la columna '#' tras añadir/eliminar filas.
     // --------------------------------------------------------------- //
     function reindexRows() {
@@ -1251,13 +1312,19 @@
 
     // F-077 R12: el PATCH de fila (F-065 R8, R13: solo lo cambiado, y guardar
     // = bloquear). Única petición de este tipo en el fichero: la usan el
-    // «Guardar» de cada fila, «Guardar todas» y el guardado previo de
-    // «Guardar» / «Guardar y aprobar». ``null`` si fue bien; si no, el motivo.
-    async function enviarFila(vid, cuerpo) {
+    // «Guardar» de cada fila, «Guardar todas», el guardado previo de
+    // «Guardar» / «Guardar y aprobar» y (F-116 R13) el autoguardado de la
+    // fila, este con ``{bloquear: false, red: fetchRed}`` (sin bloquear y por
+    // la red de verdad: corre dentro de la Cola). ``null`` si fue bien; si
+    // no, el motivo.
+    async function enviarFila(vid, cuerpo, opciones) {
+        const o = opciones || {};
+        const bloquear = o.bloquear !== false;
+        const red = o.red || fetch;
         let resp;
         try {
-            resp = await fetch(
-                `/api/documents/${documentId}/lines/${vid}/conciliacion/campos?bloquear=1`,
+            resp = await red(
+                `/api/documents/${documentId}/lines/${vid}/conciliacion/campos` + (bloquear ? "?bloquear=1" : ""),
                 {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
@@ -1281,6 +1348,88 @@
         });
         const boton = tr.querySelector(".js-cedit-save");
         if (boton) { boton.disabled = true; }
+    }
+
+    // F-116 R16: los valores de las celdas de la fila (``field`` ⇒ ``value``).
+    function valoresDeFila(tr) {
+        const valores = {};
+        tr.querySelectorAll(".js-cedit").forEach(function (inp) {
+            valores[inp.dataset.field] = inp.value;
+        });
+        return valores;
+    }
+
+    // F-116 R16: una fila autoguardada (SIN bloquear): lo enviado pasa a ser
+    // su valor inicial (lo tecleado después sigue con cambios); a diferencia de
+    // ``consolidarFila``, nada se desactiva.
+    function consolidarSinBloquear(tr, enviado) {
+        tr.querySelectorAll(".js-cedit").forEach(function (inp) {
+            const field = inp.dataset.field;
+            if (field in enviado) { inp.defaultValue = enviado[field]; }
+            if (inp.value === inp.defaultValue) { inp.classList.remove("cedit-dirty"); }
+        });
+        tr.classList.remove("fila-no-guardada");
+    }
+
+    // F-116 R16: el número de la fila en la tabla (1, 2…), para los avisos.
+    function numeroDeLinea(tr) {
+        return [].slice.call(linesBody.querySelectorAll("tr.conciliacion-row")).indexOf(tr) + 1;
+    }
+
+    // F-116 R13–R17, R26: autoguardado de una fila al salir de una celda.
+    // Entra en la Cola en el mismo tick del ``blur`` (R25); cuando le toca,
+    // espera la lista de partidas y valida, lee y arma el cuerpo sin nada
+    // entre medias (R14, CR4 de F-065). Partida fuera de la lista ⇒ nada de
+    // la fila, en rojo, sin ``alert`` (R15, D5 = a). Bien ⇒ consolidada SIN
+    // bloquear y marcada (R16); mal ⇒ en rojo con el motivo (R17), sin
+    // reintentar sola (R26).
+    function autoguardarFila(tr) {
+        const vid = (tr.dataset.forValuationLineId || "").trim();
+        if (!vid || !document.getElementById("autoguardado-estado")) { return null; }
+        return encolar(async function () {
+            const lista = await cargarPartidasObra();
+            if (partidasMalas([tr], lista.items).length) { return false; }
+            const enviado = valoresDeFila(tr);
+            const cuerpo = _camposCambiados(tr, lista.items);
+            if (!Object.keys(cuerpo).length) { return null; }
+            const motivo = await enviarFila(vid, cuerpo, { bloquear: false, red: fetchRed });
+            const n = numeroDeLinea(tr);
+            if (motivo !== null) {
+                marcarFilaNoGuardada(tr, motivo);
+                avisarAutoguardado("No se pudo guardar la línea " + n + ": " + motivo);
+                return false;
+            }
+            consolidarSinBloquear(tr, enviado);
+            tr.classList.add("fila-autoguardada");
+            tr.title = "Guardada automáticamente, sin bloquear";
+            tr.dataset.autoguardada = "1";
+            avisarAutoguardado("Línea " + n + " guardada");
+            document.dispatchEvent(new Event("autoguardado"));
+            return true;
+        });
+    }
+
+    // F-116 R13: al salir de CADA celda editable. Enganchado después de
+    // ``wirePartidaCombos`` (su ``blur`` devuelve antes la partida no válida)
+    // y de ``wireConciliaEdit``. Sin ``#autoguardado-estado``, nada (R12).
+    function wireAutoguardadoFilas() {
+        if (!document.getElementById("autoguardado-estado")) { return; }
+        linesBody.querySelectorAll("tr.concilia-editable").forEach(function (tr) {
+            tr.querySelectorAll(".js-cedit").forEach(function (inp) {
+                inp.addEventListener("blur", function () { autoguardarFila(tr); });
+            });
+        });
+    }
+
+    // F-116 R22 (D2 = a): lo que mandan con ``?bloquear=1`` «Guardar todas»,
+    // «Guardar» y «Guardar y aprobar»: las de ``conCambios`` (las de
+    // ``filasConCambios``) y las autoguardadas en esta carga, en el orden de
+    // la tabla. Las bloqueadas no son ``tr.concilia-editable``.
+    function filasParaGuardar(filas, conCambios) {
+        return filas.filter(function (tr) {
+            const vid = (tr.dataset.forValuationLineId || "").trim();
+            return conCambios.indexOf(tr) !== -1 || (vid && tr.dataset.autoguardada === "1");
+        });
     }
 
     // F-065 R29: aviso de la confirmación de «Dividir» (recarga la ficha y se
@@ -1594,6 +1743,9 @@
                 // sin nada entre medias: lo validado es lo enviado. R27 v5:
                 // con una partida fuera de la lista, nada (en rojo).
                 saveBtn.disabled = true;
+                // F-116 R21, R23: antes, los autoguardados en curso (el ``blur``
+                // de la celda ya encoló el suyo, R25); luego, lo pendiente.
+                await encolar(function () { return null; });
                 const lista = await cargarPartidasObra();
                 if (partidasMalas([tr], lista.items).length) {
                     saveBtn.disabled = false;
@@ -1618,6 +1770,7 @@
     // concepto es texto (reapuntar es solo «Origen ✎»).
     wirePartidaCombos();
     wireConciliaEdit();
+    wireAutoguardadoFilas();
     wireCuadrar();
     wireVolverACalculado();
 
@@ -1877,17 +2030,24 @@
     const saveAllLinesBtn = document.getElementById("save-all-lines-btn");
     if (saveAllLinesBtn) {
         saveAllLinesBtn.addEventListener("click", async function () {
+            // F-116 R22 (D2 = a): las de cambios pendientes y las
+            // autoguardadas en esta carga (estas, con ``{}``: solo bloquear).
             function conCambios() {
-                return filasConCambios([].slice.call(linesBody.querySelectorAll("tr.concilia-editable")));
+                const filas = [].slice.call(linesBody.querySelectorAll("tr.concilia-editable"));
+                return filasParaGuardar(filas, filasConCambios(filas));
             }
+            // F-116 R23: desactivado ya y, antes de elegir filas, esperar a
+            // los autoguardados en curso (si no, se reenviaría lo suyo).
+            saveAllLinesBtn.disabled = true;
+            await encolar(function () { return null; });
             if (!conCambios().length) {
                 window.alert("No hay cambios en las líneas.");
+                saveAllLinesBtn.disabled = false;
                 return;
             }
-            // CR4: desactivado ya; tras esperar la lista, filas, validación y
-            // cuerpos en el mismo tick (lo validado es lo enviado). R27 v5:
-            // con alguna partida fuera de la lista no se guarda NADA.
-            saveAllLinesBtn.disabled = true;
+            // CR4: tras esperar la lista, filas, validación y cuerpos en el
+            // mismo tick (lo validado es lo enviado). R27 v5: con alguna
+            // partida fuera de la lista no se guarda NADA.
             const lista = await cargarPartidasObra();
             const filas = conCambios();
             if (partidasMalas(filas, lista.items).length) {
@@ -2778,6 +2938,121 @@
 
     wireFechaAlbaran();
 
+    // --------------------------------------------------------------- //
+    // F-116 R7–R12, R26 · autoguardado de la cabecera: al salir de fecha,
+    // número, forma de pago o notas con un valor admitido distinto de lo
+    // guardado, se encola el PATCH de ese campo solo, sin recargar. Fallos
+    // sin ``alert`` (D8 = a): marca en el campo y ``#autoguardado-estado``.
+    // --------------------------------------------------------------- //
+    function avisarAutoguardado(texto) {
+        const estado = document.getElementById("autoguardado-estado");
+        if (estado) { estado.textContent = texto; }
+    }
+
+    // La etiqueta del campo para los avisos (la de la ficha).
+    function etiquetaCampoCabecera(id) {
+        return ({
+            fecha: "Fecha",
+            numero_albaran: "Número albarán",
+            forma_pago: "Forma de pago",
+            review_notes: "Notas de revisión",
+        })[id] || id;
+    }
+
+    // R7: lo que viajaría: la fecha en ``AAAA-MM-DD`` (no admitida ⇒ ``ok``
+    // falso; vacía ⇒ null) y los textos recortados (vacío ⇒ null).
+    function valorCabeceraParaGuardar(campo) {
+        if (campo.id === "fecha") {
+            const iso = parseFechaEs(campo.value);
+            if (iso === null) { return { ok: false, valor: null }; }
+            return { ok: true, valor: iso || null };
+        }
+        const texto = String(campo.value || "").trim();
+        return { ok: true, valor: texto || null };
+    }
+
+    // Lo guardado (``data-guardado``), normalizado como lo que viajaría (una
+    // fecha vieja ``dd/mm/aaaa`` cuenta como su ISO).
+    function valorGuardadoCabecera(campo) {
+        const guardado = String(campo.dataset.guardado || "").trim();
+        if (campo.id === "fecha") { return parseFechaEs(guardado) || guardado || null; }
+        return guardado || null;
+    }
+
+    // R7, R10, R11, R26. Se compara con lo último ENCOLADO si lo hay (si no,
+    // con lo guardado): cambiar y volver a lo de antes con el primero aún en
+    // la Cola también viaja. Un fallo no se reintenta solo: el siguiente
+    // ``blur`` con cambios (o los botones) lo hace.
+    function autoguardarCampoCabecera(campo) {
+        if (!campo || !document.getElementById("autoguardado-estado")) { return null; }
+        const v = valorCabeceraParaGuardar(campo);
+        if (!v.ok) { return null; }  // R9: la marca de F-108 ya la puso su ``blur``
+        const referencia = campo._enCola !== undefined ? campo._enCola : valorGuardadoCabecera(campo);
+        if (v.valor === referencia) { return null; }
+        const cuerpo = {};
+        cuerpo[campo.id] = v.valor;
+        const turno = {};
+        campo._enCola = v.valor;
+        campo._turnoCola = turno;
+        const etiqueta = etiquetaCampoCabecera(campo.id);
+        return encolar(async function () {
+            let motivo = null;
+            let guardado = v.valor;
+            try {
+                const resp = await fetchRed(`/api/documents/${documentId}/cabecera`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(cuerpo),
+                });
+                if (!resp.ok) {
+                    motivo = await motivoDeRespuesta(resp);
+                } else {
+                    try {
+                        const b = await resp.json();
+                        if (b && b.cabecera && campo.id in b.cabecera) { guardado = b.cabecera[campo.id]; }
+                    } catch (_) {}
+                }
+            } catch (_) {
+                motivo = "error de red";
+            }
+            if (campo._turnoCola === turno) { campo._enCola = undefined; }
+            if (motivo !== null) {
+                campo.classList.remove("campo-guardado");
+                campo.classList.add("campo-no-guardado");
+                campo.title = motivo;
+                avisarAutoguardado("No se pudo guardar " + etiqueta.toLowerCase() + ": " + motivo);
+                return false;
+            }
+            campo.dataset.guardado = guardado === null ? "" : guardado;
+            campo.classList.remove("campo-no-guardado");
+            campo.classList.add("campo-guardado");
+            campo.title = "Guardado automáticamente";
+            avisarAutoguardado(etiqueta + " guardado");
+            document.dispatchEvent(new Event("autoguardado"));
+            return true;
+        });
+    }
+
+    // R7, R8, R12: ``blur`` de los cuatro campos y ``change`` del calendario,
+    // enganchados DESPUÉS de ``wireFechaAlbaran`` (su ``blur`` ya reescribió o
+    // marcó la fecha). Al volver a teclear se quita la marca de guardado.
+    function wireAutoguardadoCabecera() {
+        if (!document.getElementById("autoguardado-estado")) { return; }
+        ["fecha", "numero_albaran", "forma_pago", "review_notes"].forEach(function (id) {
+            const campo = document.getElementById(id);
+            if (!campo) { return; }
+            campo.addEventListener("blur", function () { autoguardarCampoCabecera(campo); });
+            campo.addEventListener("input", function () { campo.classList.remove("campo-guardado"); });
+        });
+        const cal = document.getElementById("fecha_calendario");
+        const fecha = document.getElementById("fecha");
+        if (cal && fecha) {
+            cal.addEventListener("change", function () { autoguardarCampoCabecera(fecha); });
+        }
+    }
+
+    wireAutoguardadoCabecera();
+
     function collectSelectedContratoCodigo() {
         const el = document.getElementById("selected_contrato_codigo");
         if (!el) return null;
@@ -2855,9 +3130,16 @@
     // (F-065 R27 v5) y arma los cuerpos: lo validado es lo enviado (CR4). Al
     // primer fallo para; cada fila guardada se consolida. Devuelve
     // ``{malas, guardadas, motivo}``.
+    //
+    // F-116 R22, R23: primero espera a que la Cola se vacíe (los autoguardados
+    // en curso; si no, se reenviaría lo que van a mandar) y manda, además de
+    // las filas con cambios, las autoguardadas sin bloquear (con lo pendiente,
+    // ``{}`` si nada). Una que se bloquea deja de contar como autoguardada.
     async function guardarFilasPendientes() {
+        await encolar(function () { return null; });
         const lista = await cargarPartidasObra();
-        const filas = filasConCambios([].slice.call(linesBody.querySelectorAll("tr.concilia-editable")));
+        const todas = [].slice.call(linesBody.querySelectorAll("tr.concilia-editable"));
+        const filas = filasParaGuardar(todas, filasConCambios(todas));
         if (partidasMalas(filas, lista.items).length) {
             return { malas: true, guardadas: 0, motivo: null };
         }
@@ -2872,6 +3154,7 @@
                 return { malas: false, guardadas: guardadas, motivo: motivo };
             }
             consolidarFila(envios[i].tr);
+            delete envios[i].tr.dataset.autoguardada;
             guardadas += 1;
         }
         return { malas: false, guardadas: guardadas, motivo: null };
@@ -4102,6 +4385,7 @@
             almacen: "Almacén",
             producto: "Producto",
             dividir: "Dividir",
+            cabecera: "Cabecera",  // F-116 R28: el autoguardado de la cabecera
         })[a] || "Cambio";
     }
 
@@ -4162,6 +4446,9 @@
         });
         panel.addEventListener("click", function (ev) { ev.stopPropagation(); });
     }
+    // F-116 R28: cada autoguardado que va bien es una entrada más del
+    // historial; el widget se refresca sin recargar la ficha.
+    document.addEventListener("autoguardado", refrescar);
     refrescar();
 })();
 
