@@ -116,8 +116,11 @@ valuation_es:
         4. Pon matched_contrato_line_id = esa línea, precio_unitario_
            contrato_db = su precio POR contenedor, y RELLENA
            `contenedor_m3` = los m³ de ESE contenedor (de su descripción,
-           p.ej. "6 M CÚBICOS" → 6). Si el albarán trae m³ igual a un
-           tamaño concreto, prioriza ese tamaño; si no, el por defecto.
+           p.ej. "6 M CÚBICOS" → 6). Si el contrato da tamaños, el más
+           pequeño en el que caben los m³; si no da ninguno, los
+           contenedores son de 3, 6 o 9 m³ (el más pequeño en el que
+           caben; con más de 9 m³, paquetes de 6) y `contenedor_m3` =
+           null (F-111).
         5. **Caso SIN m³/Tn (solo "movimiento"):** si el albarán solo
            indica un movimiento de contenedor SIN volumen ni peso, NO
            uses las líneas "6 M CÚBICOS": casa con la línea genérica
