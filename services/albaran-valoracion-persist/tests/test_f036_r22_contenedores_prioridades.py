@@ -206,13 +206,20 @@ def test_f036_r22_sin_volumen_ni_resta_no_se_inventa_un_numero():
 # Lo que el intercambio NO puede romper
 # ------------------------------------------------------------------ #
 def test_f036_r22_los_nombres_de_las_reasons_no_cambian():
-    """`valuation_builder` las inspecciona por PREFIJO."""
+    """`valuation_builder` las inspecciona por PREFIJO.
+
+    (F-111 R3, R10) Sin tamaño en el contrato ya no hay «6 por defecto»: 7 m³
+    caben en el estándar de 9 (1 contenedor) y el motivo es
+    ``residuos_tamano_estandar=9m3``. El de ``residuos_contenedores=`` no cambia.
+    """
     sin_tamano = calcular_contenedores_residuos(
         contexto_linea=_Ctx(volumen_m3=7.0), contrato_lines=[]
     )
 
-    assert "residuos_tamano_defecto_6m3" in sin_tamano.reasons
-    assert sin_tamano.num_contenedores == 2      # ceil(7 / 6)
+    assert "residuos_tamano_estandar=9m3" in sin_tamano.reasons
+    assert "residuos_tamano_defecto_6m3" not in sin_tamano.reasons
+    assert sin_tamano.num_contenedores == 1      # 7 m³ caben en el de 9
+    assert "residuos_contenedores=1 (m3=7 / contenedor=9 m3)" in sin_tamano.reasons
 
 
 def test_f036_r22_el_volumen_implausible_sigue_marcando_revision():
