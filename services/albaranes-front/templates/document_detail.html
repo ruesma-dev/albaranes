@@ -279,6 +279,8 @@
                     <h2>Campos extraídos · {{ view_label(document.view_mode) }}</h2>
                     <div class="header-actions">
                         {% if editable %}
+                        {# F-116 R10, R11: lo que dice el autoguardado de cada campo (sin alert). #}
+                        <span id="autoguardado-estado" class="autoguardado-estado muted small" aria-live="polite"></span>
                         <button type="button" class="btn secondary" id="save-btn">Guardar</button>
                         {# F-053 R37: sin valorar no se aprueba (el servidor lo rechaza igual).
                            F-065 R21: si la suma de las filas no cuadra con lo leído, el JS
@@ -342,7 +344,7 @@
                             <span>Fecha</span>
                             {% if editable %}
                             <span class="campo-fecha">
-                                <input type="text" id="fecha" value="{{ document.fecha | fecha_albaran_ver }}" placeholder="dd/mm/aaaa" autocomplete="off" aria-describedby="fecha-error">
+                                <input type="text" id="fecha" value="{{ document.fecha | fecha_albaran_ver }}" placeholder="dd/mm/aaaa" autocomplete="off" aria-describedby="fecha-error" data-guardado="{{ document.fecha or '' }}">
                                 <button type="button" class="btn secondary small js-fecha-calendario" title="Elegir la fecha en el calendario" aria-label="Elegir la fecha en el calendario">Calendario</button>
                                 <input type="date" id="fecha_calendario" class="fecha-calendario" tabindex="-1" aria-hidden="true">
                             </span>
@@ -353,11 +355,11 @@
                         </label>
                         <label>
                             <span>Número albarán</span>
-                            <input type="text" id="numero_albaran" value="{{ document.numero_albaran or '' }}" maxlength="128" autocomplete="off"{% if not editable %} readonly{% endif %}>
+                            <input type="text" id="numero_albaran" value="{{ document.numero_albaran or '' }}" maxlength="128" autocomplete="off"{% if editable %} data-guardado="{{ document.numero_albaran or '' }}"{% else %} readonly{% endif %}>
                         </label>
                         <label>
                             <span>Forma de pago</span>
-                            <input type="text" id="forma_pago" value="{{ document.forma_pago or '' }}"{% if not editable %} readonly{% endif %}>
+                            <input type="text" id="forma_pago" value="{{ document.forma_pago or '' }}"{% if editable %} data-guardado="{{ document.forma_pago or '' }}"{% else %} readonly{% endif %}>
                         </label>
                     </div>
                     {% if editable %}
@@ -391,7 +393,7 @@
                     </div>
                     <label class="full-width">
                         <span>Notas de revisión</span>
-                        <textarea id="review_notes" rows="3"{% if not editable %} readonly{% endif %}>{{ document.review_notes or '' }}</textarea>
+                        <textarea id="review_notes" rows="3"{% if editable %} data-guardado="{{ document.review_notes or '' }}"{% else %} readonly{% endif %}>{{ document.review_notes or '' }}</textarea>
                     </label>
                 </div>
 
