@@ -92,6 +92,67 @@
     const refetchStatus = document.getElementById("refetch-status");
 
     // --------------------------------------------------------------- //
+    // F-116 R24, R27 (D3 = a) · la Cola de escritura de la ficha: TODA
+    // petición que escribe (PUT, POST, PATCH, DELETE) espera a que termine
+    // la anterior y sale en el orden en que se pidió; los GET no esperan.
+    // Así el autoguardado (al salir de un campo) y los botones no se pisan:
+    // el ``blur`` encola su PATCH antes de que corra el ``click`` que lo
+    // provocó (R25). Se instala envolviendo ``fetch`` (``globalThis`` es
+    // ``window`` en el navegador): entran sin tocarlas todas las vías de la
+    // ficha y el deshacer global. Solo en la ficha editable.
+    // --------------------------------------------------------------- //
+    function _estadoCola() {
+        if (!globalThis.__colaEscrituras) {
+            globalThis.__colaEscrituras = { cola: Promise.resolve(), pendientes: 0, red: null };
+        }
+        return globalThis.__colaEscrituras;
+    }
+
+    // El ``fetch`` de verdad (sin la Cola): lo usan las tareas de la Cola,
+    // que si llamaran al envuelto se esperarían a sí mismas.
+    function fetchRed(url, init) {
+        const red = _estadoCola().red;
+        return red ? red(url, init) : fetch(url, init);
+    }
+
+    // Pone ``tarea`` (función que devuelve un valor o una promesa) al final
+    // de la Cola y devuelve su resultado. Un fallo no rompe la cadena.
+    function encolar(tarea) {
+        const estado = _estadoCola();
+        estado.pendientes += 1;
+        const resultado = estado.cola.then(function () { return tarea(); });
+        const hecho = function () { estado.pendientes -= 1; };
+        estado.cola = resultado.then(hecho, hecho);
+        return resultado;
+    }
+
+    function hayEscriturasEnCurso() {
+        return _estadoCola().pendientes > 0;
+    }
+
+    function instalarColaEscrituras() {
+        const estado = _estadoCola();
+        if (estado.red) { return; }
+        const red = globalThis.fetch.bind(globalThis);
+        estado.red = red;
+        globalThis.fetch = function (url, init) {
+            const metodo = String((init && init.method) || "GET").toUpperCase();
+            if (metodo === "GET" || metodo === "HEAD") { return red(url, init); }
+            return encolar(function () { return red(url, init); });
+        };
+        // R27 (D6 = a): salir o recargar con escrituras sin terminar pide la
+        // confirmación nativa del navegador.
+        window.addEventListener("beforeunload", function (ev) {
+            if (!hayEscriturasEnCurso()) { return; }
+            ev.preventDefault();
+            ev.returnValue = "";
+        });
+    }
+
+    // R12: solo la ficha editable trae ``#autoguardado-estado``.
+    if (document.getElementById("autoguardado-estado")) { instalarColaEscrituras(); }
+
+    // --------------------------------------------------------------- //
     // Renumerar la columna '#' tras añadir/eliminar filas.
     // --------------------------------------------------------------- //
     function reindexRows() {
