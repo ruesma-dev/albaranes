@@ -1,9 +1,33 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
-**F-111 · `pending` (2026-10-30): spec escrita, espera PARADA 1** — residuos: contenedores de 3, 6 o 9 m³ y partida del capítulo de gestión de residuos. Spec en `specs/F-111-residuos-contenedores-y-partida/`, informe `progress/spec_F-111.md` (medición en solo lectura: cambian 2 líneas de contenedores, una aprobada; 8 líneas de residuos sin partida; el capítulo existe en 17 de 17 obras, como subcapítulo de CD). Decisiones abiertas D1–D10 en `design.md` §10 (recomendada (a) en todas); D9 = orden frente a F-100, que comparte ficheros. Va después de F-106.
+**F-111 · `in_progress` (2026-11-02): implementer en marcha** — residuos: contenedores de 3, 6 o 9 m³ y partida del capítulo de gestión de residuos. Rama `feature/F-111-residuos-contenedores-y-partida`, worktree `../albaranes-F-111`. Spec en `specs/F-111-residuos-contenedores-y-partida/`, informe previo `progress/spec_F-111.md`. **PARADA 1 cerrada por el humano el 2026-10-30: D1–D10 = (a).** `dev` (`8d5b702`) fusionado en la rama antes de empezar.
 
-**F-106 · `in_progress` (2026-10-28): recalcular el precio al cambiar la medición** — rama `feature/F-106-precio-al-cambiar-medicion`, worktree `../albaranes-F-106`. Spec v3 con PARADA 1 cerrada (D8 = c, D9–D13 = a; design §10). Empieza por la T0 (solo lectura en producción: cuántas líneas pendientes no cuadran; si más del 10 %, se para). Despliegue: sv6 → sv9 → sv4. F-110 (dto a Sigrid) va detrás y toca la misma función de sv9.
+**F-116 · CERRADA (`done`, 2026-11-02).** Resumen en `history.md`.
+
+- **Implementer, hecho:** T1–T12 y T15 (un commit por tarea). Informe `progress/impl_F-116.md`, mutación `progress/mutacion_F-116.md`, `azure-apps` `ec9ed4d` local sin push. Pendientes MANUAL: T13 (M1, líder, Chrome y Edge con sv4 local) y T14 (humano despliega sv4 sola; líder M2 de solo lectura).
+- **Desviaciones justificadas** (detalle en el informe §3): (1) `test_f098_r21` cuenta lo mismo que el declarado `test_f106_r12` (3 ⇒ 4) y no estaba en la lista de R30; (2) cinco listas de funciones extraídas de tests viejos de JS añaden `_estadoCola`, `encolar` y `filasParaGuardar` (ninguna aserción tocada); (3) el `blur` de las celdas se engancha en `wireAutoguardadoFilas()` (llamada justo después de `wireConciliaEdit()`), no dentro de esta; (4) el autoguardado de cabecera compara con lo último encolado si lo hay (si no, cambiar y volver atrás con la petición en vuelo dejaba guardado el valor intermedio); (5) `filasParaGuardar(filas, conCambios)` recibe las de `filasConCambios`.
+- **Entorno del worktree:** suites con `PYTHONPATH=C:\Users\pgris\PycharmProjects\albaranes-F-116\services\albaranes-comun` y `ARNES_SIN_CACHE=1`. *Junction* `.venv` de sv4 creada (a la del árbol principal): quitarla con `cmd /c rmdir` antes de `git worktree remove`.
+
+- **Respuestas leídas en código (design §1):** «bloquear» = `bloqueada = TRUE` + quitar el aviso «revisa la cantidad» + `bloqueada` en la edición; el PATCH de fila sin `?bloquear=1` ya existe, escribe `edicion_manual_json` y su deshacer, y sv6 reaplica toda fila con edición, bloqueada o no ⇒ **un autoguardado sí sobrevive a revalorar** y enseña «✋» al recargar. Campos de cabecera escritos a mano: fecha, número, forma de pago y notas (proveedor/CIF/obra son `readonly` y sus combos ya guardan solos).
+- **Decisiones para el humano (design §8), todas con (a) recomendada:** D1 endpoint propio `PATCH /api/documents/{id}/cabecera` (el PUT entero pisaría lo que sv3 escribe después, p. ej. el contrato auto-seleccionado); D2 «Guardar todas»/«Guardar»/«Guardar y aprobar» bloquean también las filas autoguardadas en esta carga (si no, casi nunca bloquearían nada); D3 una cola única en serie para toda escritura de la ficha (envolviendo `fetch`); D4 sin repintar ✋/total hasta recargar; D5 partida no válida ⇒ nada de esa fila; D6 aviso al salir solo con guardados en vuelo; D7 una entrada de «Deshacer» por autoguardado; D8 fallos sin `alert`, con marca.
+- **Tests viejos que cambian (R30):** `test_f077_r12_una_sola_peticion_patch_de_fila` y `test_f106_r12_las_tres_vias...` (3 ⇒ 4).
+
+**F-110 · `blocked` (2026-11-02): review APPROVED (`progress/review_F-110.md`), T1/T17/T18/T20 hechas (`progress/manual_F-110.md`), equivalentes 6, 15 y 16 aceptados por el humano; altas en neto se quedan así. Espera T21 (humano): `.\deploy.ps1 -Only sv9,sv4` → `.\check_deploy.ps1` con la guarda apagada; después `ALTA_SIGRID_ENVIAR_DTO = "true"` en `infra/00_capps_vars.ps1` y `.\set_alta_sigrid.ps1`. Luego T22 (líder, solo lectura: primera alta real con dto).**
+
+- **Implementer, hecho (2026-11-01):** T0, T2–T16, T19, T23 (un commit por tarea; último `1b11ab4`). Mutación completa `progress/mutacion_F-110.md` (108 mutantes; 15 supervivientes cubiertos con tests nuevos, 3 equivalentes). init.sh verde. Pendientes MANUAL: T1, T17, T18 (incluye el aviso 2), T20, T21 (humano), T22. Siguiente paso: reviewer.
+
+**F-108 · CERRADA (`done`, 2026-11-01).** Resumen en `history.md`.
+
+- **Implementer (2026-10-31), hecho:** T1–T10 (un commit por tarea). Informe `progress/impl_F-108.md`, mutación `progress/mutacion_F-108.md`. Pendientes MANUAL: M1 (líder, Chrome/Edge con sv4 local), M-D (humano, despliegue de sv4 sola), M2 (líder, solo lectura en producción), M3 (humano, las 2 fechas `dd/mm/aaaa`), T11.
+- **Desviaciones justificadas** (detalle en el informe §3): (1) R11 se comprueba lo ÚLTIMO al pasar a aprobado (tras líneas y contrato), para que los avisos de F-065/F-078/F-106/F-115 sigan saliendo igual; (2) los fixtures compartidos `f053_sv4_bbdd` y `f065_bbdd` ganan fecha y número, y 3 tests ajustan su payload (ninguna aserción relajada); (3) tres tests de JS viejos añaden las funciones nuevas a su lista de funciones extraídas; (4) la `<dd>` de solo lectura que cita design §3 es la de las vistas crudas: sigue sin filtro (R23, §4.4).
+- **Entorno del worktree:** suites con `PYTHONPATH=C:\Users\pgris\PycharmProjects\albaranes-F-108\services\albaranes-comun` y `ARNES_SIN_CACHE=1`. *Junction* `.venv` de sv4 creada (a la del árbol principal): quitarla con `cmd /c rmdir` antes de `git worktree remove`.
+
+**F-114 · CERRADA (`done`, 2026-10-31).** Check «Solo de la obra» o todos los proveedores de Sigrid. Review APPROVED (pasada 3), T8 en verde, desplegada con el sv4 `r20261031-1506`. Pendiente sin bloqueo: O1 de la review (R10 por el texto del error; propuesta `!currentObra()`).
+
+**F-113 · CERRADA (`done`, 2026-11-01).** Resumen en `history.md`.
+
+**F-106 · CERRADA (`done`, 2026-10-31).** Resumen en `history.md`.
 
 **F-100 · `blocked` (2026-10-28): parte A (T1–T7, banco VAL) con review APPROVED** (`progress/review_F-100.md` en su rama, pasada 1). Espera a F-106 en `dev` para la medición ANTES (T8–T11; T10 y T11 de pago, las lanza el humano). Antes de T11: (O1) que el humano acepte los 6 mutantes equivalentes; (O2) corregir la fila «valoración» de `evals/README.md:257` (mide importe, precio y su fuente, no la cantidad); (O3) fusionar `dev` antes de T11, nunca entre T11 y T21; (O4) decidir si el banco normaliza las partidas como producción (F-076) antes de IA4.
 
@@ -644,3 +668,9 @@ No bloquea el `done`. Procedimiento (design §10 y `tasks.md` T12):
 6. Los mixtos que están en `Procesados` con el interior perdido **no** se mueven en bloque (re-ingerirían los
    PDF directos con otra `correlation_key`): uno a uno, si el humano lo decide.
 7. Anotar aquí el resultado.
+
+## F-115 · implementer (2026-10-31)
+
+- Hechas T1–T10 (un commit por tarea). T0 la hizo el líder (0 y 0 %). Siguen T11–T12 (JS), T14 (mutación), T15 (docs), T17.
+- Desviaciones (detalle en `progress/impl_F-115.md`): (a) `test_f106_t2_version_0100` pasa a «≥ 0.10.0» (comun 0.11.0), como hicieron F-098 y F-113; (b) R13 obliga a datos coherentes en los fixtures `f053_sv4_bbdd` y `f065_bbdd` (el merge tiene seleccionado el contrato de su valoración) y a que 6 llamadas de «guardar y aprobar» de tests anteriores manden la cabecera (`CABECERA`: CIF, obra y contrato) como hace la ficha; ninguna aserción cambia; (c) aviso de R11 con variante «Obra cambiada…» (R15: el proveedor se conserva).
+- Entorno: *junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`); suites con `PYTHONPATH` a la comun del worktree.

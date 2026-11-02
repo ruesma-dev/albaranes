@@ -17,7 +17,9 @@ Llaves propias del alta (con sus defectos):
   (F-069: la Lista de excepciones, JSON Login → ``{"usu"?, "empide"?}``; vacía
   es lo normal; mal escrita = no arranca, R2) y
   ``ALTA_SIGRID_PRODUCTO_POR_DEFECTO`` (JSON familia → producto, con ``*``;
-  mal formado = no arranca, R44). DESDE, Espera y mapeo llevan el MISMO valor
+  mal formado = no arranca, R44) y ``ALTA_SIGRID_ENVIAR_DTO`` (F-110: guarda del
+  descuento por línea; encendida SOLO con el literal ``true``, apagada por
+  defecto; la enciende el humano tras desplegar). DESDE, Espera y mapeo llevan el MISMO valor
   en sv4. La variable del empleado fijo de F-053 ya no se lee (F-069 R4): el
   ``empide`` sale de la resolución por documento; si queda en el entorno, se
   ignora (``extra="ignore"``).
@@ -37,6 +39,7 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from ruesma_comun.alta_sigrid import (
     MAPEO_PRODUCTO_POR_DEFECTO_TEXTO,
+    enviar_dto_activo,
     leer_instante_utc,
     leer_mapeo,
 )
@@ -59,6 +62,8 @@ class Settings(BaseSettings):
     # ----------------------------------------------------------------- #
     alta_sigrid_desde_utc: str = Field("", alias="ALTA_SIGRID_DESDE_UTC")
     alta_sigrid_commit: str = Field("false", alias="ALTA_SIGRID_COMMIT")
+    #: F-110 R5: guarda del ``dto`` por línea; MISMO valor que en sv4 (R14).
+    alta_sigrid_enviar_dto: str = Field("false", alias="ALTA_SIGRID_ENVIAR_DTO")
     espera_incierto_min: int = Field(15, alias="ALTA_SIGRID_ESPERA_INCIERTO_MIN", ge=0)
     tolerancia_eur: float = Field(0.05, alias="ALTA_SIGRID_TOLERANCIA_EUR", ge=0)
     alta_sigrid_avisos_bloqueantes: str = Field(
@@ -157,6 +162,11 @@ class Settings(BaseSettings):
     def commit_real(self) -> bool:
         """R19: real SOLO con el literal ``true`` (sin espacios ni mayúsculas)."""
         return self.alta_sigrid_commit == LITERAL_COMMIT_REAL
+
+    @property
+    def enviar_dto(self) -> bool:
+        """F-110 R5: encendida SOLO con el literal ``true`` (la regla de comun)."""
+        return enviar_dto_activo(self.alta_sigrid_enviar_dto)
 
     @property
     def modo(self) -> str:

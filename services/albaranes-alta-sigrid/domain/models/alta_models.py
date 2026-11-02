@@ -164,6 +164,10 @@ class LineaAlta:
     descripcion_merge: str | None
     tipo_familia: str | None
     producto_sigrid: str | None
+    #: (F-106 R17) P (bruto) y d de la fila, para ``linea_no_cuadra``. Nulos =
+    #: no comparable (los datos anteriores a F-106 no los traen).
+    precio_unitario_final: float | None = None
+    descuento_albaran_aplicado: float | None = None
 
     @property
     def referencia_linea(self) -> str:
@@ -189,6 +193,9 @@ class LineaPeticion:
     descripcion: str | None = None
     unidad: str | None = None
     partida: str | None = None
+    #: (F-110 R7, R10) % de descuento de la línea; con él, ``precio`` es el
+    #: bruto. Nulo = sin la clave (las peticiones de antes no la traen).
+    dto: float | None = None
 
     def a_dict(self) -> dict[str, Any]:
         orden = (
@@ -199,6 +206,7 @@ class LineaPeticion:
             ("unidad", self.unidad),
             ("cantidad", self.cantidad),
             ("precio", self.precio),
+            ("dto", self.dto),
             ("partida", self.partida),
         )
         return {clave: valor for clave, valor in orden if valor is not None}

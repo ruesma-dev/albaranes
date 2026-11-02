@@ -5,6 +5,7 @@ import dataclasses
 import json
 import logging
 
+from ruesma_comun.contratos import contrato_es_del_albaran
 from ruesma_comun.obras import normalizar_codigo_obra
 from application.services.contrato_selector import (
     elegir_contrato_probable,
@@ -136,6 +137,10 @@ class ContratoEnrichmentService:
         )
         cif_clean = (cif or "").strip().upper().replace(" ", "") or None
         obra_norm = normalizar_codigo_obra(obra_raw)
+        # (F-115 R2–R5) Antes de buscar, en cualquier rama (también
+        # sin_datos y error): un contrato que no es del proveedor y la obra
+        # actuales no sobrevive al cambio.
+        self._retirar_seleccion_ajena_safely(merge_document_id, cif, obra_raw)
         if not cif_clean or not obra_norm:
             logger.warning(
                 "%s Faltan datos o no validan; se OMITE. cif=%r obra=%r",
@@ -556,6 +561,60 @@ class ContratoEnrichmentService:
             BUSQUEDA_ENCONTRADOS if contratos else BUSQUEDA_NINGUNO,
         )
         return len(contratos)
+
+    # ------------------------------------------------------------------ #
+    # Selección ajena (F-115 · R2–R5)
+    # ------------------------------------------------------------------ #
+    def _retirar_seleccion_ajena_safely(
+        self,
+        merge_document_id: str,
+        cif_raw: str | None,
+        obra_raw: str | None,
+    ) -> str | None:
+        """Quita la selección si es AJENA al CIF y la obra del merge.
+
+        Ajena = hay filas de ese código y ninguna es del albarán
+        (``contrato_es_del_albaran``). Sin filas no se sabe y se deja. Al
+        retirar: selección y origen a NULL, fuera la nota de auto-selección
+        de ese código e INFO. Devuelve el código retirado (o ``None``).
+        Best-effort (R5): un fallo se registra y el enriquecimiento sigue.
+        """
+        lector = getattr(self._repository, "get_pertenencia_seleccion", None)
+        if lector is None:
+            # Repositorios/mocks anteriores a F-115: no-op, como en la
+            # canonizacion del nombre.
+            return None
+        try:
+            codigo, filas = lector(document_id=merge_document_id)
+            if not codigo or not filas:
+                return None
+            if any(
+                contrato_es_del_albaran(
+                    contrato_cif=fila_cif,
+                    contrato_obra=fila_obra,
+                    albaran_cif=cif_raw,
+                    albaran_obra=obra_raw,
+                )
+                for fila_cif, fila_obra in filas
+            ):
+                return None
+            self._repository.clear_selected_contrato(document_id=merge_document_id)
+            self._repository.remove_review_note_prefix(
+                document_id=merge_document_id,
+                prefijo=f"[AVISO] Contrato {codigo} elegido",
+            )
+            logger.info(
+                "%s contrato %s retirado: no es del proveedor ni de la obra "
+                "actuales del albaran. doc=%s",
+                _LOG_PREFIX, codigo, merge_document_id,
+            )
+            return codigo
+        except Exception:  # noqa: BLE001 - best-effort (R5)
+            logger.exception(
+                "%s no se pudo comprobar o retirar la seleccion ajena. doc=%s",
+                _LOG_PREFIX, merge_document_id,
+            )
+            return None
 
     # ------------------------------------------------------------------ #
     # Rastro de la busqueda (F-052 · R21)

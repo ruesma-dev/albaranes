@@ -629,6 +629,8 @@ updated_at_utc           VARCHAR(64)
 | `parent_merge_line_id`             | merge_id del padre (sintéticas)                                                              |
 | `modifier_source/_reason/descripcion_linea` | sintéticas                                                                          |
 | `descuento_albaran_aplicado`       | el % que se aplicó (auditoría — tanda descuento abr 2026)                                   |
+| `bloqueada`                        | fila guardada en sv4 (F-065)                                                                 |
+| `edicion_manual_json`              | TEXT NULL (F-106 R19, `schema_contribution.py`): lo editado a mano en sv4 (`campos`, `calculado`, `fila_entera`); la escribe sv4 y sv6 solo al reaplicar |
 
 #### `contrato_lines_derived` (líneas de contrato creadas por valoración)
 
@@ -889,6 +891,17 @@ Igual que sv3 — **Azure Container App** con:
    incremental. La valoración es 1:1 con `document_id` y siempre coherente.
    Coste: si una valoración tiene 200 líneas y solo cambia una, se reinsertan
    las 200. Aceptable para volúmenes razonables.
+   **Desde F-106 (fase B) conserva lo editado a mano**: antes de borrar bloquea
+   la cabecera (`SELECT … FOR UPDATE`), lee las filas con edición de la anterior
+   (y las legadas de `es_fila_manual`, que cuentan como `fila_entera`) y las
+   reaplica a las nuevas con `ruesma_comun.edicion_manual.aplicar_edicion`:
+   pareja por `merge_line_id` (o padre + `modifier_source` en una sintética
+   única), la fila entera si no hay pareja y su blanca existe, perdida (motivo
+   `ediciones_perdidas:N` en la cabecera) si su blanca ya no está. Origen Nueva
+   ⇒ derivada `manual_override` nueva con su P; vinculada a una línea que no es
+   del contrato nuevo ⇒ Nueva con `front_contrato_cambiado`. Total y
+   `total_lines` salen de las filas finales; `codigo_externo` (columna de sv4)
+   se reescribe con un UPDATE tolerante. Regla 20 de `docs/ARCHITECTURE.md`.
 3. **STUBS de tablas del sv3** para FKs sin acoplar paquetes (§7.2). Es la
    solución limpia al problema "cómo tener FK reales sin importar `from sv3.orm import ...`".
 4. **Inicialización perezosa de DDL** para resolver el race con sv3 al arrancar

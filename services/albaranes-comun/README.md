@@ -18,11 +18,14 @@ Resuelve la duplicación con deriva detectada en el análisis de código
 | `ruesma_comun.db.session_factory` | SessionFactory canónico (el de sv3) + `SessionFactoryDesdeEngine` para tests | las 5 copias |
 | `ruesma_comun.llm` *(entrega 2)* | Puerto `LlmVisionClient` (adjunto opcional), `LlmAttachment`, `RetryPolicy`, `LlmCallLogger` y los 3 clientes de visión (Claude con `tool_name` parametrizado, OpenAI, Gemini) | las 2 copias divergentes de sv2/sv5 (merge: base sv2 + fix adjunto-opcional de sv5) |
 | `ruesma_comun.contratos.contexto_linea` *(entrega 2)* | Modelo compartido `ContextoLinea` del envelope | las 4 copias de sv2/sv3/sv5/sv6 |
+| `ruesma_comun.contratos.pertenencia` *(0.11.0, F-115)* | `contrato_es_del_albaran`: el contrato es del albarán si su CIF y su obra coinciden con los del merge (normalizados); fila legada sin un lado no descalifica, albarán sin CIF u obra sí | la aceptación de un contrato «compartido» sin mirar el proveedor (sv4) |
 | `ruesma_comun.sharepoint.GraphSharePointClient` *(entrega 3)* | Núcleo Graph/SharePoint: resolución site/drive (3 modos), carpetas, **subida** y **descarga** (bytes y texto) por path relativo, sharing link | el bloque casi idéntico de sv3 (sube) y sv5 (lee el contrato); sv4 era código muerto |
 | `ruesma_comun.markdown` *(entrega 4)* | Conversión de contratos (PDF/Word) a **Markdown** con markitdown: `a_markdown`, `combinar_a_markdown` (conserva tablas de tarifas; degrada al texto de fallback) | — (capacidad nueva) |
 | `ruesma_comun.sigrid` *(0.7.0, F-052)* | Lectura de sigrid-api sin truncados silenciosos: `PoliticaTruncado`, `SigridRespuestaTruncada`, `comprobar_truncado`, `con_paginacion`, `leer_paginado`, `MAX_FILAS_POR_PETICION` (500.000) y `PAGINA_MAXIMA` (499.999). Sin HTTP ni SQL: la SQL de cada servicio es suya | el `truncated` que nadie miraba en sv3 y sv4 |
 | `ruesma_comun.obras` *(0.7.0, F-052)* | `normalizar_codigo_obra`: el código de obra canónico que se envía a Sigrid y se sella (semántica de sv3) | las 2 copias divergentes de sv3 y sv4 |
 | `ruesma_comun.sigrid.partidas` *(0.8.0, F-076; 0.9.0, F-098)* | Partidas HOJA de una obra (SQL de sv4 + `emp = 1`), `normalizar_partida` (`CI.04.18` ≡ `CI.4.18`), `casar_partida`, `resolver_partida_obra` (guarda de no hoja) y `CachePartidasObra` (TTL, LRU, fallo recordado). F-098: cada hoja con `ide`, capítulo (raíz de su cadena) y `codigo_completo` (`CD.99.01.64` para el cod `99.01.64` de CD), `ListaPartidasObra.capitulos`, motivo `completa`, `misma_partida`, `mostrar_partida` y `CachePartidasObra.consultar`. Subconjunto aprobado de F-049; excepción consciente a D2 de F-052 | la copia de la SQL y del cálculo de hojas de sv4 |
+| `ruesma_comun.edicion_manual` *(0.10.0, F-106)* | Lo editado a mano en una fila (`EdicionManual`, `registrar_edicion`, `leer_edicion`, `aplicar_edicion`, `es_fila_manual`) y `recalcular_fila` (precio e importe tras una edición). Lo escribe sv4 y lo reaplica sv6 al revalorar | — |
+| `ruesma_comun.mime` *(0.9.1, F-113)* | MIME real por los bytes: `detectar_mime` (firma > declarado específico > extensión con tabla fija > `application/octet-stream`; JPEG, PNG, GIF, WebP, TIFF, HEIC/HEIF y PDF), `nombre_coherente` (extensión acorde al MIME real), `es_mime_generico`, `MIME_PDF`. Funciones puras, solo stdlib. `normalizar_adjuntos` de `ruesma_comun.llm` lo aplica a cada adjunto | el `contentType` de Graph tomado tal cual (`application/octet-stream` en fotos de WhatsApp) |
 
 Hecho en la **entrega 2**: capa LLM y `contexto_linea` migradas como
 *reexports* de 3 líneas en los servicios. Hecho en la **entrega 3**: el
@@ -48,6 +51,25 @@ el paquete va en cada imagen.
 `mostrar_partida` y `CachePartidasObra.consultar`, sin romper API (los campos
 nuevos de `PartidaObra` van al final, con defecto y fuera de la igualdad). Se
 reconstruyen sv6 y sv4, en ese orden; sv9 la importa pero no cambia.
+
+**0.9.1** (F-113, 2026-10-30): módulo nuevo `ruesma_comun.mime` y
+`normalizar_adjuntos` devuelve cada adjunto con su MIME real (copia con `kind`
+coherente y WARNING sin nombre; el mismo objeto si ya era el real). Compatible:
+sin cambios de firma. Se reconstruyen sv1 y sv2, en ese orden; sv5 importa
+`ruesma_comun.llm` y lo hereda en su próxima imagen sin obligar a desplegarlo.
+
+**0.10.0** (F-106, 2026-10-30): el precio al cambiar la medición.
+`importes.cuadra_linea` y `TOLERANCIA_CUADRE_EUR` (¿Q × P × (1 − d) = I?),
+`alta_sigrid.linea_a_sigrid` (la única definición de la línea que manda sv9:
+Q y P = |I| / |Q|) y el módulo nuevo `ruesma_comun.edicion_manual` (lo editado
+a mano en una fila y su reaplicación al revalorar). Compatible: sin cambios de
+firma en lo que ya había. Se reconstruyen sv6 → sv9 → sv4, en ese orden.
+
+**0.11.0** (F-115, 2026-10-31): `ruesma_comun.contratos.contrato_es_del_albaran`
+(¿el contrato es del proveedor y de la obra del albarán?, con `normalizar_cif` y
+`canonizar_codigo_obra`; un lado del contrato vacío no descalifica, uno del
+albarán sí). Función pura nueva, sin cambios de firma en lo que ya había. La
+importan sv3 y sv4: se reconstruyen sv3 → sv4, en ese orden.
 
 ## Instalación en local (PyCharm)
 

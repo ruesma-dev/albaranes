@@ -112,7 +112,9 @@ _DDL = (
         descripcion_linea             TEXT,
         review_required               BOOLEAN NOT NULL DEFAULT 0,
         review_reasons_json           TEXT,
-        bloqueada                     BOOLEAN NOT NULL DEFAULT 0
+        bloqueada                     BOOLEAN NOT NULL DEFAULT 0,
+        producto_sigrid               VARCHAR(64),
+        edicion_manual_json           TEXT
     )
     """,
     # F-036: la trazabilidad (R23, R24) toca tambien la cabecera del
@@ -189,6 +191,10 @@ def render_detalle():
     entorno.filters["fecha_hora_local"] = lambda valor: str(valor or "—")
     entorno.filters["fecha_local"] = lambda valor: str(valor or "—")
     entorno.filters["hora_local"] = lambda valor: str(valor or "—")
+    # F-108 R4: el filtro real (dominio puro), como lo registra build_app.
+    from domain.services.fecha_albaran import fecha_para_ver
+
+    entorno.filters["fecha_albaran_ver"] = fecha_para_ver
     entorno.globals["view_label"] = str
     entorno.globals["asset_version"] = "test"
 

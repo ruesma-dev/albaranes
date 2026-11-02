@@ -94,7 +94,7 @@ SQL_LINEAS = """
 SELECT lv.id, lv.merge_line_id, lv.cantidad_albaran, lv.cantidad_convertida,
        lv.unidad_albaran, lv.importe_calculado, lv.matched_contrato_line_id,
        lv.derived_contrato_line_id, lv.codigo_partida_final, lv.descripcion_linea,
-       lv.producto_sigrid,
+       lv.producto_sigrid, lv.precio_unitario_final, lv.descuento_albaran_aplicado,
        l.line_index, l.concepto AS descripcion_merge, l.contexto_linea_json,
        cl.sigrid_ide AS ctrpro_ide, cl.codigo_contrato AS contrato_linea
 FROM albaran_valuations v
@@ -242,6 +242,8 @@ def _linea_de_fila(fila: Any) -> LineaAlta:
         descripcion_merge=_texto(fila.get("descripcion_merge")),
         tipo_familia=_tipo_familia(fila.get("contexto_linea_json")),
         producto_sigrid=_texto(fila.get("producto_sigrid")),
+        precio_unitario_final=_real(fila.get("precio_unitario_final")),
+        descuento_albaran_aplicado=_real(fila.get("descuento_albaran_aplicado")),
     )
 
 

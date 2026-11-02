@@ -29,6 +29,13 @@ VAL = "f065-val-1"
 VAL_AJENO = "f065-val-2"
 CONTRATO = "CTSU25/0359"
 
+#: (F-115 R9, R13) La cabecera que manda la ficha al guardar (CIF, obra y
+#: contrato elegido); ver ``f053_sv4_bbdd.CABECERA``.
+#: (F-108 R11) Con su fecha y su número, como la de ``f053_sv4_bbdd``.
+CABECERA = {"proveedor_cif": "B12345678", "obra_codigo": "0404",
+            "selected_contrato_codigo": CONTRATO, "fecha": "2026-10-08",
+            "numero_albaran": "A-1"}
+
 COLUMNAS = (
     "id", "valuation_id", "merge_line_id", "matched_contrato_line_id",
     "derived_contrato_line_id", "precio_unitario_final", "precio_unitario_agreement",
@@ -73,9 +80,12 @@ def construir(*, aprobado: bool = False, con_altas: bool = False, status: str = 
             s.execute(text(sentencia))
         if con_altas:
             s.execute(text(DDL_ALTAS))
+        # (F-115 R13) La valoración es del contrato CONTRATO: el albarán lo tiene
+        # seleccionado (datos coherentes; aprobar con otro contrato es un 409).
         _merge(s, DOC, approved=aprobado, approved_by="ana" if aprobado else None,
-               approved_at_utc="2026-10-09T09:00:00+00:00" if aprobado else None)
-        _merge(s, DOC_AJENO)
+               approved_at_utc="2026-10-09T09:00:00+00:00" if aprobado else None,
+               selected_contrato_codigo=CONTRATO)
+        _merge(s, DOC_AJENO, selected_contrato_codigo=CONTRATO)
         s.execute(text(
             "INSERT INTO albaran_contratos_merge (id, document_id, codigo_contrato, "
             "fetched_at_utc) VALUES (1, :d, :c, 't')"), {"d": DOC, "c": CONTRATO})

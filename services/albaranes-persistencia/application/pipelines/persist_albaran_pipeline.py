@@ -610,6 +610,8 @@ class PersistAlbaranPipeline:
         (F-075 R3) si NO hay contrato seleccionado y el albarán trae importes
         leídos: entonces publica con ``codigo_contrato=None`` y sv6 hace la
         valoración directa. Con contrato seleccionado sin líneas, SKIP (M1).
+        (F-115 R7) Sin contrato y con ``force``, publica sin contrato aunque
+        no traiga importes.
 
         ``force`` (jul 2026) — FIX re-valorado: se propaga tal cual a
         ``trigger_async`` → ``MensajeValoracion.force`` → sv6. Antes
@@ -649,7 +651,13 @@ class PersistAlbaranPipeline:
             return
 
         if not has_lines:
-            if codigo or not self._trae_importes_safely(merge_document_id):
+            # (F-115 R7, D7) Con ``force`` (acción humana en sv4) y sin
+            # contrato se revalora SIEMPRE sin contrato, traiga o no
+            # importes: sv6 sustituye la valoración del contrato anterior
+            # (directa con importes; ``no_contract`` sin ellos).
+            if codigo or not (
+                self._trae_importes_safely(merge_document_id) or force
+            ):
                 logger.info(
                     "[valuation-trigger][pipeline] SKIP: no hay contrato "
                     "seleccionado con líneas ni (sin contrato) importes "

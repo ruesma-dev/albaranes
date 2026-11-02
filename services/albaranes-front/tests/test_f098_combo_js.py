@@ -302,8 +302,10 @@ def test_f098_r21_los_guardados_mandan_el_cod_de_la_lista():
     from test_f051_almacen_front import _app_js, _funcion_js
 
     js = _app_js()
-    assert js.count("_camposCambiados(tr, lista.items)") == 3
+    # F-116: 3 ⇒ 4 (el autoguardado de la fila también), como test_f106_r12 (R30).
+    assert js.count("_camposCambiados(tr, lista.items)") == 4
     assert "_camposCambiados(tr, lista.items)" in _funcion_js(js, "guardarFilasPendientes")
+    assert "_camposCambiados(tr, lista.items)" in _funcion_js(js, "autoguardarFila")
 
 
 # =================================================================== #

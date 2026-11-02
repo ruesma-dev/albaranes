@@ -9,6 +9,7 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from ruesma_comun.alta_sigrid import (
     MAPEO_PRODUCTO_POR_DEFECTO_TEXTO,
+    enviar_dto_activo,
     leer_instante_utc,
     leer_mapeo,
 )
@@ -158,6 +159,10 @@ class Settings(BaseSettings):
     alta_sigrid_producto_por_defecto: str = Field(
         MAPEO_PRODUCTO_POR_DEFECTO_TEXTO, alias="ALTA_SIGRID_PRODUCTO_POR_DEFECTO",
     )
+    # F-110 R14: guarda del descuento por línea, MISMO valor que en sv9 (va en
+    # AltaSigridEnvComun). Solo el literal ``true`` la enciende: el «A Sigrid»
+    # de la ficha enseña entonces el precio bruto y el ``dto`` que manda sv9.
+    alta_sigrid_enviar_dto: str = Field("false", alias="ALTA_SIGRID_ENVIAR_DTO")
 
     @field_validator("alta_sigrid_espera_incierto_min", mode="before")
     @classmethod
@@ -198,6 +203,11 @@ class Settings(BaseSettings):
         return timedelta(minutes=self.alta_sigrid_espera_incierto_min)
 
     @property
+    def enviar_dto(self) -> bool:
+        """F-110 R14: la misma lectura que sv9 (``enviar_dto_activo`` de comun)."""
+        return enviar_dto_activo(self.alta_sigrid_enviar_dto)
+
+    @property
     def mapeo_producto(self) -> dict[str, str]:
         return leer_mapeo(self.alta_sigrid_producto_por_defecto)
 
@@ -207,6 +217,7 @@ class Settings(BaseSettings):
             desde=self.alta_sigrid_desde,
             espera=self.alta_sigrid_espera,
             mapeo=self.mapeo_producto,
+            enviar_dto=self.enviar_dto,
         )
 
     @property
