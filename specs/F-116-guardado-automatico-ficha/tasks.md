@@ -15,6 +15,6 @@ Rama `feature/F-116-guardado-automatico-ficha`. Un commit por tarea (`F-116 Tn: 
 - [x] T10: Deshacer global: etiqueta `cabecera` y refresco con el evento `autoguardado` (R28)  |  Verificación: `pytest services/albaranes-front/tests/test_f116_autoguardado_js.py -k "r28"`
 - [x] T11: Suite completa de sv4 sin relajar aserciones (R29, R30)  |  Verificación: `pytest services/albaranes-front/tests`
 - [x] T12: Documentación: `docs/ARCHITECTURE.md` regla 20, `services/albaranes-front/sv4.md` (endpoint y autoguardado), `azure-apps/albaranes.md` (viñeta de `bloqueada`; commit local en `azure-apps`, sin push) (R31)  |  Verificación: revisión del reviewer contra R31
-- [ ] T13: M1 en Chrome y Edge con sv4 local (design §7)  |  Verificación: MANUAL (líder)
+- [x] T13: M1 en Chrome y Edge con sv4 local (design §7)  |  Verificación: MANUAL (líder)
 - [ ] T14: Despliegue de sv4 sola (`cd infra; Set-DeployTag; .\deploy.ps1 -Only sv4`) y M2 de solo lectura  |  Verificación: MANUAL (humano despliega; líder M2)
 - [x] T15: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`

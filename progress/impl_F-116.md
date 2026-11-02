@@ -188,3 +188,25 @@ Pasada final de `init.sh` (tras commitear este informe y la mutación): ver la
 línea siguiente, la escribe el implementer con el resultado real.
 
 - Pasada final (sobre `5ff3fa9`): **salida 0, «ENTORNO LISTO»**. sv4 2501 passed (257.69 s), resto en verde (1919, 236, 496, 1608, 125, 506+1 skipped, 1073, 1342), `PUERTA COBERTURA: 100.0% de 48 líneas (48/48)`, `PUERTA TAMAÑO` (impl 190/220). Una pasada anterior salió en rojo solo por `test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`: faltaba la fila de `progress/mutacion_F-116.md` en `progress/inventario_mutacion_F-039.md` (añadida en `5ff3fa9`).
+
+## 8. T13 · M1 en Chrome con sv4 local (líder, 2026-11-02)
+
+sv4 de esta rama en local (BBDD local, Azurite), Chrome, ficha pendiente `e00f581b…` (3 líneas, la 3.ª sin bloquear).
+Edge no está al alcance del líder: queda para el humano si quiere repetirlo.
+
+| Paso | Resultado |
+|---|---|
+| 1 | `28-10-26` + Tab ⇒ `28/10/2026`, `campo-guardado`, «Fecha guardado»; BBDD `2026-10-28`; sigue tras recargar |
+| 2 | No probado a mano (el calendario nativo no se maneja desde la extensión); lo cubre `test_f116_r8_elegir_en_el_calendario_guarda` |
+| 3 | `31/02/2026` + Tab ⇒ `campo-no-valido`, nada enviado (`data-guardado` y BBDD siguen en `2026-10-28`) |
+| 4 | Número `230.285-P`, forma de pago y notas + Tab ⇒ guardados (BBDD comprobada) |
+| 5 | Cantidad 78 ⇒ 80 + Tab ⇒ importe 136, `fila-autoguardada`, sigue editable; al recargar 80,0 / 136,00, «✋», sin bloquear |
+| 6 | Partida `ZZ99.INVENTADA` + Tab ⇒ vuelve a la de antes (almacén), sin marca ni PATCH |
+| 7 | Fecha cambiada con el cursor dentro + clic en «Guardar y aprobar» ⇒ en Red, PATCH `/cabecera` 200 **antes** del PUT; BBDD con la fecha nueva. El PUT dio 409 por una validación previa ajena («Líneas sin descripción: 1, 2, 3», datos del documento local) |
+| 8 | Autoguardado (PATCH sin `?bloquear=1`) y «Guardar todas» ⇒ PATCH `?bloquear=1` de esa fila; tras recargar, bloqueada |
+| 9 | Forma de pago autoguardada ⇒ entrada «Editar cabecera · Forma de pago» en el deshacer; «Deshacer» la devuelve |
+| 10 | No probado: sin sv6 local. Lo cubre `test_f106_r25_r32c_…` de sv6 (R19, verificado por el reviewer) |
+
+Observación menor (no bloquea): con la fecha en rojo (paso 3) el `title` del campo sigue diciendo «Guardado
+automáticamente», del guardado anterior. Al probar se tocó por error la unidad de la línea (KG ⇒ 80 ⇒ KG, ambos
+autoguardados): BBDD local solamente.
