@@ -1709,6 +1709,9 @@
                 // sin nada entre medias: lo validado es lo enviado. R27 v5:
                 // con una partida fuera de la lista, nada (en rojo).
                 saveBtn.disabled = true;
+                // F-116 R21, R23: antes, los autoguardados en curso (el ``blur``
+                // de la celda ya encoló el suyo, R25); luego, lo pendiente.
+                await encolar(function () { return null; });
                 const lista = await cargarPartidasObra();
                 if (partidasMalas([tr], lista.items).length) {
                     saveBtn.disabled = false;
@@ -1993,17 +1996,24 @@
     const saveAllLinesBtn = document.getElementById("save-all-lines-btn");
     if (saveAllLinesBtn) {
         saveAllLinesBtn.addEventListener("click", async function () {
+            // F-116 R22 (D2 = a): las de cambios pendientes y las
+            // autoguardadas en esta carga (estas, con ``{}``: solo bloquear).
             function conCambios() {
-                return filasConCambios([].slice.call(linesBody.querySelectorAll("tr.concilia-editable")));
+                const filas = [].slice.call(linesBody.querySelectorAll("tr.concilia-editable"));
+                return filasParaGuardar(filas, filasConCambios(filas));
             }
+            // F-116 R23: desactivado ya y, antes de elegir filas, esperar a
+            // los autoguardados en curso (si no, se reenviaría lo suyo).
+            saveAllLinesBtn.disabled = true;
+            await encolar(function () { return null; });
             if (!conCambios().length) {
                 window.alert("No hay cambios en las líneas.");
+                saveAllLinesBtn.disabled = false;
                 return;
             }
-            // CR4: desactivado ya; tras esperar la lista, filas, validación y
-            // cuerpos en el mismo tick (lo validado es lo enviado). R27 v5:
-            // con alguna partida fuera de la lista no se guarda NADA.
-            saveAllLinesBtn.disabled = true;
+            // CR4: tras esperar la lista, filas, validación y cuerpos en el
+            // mismo tick (lo validado es lo enviado). R27 v5: con alguna
+            // partida fuera de la lista no se guarda NADA.
             const lista = await cargarPartidasObra();
             const filas = conCambios();
             if (partidasMalas(filas, lista.items).length) {
@@ -3086,9 +3096,16 @@
     // (F-065 R27 v5) y arma los cuerpos: lo validado es lo enviado (CR4). Al
     // primer fallo para; cada fila guardada se consolida. Devuelve
     // ``{malas, guardadas, motivo}``.
+    //
+    // F-116 R22, R23: primero espera a que la Cola se vacíe (los autoguardados
+    // en curso; si no, se reenviaría lo que van a mandar) y manda, además de
+    // las filas con cambios, las autoguardadas sin bloquear (con lo pendiente,
+    // ``{}`` si nada). Una que se bloquea deja de contar como autoguardada.
     async function guardarFilasPendientes() {
+        await encolar(function () { return null; });
         const lista = await cargarPartidasObra();
-        const filas = filasConCambios([].slice.call(linesBody.querySelectorAll("tr.concilia-editable")));
+        const todas = [].slice.call(linesBody.querySelectorAll("tr.concilia-editable"));
+        const filas = filasParaGuardar(todas, filasConCambios(todas));
         if (partidasMalas(filas, lista.items).length) {
             return { malas: true, guardadas: 0, motivo: null };
         }
@@ -3103,6 +3120,7 @@
                 return { malas: false, guardadas: guardadas, motivo: motivo };
             }
             consolidarFila(envios[i].tr);
+            delete envios[i].tr.dataset.autoguardada;
             guardadas += 1;
         }
         return { malas: false, guardadas: guardadas, motivo: null };
