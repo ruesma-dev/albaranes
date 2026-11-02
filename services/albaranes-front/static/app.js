@@ -1312,13 +1312,19 @@
 
     // F-077 R12: el PATCH de fila (F-065 R8, R13: solo lo cambiado, y guardar
     // = bloquear). Única petición de este tipo en el fichero: la usan el
-    // «Guardar» de cada fila, «Guardar todas» y el guardado previo de
-    // «Guardar» / «Guardar y aprobar». ``null`` si fue bien; si no, el motivo.
-    async function enviarFila(vid, cuerpo) {
+    // «Guardar» de cada fila, «Guardar todas», el guardado previo de
+    // «Guardar» / «Guardar y aprobar» y (F-116 R13) el autoguardado de la
+    // fila, este con ``{bloquear: false, red: fetchRed}`` (sin bloquear y por
+    // la red de verdad: corre dentro de la Cola). ``null`` si fue bien; si
+    // no, el motivo.
+    async function enviarFila(vid, cuerpo, opciones) {
+        const o = opciones || {};
+        const bloquear = o.bloquear !== false;
+        const red = o.red || fetch;
         let resp;
         try {
-            resp = await fetch(
-                `/api/documents/${documentId}/lines/${vid}/conciliacion/campos?bloquear=1`,
+            resp = await red(
+                `/api/documents/${documentId}/lines/${vid}/conciliacion/campos` + (bloquear ? "?bloquear=1" : ""),
                 {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
@@ -1342,6 +1348,88 @@
         });
         const boton = tr.querySelector(".js-cedit-save");
         if (boton) { boton.disabled = true; }
+    }
+
+    // F-116 R16: los valores de las celdas de la fila (``field`` ⇒ ``value``).
+    function valoresDeFila(tr) {
+        const valores = {};
+        tr.querySelectorAll(".js-cedit").forEach(function (inp) {
+            valores[inp.dataset.field] = inp.value;
+        });
+        return valores;
+    }
+
+    // F-116 R16: una fila autoguardada (SIN bloquear): lo enviado pasa a ser
+    // su valor inicial (lo tecleado después sigue con cambios); a diferencia de
+    // ``consolidarFila``, nada se desactiva.
+    function consolidarSinBloquear(tr, enviado) {
+        tr.querySelectorAll(".js-cedit").forEach(function (inp) {
+            const field = inp.dataset.field;
+            if (field in enviado) { inp.defaultValue = enviado[field]; }
+            if (inp.value === inp.defaultValue) { inp.classList.remove("cedit-dirty"); }
+        });
+        tr.classList.remove("fila-no-guardada");
+    }
+
+    // F-116 R16: el número de la fila en la tabla (1, 2…), para los avisos.
+    function numeroDeLinea(tr) {
+        return [].slice.call(linesBody.querySelectorAll("tr.conciliacion-row")).indexOf(tr) + 1;
+    }
+
+    // F-116 R13–R17, R26: autoguardado de una fila al salir de una celda.
+    // Entra en la Cola en el mismo tick del ``blur`` (R25); cuando le toca,
+    // espera la lista de partidas y valida, lee y arma el cuerpo sin nada
+    // entre medias (R14, CR4 de F-065). Partida fuera de la lista ⇒ nada de
+    // la fila, en rojo, sin ``alert`` (R15, D5 = a). Bien ⇒ consolidada SIN
+    // bloquear y marcada (R16); mal ⇒ en rojo con el motivo (R17), sin
+    // reintentar sola (R26).
+    function autoguardarFila(tr) {
+        const vid = (tr.dataset.forValuationLineId || "").trim();
+        if (!vid || !document.getElementById("autoguardado-estado")) { return null; }
+        return encolar(async function () {
+            const lista = await cargarPartidasObra();
+            if (partidasMalas([tr], lista.items).length) { return false; }
+            const enviado = valoresDeFila(tr);
+            const cuerpo = _camposCambiados(tr, lista.items);
+            if (!Object.keys(cuerpo).length) { return null; }
+            const motivo = await enviarFila(vid, cuerpo, { bloquear: false, red: fetchRed });
+            const n = numeroDeLinea(tr);
+            if (motivo !== null) {
+                marcarFilaNoGuardada(tr, motivo);
+                avisarAutoguardado("No se pudo guardar la línea " + n + ": " + motivo);
+                return false;
+            }
+            consolidarSinBloquear(tr, enviado);
+            tr.classList.add("fila-autoguardada");
+            tr.title = "Guardada automáticamente, sin bloquear";
+            tr.dataset.autoguardada = "1";
+            avisarAutoguardado("Línea " + n + " guardada");
+            document.dispatchEvent(new Event("autoguardado"));
+            return true;
+        });
+    }
+
+    // F-116 R13: al salir de CADA celda editable. Enganchado después de
+    // ``wirePartidaCombos`` (su ``blur`` devuelve antes la partida no válida)
+    // y de ``wireConciliaEdit``. Sin ``#autoguardado-estado``, nada (R12).
+    function wireAutoguardadoFilas() {
+        if (!document.getElementById("autoguardado-estado")) { return; }
+        linesBody.querySelectorAll("tr.concilia-editable").forEach(function (tr) {
+            tr.querySelectorAll(".js-cedit").forEach(function (inp) {
+                inp.addEventListener("blur", function () { autoguardarFila(tr); });
+            });
+        });
+    }
+
+    // F-116 R22 (D2 = a): lo que mandan con ``?bloquear=1`` «Guardar todas»,
+    // «Guardar» y «Guardar y aprobar»: las de ``conCambios`` (las de
+    // ``filasConCambios``) y las autoguardadas en esta carga, en el orden de
+    // la tabla. Las bloqueadas no son ``tr.concilia-editable``.
+    function filasParaGuardar(filas, conCambios) {
+        return filas.filter(function (tr) {
+            const vid = (tr.dataset.forValuationLineId || "").trim();
+            return conCambios.indexOf(tr) !== -1 || (vid && tr.dataset.autoguardada === "1");
+        });
     }
 
     // F-065 R29: aviso de la confirmación de «Dividir» (recarga la ficha y se
@@ -1645,6 +1733,7 @@
     // concepto es texto (reapuntar es solo «Origen ✎»).
     wirePartidaCombos();
     wireConciliaEdit();
+    wireAutoguardadoFilas();
     wireCuadrar();
     wireVolverACalculado();
 

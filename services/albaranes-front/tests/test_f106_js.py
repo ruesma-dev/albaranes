@@ -261,8 +261,9 @@ def test_f106_r12_js_el_importe_viaja_si_fue_lo_ultimo_tecleado(tmp_path):
 
 
 def test_f106_r12_las_tres_vias_de_enviar_fila_usan_campos_cambiados():
+    # F-116 R30: 3 ⇒ 4 vías (la cuarta, el autoguardado de la fila).
     js = _app_js()
-    assert js.count("_camposCambiados(tr, lista.items)") == 3
+    assert js.count("_camposCambiados(tr, lista.items)") == 4
 
 
 # =================================================================== #

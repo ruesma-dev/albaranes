@@ -480,6 +480,7 @@ def test_f116_r14_el_cuerpo_se_arma_cuando_le_toca(tmp_path):
 @con_node
 def test_f116_r15_partida_fuera_de_la_lista_no_envia_nada_de_la_fila(tmp_path):
     casos = _correr(tmp_path, 'f1.cant.value = "6";\n' + _salir("f1.part", "zzzz") + """
+        await dejar();
         estado.roja = f1.part.classList.contains("partida-invalida");
     """, preparacion="""
         const _e = estado;
@@ -561,7 +562,8 @@ def test_f116_r20_enter_sigue_siendo_guardar_y_bloquear(tmp_path):
 
 def test_f116_r13_enviar_fila_es_la_unica_que_construye_la_url():
     js = _app_js()
-    assert js.count("conciliacion/campos") == js.count("conciliacion/campos", *_rango(js, "enviarFila"))
+    url = "/conciliacion/campos`"  # la plantilla de la URL (no los comentarios)
+    assert js.count(url) == js.count(url, *_rango(js, "enviarFila")) == 1
     cuerpo = _funcion_js(js, "enviarFila")
     assert "?bloquear=1" in cuerpo
 

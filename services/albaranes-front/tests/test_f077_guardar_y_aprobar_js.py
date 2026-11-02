@@ -419,8 +419,13 @@ def test_f077_r11_el_servidor_sigue_rechazando_aprobar_con_filas_incompletas():
 # R12 · R13 · una sola petición de PATCH de fila y adiós al aviso de F-065 R19
 # =================================================================== #
 def test_f077_r12_una_sola_peticion_patch_de_fila():
+    # F-116 R30: la URL ya no lleva ``?bloquear=1`` fijo (el autoguardado
+    # manda sin él): ``enviarFila`` sigue siendo la ÚNICA que la construye.
+    from test_f051_almacen_front import _funcion_js
+
     js = _app_js()
-    assert js.count("conciliacion/campos?bloquear=1") == 1
+    url = "/conciliacion/campos`"  # la plantilla de la URL (no los comentarios)
+    assert js.count(url) == 1 and url in _funcion_js(js, "enviarFila")
     assert js.count("b.detail.map(") + js.count("cuerpo.detail.map(") <= 1  # el motivo, una vez
 
 
