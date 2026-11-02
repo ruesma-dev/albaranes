@@ -176,9 +176,9 @@ el recuento de la URL contaba también un comentario. Verde: 51 passed.
 
 | Evidencia | Valor |
 |---|---|
-| Tests ejecutados (sv4, suite completa) | **2500 passed**, 0 failed (190.83 s suelta; 412.64 s dentro de `init.sh`, con cobertura) |
+| Tests ejecutados (sv4, suite completa) | **2501 passed** en la pasada final (2500 en T11), 0 failed (190.83 s suelta; 412.64 s dentro de `init.sh`, con cobertura) |
 | Tests nuevos de F-116 | 115 (46 + 6 + 12 + 51), todos en verde |
-| Cobertura de las líneas cambiadas | **97.9 %** (47/48, `PUERTA COBERTURA` de `init.sh`); la que faltaba tiene test desde `aa59535` |
+| Cobertura de las líneas cambiadas | **100.0 %** (48/48, pasada final); 97.9 % (47/48) en la primera, la que faltaba tiene test desde `aa59535` |
 | Mutantes generados / supervivientes | **7 generados, 7 muertos, 0 supervivientes, 0 timeouts** (`python -m harness.mutacion --feature F-116`, HEAD `0245fd6`, 4 workers, 1020.9 s; nivel `estandar` con tope 20: hubo 7, campaña completa). Detalle en `progress/mutacion_F-116.md` |
 | Análisis de supervivientes | No hay |
 | Tiempo de la suite de sv4 | 190.83 s (suelta) |
@@ -187,4 +187,4 @@ el recuento de la URL contaba también un comentario. Verde: 51 passed.
 Pasada final de `init.sh` (tras commitear este informe y la mutación): ver la
 línea siguiente, la escribe el implementer con el resultado real.
 
-- Pasada final: PENDIENTE_DE_RELLENAR
+- Pasada final (sobre `5ff3fa9`): **salida 0, «ENTORNO LISTO»**. sv4 2501 passed (257.69 s), resto en verde (1919, 236, 496, 1608, 125, 506+1 skipped, 1073, 1342), `PUERTA COBERTURA: 100.0% de 48 líneas (48/48)`, `PUERTA TAMAÑO` (impl 190/220). Una pasada anterior salió en rojo solo por `test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`: faltaba la fila de `progress/mutacion_F-116.md` en `progress/inventario_mutacion_F-039.md` (añadida en `5ff3fa9`).
