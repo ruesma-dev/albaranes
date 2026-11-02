@@ -84,3 +84,16 @@ importe es correcto); **decisión del humano pendiente**: corregirlas a mano en 
 
 Nota: las verificaciones de `tasks.md` apuntan a §T17 (T18), §T19 (T20) y §T21 (T22); aquí se usan los nombres de la
 tarea (§T18, §T20), como pidió el líder.
+
+## T17 · navegador (líder, 2026-11-01)
+
+sv4 del worktree en local (BBDD local, Azurite, sin `ALTA_SIGRID_COMMIT`), Chrome. En la BBDD local no hay albaranes de
+CECOIS: se usó el de FEYMACO `20bc59dd…` (líneas con −40 %), desaprobado en local para editarlo.
+
+- **Guarda encendida**: la etiqueta «A Sigrid» deja de verse y el precio lleva `title` «A Sigrid: 108 × 0,543 € −40 %»
+  (y así en las demás líneas con descuento).
+- **Importe tecleado** 35,30 en 108 × 0,543 −40 % ⇒ P = 0,544753 y «A Sigrid: 108 × 0,544753 € −40 %», sin verse.
+- **Guarda apagada** (sv4 rearrancado): «A Sigrid: 108 × 0,325833 €» visible, como en F-106.
+- **Panel «Dto %»**: no se vio en vivo. Es la tabla de la previa del alta (`_alta_sigrid.html`) y solo sale con una
+  previa de sv9 contra sigrid-api, que no se lanza desde local; queda cubierto por los tests de la plantilla. Se verá
+  en la T22 con la primera alta real.
