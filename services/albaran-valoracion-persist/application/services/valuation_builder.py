@@ -439,13 +439,18 @@ class ValuationBuilder:
         # sobre —y en los sobres anteriores a F-043— es lo que deja el
         # servicio comportándose exactamente como hoy (R27).
         self._clasificacion = None
+        self._sin_almacen: frozenset[int] = frozenset()
 
     def build(
         self,
         *,
         envelope: ValuationEnvelope,
         existing_document_already_valued: bool,
+        sin_almacen: frozenset[int] = frozenset(),
     ) -> tuple[ValuationHeaderRecord, list[LineValuationRecord]]:
+        # (F-111 R25-R27, D5) Líneas de residuos sin partida asignable: el
+        # matcher no las manda a almacén. Es de ESTA valoración.
+        self._sin_almacen = frozenset(sin_almacen)
         # Codigo de contrato de esta valoracion (para la "linea nueva" de
         # fallback cuando la IA no casa nada con el contrato).
         self._codigo_contrato_actual = envelope.meta.codigo_contrato
@@ -1122,6 +1127,7 @@ class ValuationBuilder:
                 albaran_codigo_producto=(
                     albaran_line.codigo if albaran_line else None
                 ),
+                sin_almacen=line.merge_line_id in self._sin_almacen,
             )
 
         effective_matched_id = partida_result.matched_contrato_line_id

@@ -362,3 +362,122 @@ def test_f111_r35_motivos_congelados():
     assert MOTIVO_SIN_CANDIDATA == "partida_residuos_sin_candidata"
     assert MOTIVO_IA_FALLO == "partida_residuos_ia_fallo"
     assert MOTIVO_SIN_LISTA == "partida_residuos_sin_lista"
+
+
+# ------------------------------------------------------------------ #
+# T9 · R25 el matcher no manda a almacén lo que F-111 no pudo asignar
+# ------------------------------------------------------------------ #
+def _linea_ia(matched_id):
+    from domain.models.valuation_envelope import LineValuationDto
+
+    return LineValuationDto(
+        merge_line_id=700, line_kind="from_albaran", match_method="semantic",
+        matched_contrato_line_id=matched_id, match_confidence_pct=90.0,
+        unidad_categoria_albaran="count", unidad_category_match=True,
+        precio_unitario_contrato_db=120.0,
+    )
+
+
+def _match(matched_id, partida, *, sin_almacen, almacen=True):
+    from application.services.partida_matcher import PartidaMatcher
+    from tests.f036_escenarios_residuos import CONTRATO_SALMEDINA
+
+    return PartidaMatcher(alm_codigo_partida="ALM", almacen_sin_partida=almacen).match(
+        line=_linea_ia(matched_id), codigo_partida_albaran=partida,
+        precio_unitario_final=120.0, unidad_albaran="UD",
+        contrato_lines=list(CONTRATO_SALMEDINA), albaran_descripcion="x",
+        albaran_codigo_producto=None, sin_almacen=sin_almacen,
+    )
+
+
+def test_f111_r25_matcher_sin_almacen_conserva_la_casada_sin_partida():
+    r = _match(9001, None, sin_almacen=True)
+    assert r.partida_action == "existing_matched"
+    assert r.matched_contrato_line_id == 9001
+    assert r.codigo_partida_final is None  # nunca la del contrato (F-051)
+    assert r.derived_line is None
+    assert r.reasons == ["ia_match_trusted_sin_partida"]
+
+
+def test_f111_r25_matcher_sin_almacen_y_sin_casada_no_action():
+    r = _match(None, None, sin_almacen=True)
+    assert r.partida_action == "no_action"
+    assert r.codigo_partida_final is None
+    assert r.matched_contrato_line_id is None
+
+
+def test_f111_r25_matcher_sin_almacen_con_casada_inexistente_no_action():
+    r = _match(123456, None, sin_almacen=True)
+    assert r.partida_action == "no_action"
+
+
+def test_f111_r28_matcher_sin_marca_sigue_mandando_a_almacen():
+    assert _match(9001, None, sin_almacen=False).partida_action == "almacen_sin_partida"
+    # Con F-051 apagado, lo de antes de F-051 (sin cambios).
+    assert _match(9001, None, sin_almacen=False, almacen=False).codigo_partida_final == "32.01"
+
+
+def test_f111_r28_matcher_sin_almacen_no_toca_las_lecturas():
+    assert _match(9001, "32.01", sin_almacen=True).codigo_partida_final == "32.01"
+    assert _match(9001, "ALM", sin_almacen=True).partida_action == "alm_new_line_created"
+
+
+def _builder_almacen():
+    """El builder del escenario con F-051 encendido (como en producción)."""
+    from application.services.partida_matcher import PartidaMatcher
+    from tests.f027_escenarios import construir_builder
+
+    builder = construir_builder()
+    builder._partida_matcher = PartidaMatcher(alm_codigo_partida="ALM", almacen_sin_partida=True)
+    return builder
+
+
+def test_f111_r25_matcher_el_builder_pasa_sin_almacen():
+    builder = _builder_almacen()
+    env = _envelope()
+    _cab, regs = builder.build(envelope=env, existing_document_already_valued=False)
+    base = next(r for r in regs if r.line_kind == "from_albaran")
+    assert base.partida_action == "almacen_sin_partida"
+
+    _cab, regs = builder.build(
+        envelope=env, existing_document_already_valued=False, sin_almacen=frozenset({700}),
+    )
+    base = next(r for r in regs if r.line_kind == "from_albaran")
+    assert base.partida_action != "almacen_sin_partida"
+    assert base.codigo_partida_final is None
+    # La marca es de UNA valoración: la siguiente sin ella vuelve a almacén.
+    _cab, regs = builder.build(envelope=env, existing_document_already_valued=False)
+    assert next(r for r in regs if r.line_kind == "from_albaran").partida_action == "almacen_sin_partida"
+
+
+#: Obra con una candidata, la del contrato del escenario (32.01).
+FILAS_32 = [
+    (1, 0, "CD", "COSTES DIRECTOS"),
+    (10, 1, "32", "GESTIÓN RESIDUOS (SEGÚN EGRC)"),
+    (11, 10, "32.01", "GRD010 Gestión de residuos"),
+]
+
+
+def test_f111_r24_sintetica_ler_hereda_la_partida_asignada():
+    builder = _builder_almacen()
+    asignador, _ = _asignador(_lista(FILAS_32))
+    asignacion = asignador.asignar(envelope=_envelope(), obra="0686")
+    cab, regs = builder.build(
+        envelope=asignacion.envelope, existing_document_already_valued=False,
+        sin_almacen=asignacion.sin_almacen,
+    )
+    AsignadorPartidaResiduos.anotar(cab, regs, asignacion)
+    base = next(r for r in regs if r.line_kind == "from_albaran")
+    sinteticas = [r for r in regs if r.line_kind == "synthetic_modifier"]
+    assert base.codigo_partida_final == "32.01"
+    assert base.codigo_partida_albaran is None
+    assert sinteticas, "el escenario debe inyectar el incremento LER 170802"
+    assert all(s.codigo_partida_final == "32.01" for s in sinteticas)
+
+
+def test_f111_r24_sintetica_sin_asignacion_va_con_la_base_a_almacen():
+    """Contraste: sin F-111, base y sintética van a almacén (partida vacía)."""
+    builder = _builder_almacen()
+    _cab, regs = builder.build(envelope=_envelope(), existing_document_already_valued=False)
+    sinteticas = [r for r in regs if r.line_kind == "synthetic_modifier"]
+    assert sinteticas and all(s.codigo_partida_final is None for s in sinteticas)
