@@ -245,6 +245,18 @@ def test_f116_r4_alta_bloqueante_no_cambia_nada():
     assert foto(motor) == antes
 
 
+def test_f116_r2_el_repositorio_rechaza_otros_campos_sin_escribir():
+    """Defensa en el repositorio (el cuerpo ya lo impide, R5): un campo que no
+    es de los cuatro no se escribe nunca."""
+    motor = construir()
+    antes = foto(motor)
+
+    with pytest.raises(ValueError, match="selected_contrato_codigo"):
+        _guardar(motor, review_notes="x", selected_contrato_codigo=None)
+
+    assert foto(motor) == antes
+
+
 def test_f116_r4_documento_que_no_existe():
     motor = construir()
 
