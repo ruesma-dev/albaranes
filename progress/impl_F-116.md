@@ -210,3 +210,5 @@ Edge no está al alcance del líder: queda para el humano si quiere repetirlo.
 Observación menor (no bloquea): con la fecha en rojo (paso 3) el `title` del campo sigue diciendo «Guardado
 automáticamente», del guardado anterior. Al probar se tocó por error la unidad de la línea (KG ⇒ 80 ⇒ KG, ambos
 autoguardados): BBDD local solamente.
+
+T14 (2026-11-02): el humano despliega sv4 `r20261102-1328`; M2 del líder en producción, solo lectura: la ficha carga, `#autoguardado-estado` y los 4 `data-guardado` presentes, `app.js` servido con el código nuevo, consola sin errores.

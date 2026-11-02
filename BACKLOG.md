@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **113 features**, 77 abiertas (0 en curso, 7 con la spec lista, 12 bloqueadas y 58 en backlog) y 36 terminadas.
+Resumen: **113 features**, 76 abiertas (0 en curso, 7 con la spec lista, 11 bloqueadas y 58 en backlog) y 37 terminadas.
 
 ## En curso
 
@@ -25,7 +25,6 @@ _Ninguna feature en curso._
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-116 | Guardado automático de la ficha al salir de cada campo, sin bloquear la línea | 1 | estandar | `feature/F-116-guardado-automatico-ficha` |
 | F-110 | El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS) | 2 | critico | `feature/F-110-descuento-linea-sigrid` |
 | F-104 | sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos | 3 | critico | `feature/F-104-codigos-contrato-v83` |
 | F-098 | Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64» | 5 | critico | `feature/F-098-partidas-por-capitulo` |
@@ -124,6 +123,7 @@ _Ninguna feature en curso._
 | F-113 | Fotos reenviadas con MIME application/octet-stream: IA2 (OpenAI) las rechaza y no llegan a la plataforma | 1 | estandar |
 | F-114 | Elegir proveedor: check «Solo de la obra» (por defecto) o todos los proveedores de Sigrid | 1 | estandar |
 | F-115 | Al cambiar el proveedor: se reinicia la búsqueda de contrato y la valoración, sin regenerar las líneas | 1 | estandar |
+| F-116 | Guardado automático de la ficha al salir de cada campo, sin bloquear la línea | 1 | estandar |
 | F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
 | F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
 | F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
@@ -143,12 +143,6 @@ _Ninguna feature en curso._
 | F-075 | El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán | 13 | critico |
 
 ## Detalle
-
-### F-116 · Guardado automático de la ficha al salir de cada campo, sin bloquear la línea
-
-estado **bloqueada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-116-guardado-automatico-ficha`
-
-ORIGEN: el humano, 2026-11-01, al cerrar F-108: «al escribir la fecha sea de la forma que sea, deberia guardarse solo sin darle a guardar, igual con numero de albaran»; después lo amplía: «en general, quiero que todos los campos se guarden automaticamente», y precisa: «no quites guardar. ese boton ademas bloquea la linea. lo que quiero simplemente es que al salir de cada celda guarde lo escrito, pero no que bloquee. son 2 comportamientos independientes. los botones de guardar y guardar todos siguen igual». ALCANCE (solo sv4): (1) cabecera editable (fecha, número de albarán, forma de pago, notas de revisión y cualquier otro campo de texto de la cabecera que hoy solo se guarde con «Guardar»): al salir del campo, si el valor es válido y ha cambiado, se guarda solo, sin recargar la página, con una marca discreta de guardado; endpoint propio si hace falta (no tiene por qué ser el mismo que el de las líneas). Fecha no válida: no se guarda, rojo y aviso (F-108). (2) líneas: al salir de CADA celda editada se guarda lo escrito (con el recálculo de F-106), SIN bloquear la línea: el bloqueo es otro comportamiento, independiente, que sigue haciéndose solo con los botones. Partida fuera de la lista: no se guarda, rojo (como hoy). (3) Sin cambios: botones «Guardar» de cada fila, «Guardar todas» y «Guardar» general siguen igual (y siguen bloqueando lo que bloquean hoy); proveedor, obra y contrato ya se guardan solos. «Guardar y aprobar» espera a los guardados en curso. A RESOLVER EN LA SPEC: qué es exactamente «bloquear» hoy (`?bloquear=1` de `conciliacion/campos`, marca «✋» y `edicion_manual_json` de F-106) y si un guardado sin bloqueo conserva o no la edición al revalorar; qué campos de cabecera existen y cuáles ya se guardan solos; carreras entre guardado automático, botones y aprobar; «Deshacer» con el guardado automático. FUERA: dos pestañas editando el mismo albarán; el listado.
 
 ### F-110 · El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS)
 
@@ -1098,6 +1092,12 @@ ORIGEN: el humano, 2026-10-30, por el documento 097191e9 (obra sin contratos). H
 estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-115-cambio-proveedor-reinicia-contrato`
 
 ORIGEN: el humano, 2026-10-30, al aprobar la PARADA 1 de F-114 (era su D6). PROBLEMA (ya existe hoy, F-114 lo hará más frecuente): si el albarán tenía elegido un contrato del proveedor A y en la ficha (sv4) se cambia el proveedor a B (corrección manual de F-062), el contrato de A sigue seleccionado; la valoración usaría el contrato de A y el alta en Sigrid (sv9) mandaría el contrato de A con el CIF de B (Sigrid lo rechaza: fallo visible, no silencioso). PETICIÓN del humano: «al cambiar proveedor debe reiniciarse el proceso de busqueda de contrato y valoracion pero no la generacion de nuevas lineas». Es decir: al cambiar el proveedor se quita la selección de contrato del proveedor anterior, se vuelven a buscar los contratos del proveedor nuevo y se revalora; las líneas extraídas (y sus ediciones manuales) se conservan, sin volver a extraer (no se relanza IA1/IA2). A RESOLVER EN LA SPEC: qué hace hoy el cambio de proveedor de F-062 (qué cola publica: q-persistencia re-fetch o q-valoracion revalorar) y qué pieza vuelve a buscar contratos (enriquecimiento de sv3) sin regenerar líneas; qué se borra exactamente (contrato elegido, vinculaciones de línea a contrato, valoración previa) y qué se conserva (líneas, ediciones manuales de F-106, partidas/almacén elegidos a mano); qué pasa si el proveedor nuevo no tiene contrato en la obra (valoración sin contrato, como hoy); si el albarán ya está aprobado o con alta en Sigrid, no se permite o se avisa. Servicios previstos: sv4 (y sv3/sv6 si la re-búsqueda de contratos lo exige; se confirma en la spec). Va DETRÁS de F-114.
+
+### F-116 · Guardado automático de la ficha al salir de cada campo, sin bloquear la línea
+
+estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-116-guardado-automatico-ficha`
+
+ORIGEN: el humano, 2026-11-01, al cerrar F-108: «al escribir la fecha sea de la forma que sea, deberia guardarse solo sin darle a guardar, igual con numero de albaran»; después lo amplía: «en general, quiero que todos los campos se guarden automaticamente», y precisa: «no quites guardar. ese boton ademas bloquea la linea. lo que quiero simplemente es que al salir de cada celda guarde lo escrito, pero no que bloquee. son 2 comportamientos independientes. los botones de guardar y guardar todos siguen igual». ALCANCE (solo sv4): (1) cabecera editable (fecha, número de albarán, forma de pago, notas de revisión y cualquier otro campo de texto de la cabecera que hoy solo se guarde con «Guardar»): al salir del campo, si el valor es válido y ha cambiado, se guarda solo, sin recargar la página, con una marca discreta de guardado; endpoint propio si hace falta (no tiene por qué ser el mismo que el de las líneas). Fecha no válida: no se guarda, rojo y aviso (F-108). (2) líneas: al salir de CADA celda editada se guarda lo escrito (con el recálculo de F-106), SIN bloquear la línea: el bloqueo es otro comportamiento, independiente, que sigue haciéndose solo con los botones. Partida fuera de la lista: no se guarda, rojo (como hoy). (3) Sin cambios: botones «Guardar» de cada fila, «Guardar todas» y «Guardar» general siguen igual (y siguen bloqueando lo que bloquean hoy); proveedor, obra y contrato ya se guardan solos. «Guardar y aprobar» espera a los guardados en curso. A RESOLVER EN LA SPEC: qué es exactamente «bloquear» hoy (`?bloquear=1` de `conciliacion/campos`, marca «✋» y `edicion_manual_json` de F-106) y si un guardado sin bloqueo conserva o no la edición al revalorar; qué campos de cabecera existen y cuáles ya se guardan solos; carreras entre guardado automático, botones y aprobar; «Deshacer» con el guardado automático. FUERA: dos pestañas editando el mismo albarán; el listado.
 
 ### F-011 · Evals de IA con ground truth y puerta en el arnés
 
