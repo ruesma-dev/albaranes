@@ -331,7 +331,8 @@ class _Builder:
     def __init__(self, registros):
         self._registros = registros
 
-    def build(self, *, envelope, existing_document_already_valued):
+    def build(self, *, envelope, existing_document_already_valued, sin_almacen=frozenset()):
+        # (F-111) el pipeline pasa también las líneas que no van a almacén.
         from domain.models.valuation_records import ValuationHeaderRecord
 
         cabecera = ValuationHeaderRecord(

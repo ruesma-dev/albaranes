@@ -32,6 +32,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from application.services.almacen_politica import ACCION_ALMACEN_SIN_PARTIDA
 from application.services.valuation_builder import _familia_de
 from domain.models.valuation_envelope import ValuationEnvelope
 from domain.models.valuation_records import LineValuationRecord, ValuationHeaderRecord
@@ -249,7 +250,8 @@ class AsignadorPartidaResiduos:
         - Asignada ⇒ ``partida_residuos:<cod>`` sin revisión y
           ``codigo_partida_albaran`` vuelve a la lectura (vacía).
         - Sin asignar ⇒ el motivo en la línea y en la cabecera, más
-          ``review_required`` en las dos (como F-076).
+          ``review_required`` en las dos (como F-076); si la línea llegó como
+          ``almacen_sin_partida`` (valoración directa), pasa a ``no_action``.
         """
         for record in lines:
             if record.line_kind != "from_albaran" or record.merge_line_id not in asignacion.por_linea:
@@ -258,6 +260,10 @@ class AsignadorPartidaResiduos:
             record.codigo_partida_albaran = resultado.leida
             _anadir(record, resultado.motivo)
             if resultado.revision:
+                # (R25, D5) Nunca almacén: la valoración directa (F-075), que
+                # no pasa por el matcher, la marcaría así.
+                if record.partida_action == ACCION_ALMACEN_SIN_PARTIDA:
+                    record.partida_action = "no_action"
                 record.review_required = True
                 _anadir(header, resultado.motivo.split(":", 1)[0])
                 _anadir(header, _MOTIVO_CABECERA_REVISION)
