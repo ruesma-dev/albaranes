@@ -101,3 +101,7 @@ La primera campaña completa dejó **28 supervivientes**. Se resolvieron así (T
 - **Tests nuevos** en `test_f111_*`: tildes conservadas en el prompt; dataclasses `frozen`; 5 frente a 6 candidatas para el sufijo `(+N)`; recuento de líneas de log con `caplog`; paquetes con 12,004 m³; tamaño IA pequeño (0,75); casada de 6,01; 3 intentos por defecto e `intentos=1`; cuerpo de error recortado a 200 caracteres; 400 sin reintento; ruta que no acaba en la hoja.
 
 Informe de la primera pasada: copia en el scratchpad de la sesión (`f111/mutacion_pasada1.md`), no versionada.
+
+## Aceptación del humano
+
+2026-11-03, PARADA 2 de F-111: el humano acepta por escrito los 3 mutantes equivalentes (las dos sangrías del JSON del prompt de sv5 y el `split` de sv6) — «si a todo».
