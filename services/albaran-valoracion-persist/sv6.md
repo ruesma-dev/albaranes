@@ -700,6 +700,7 @@ Esto se ve en `/health` con el flag `schema_ready`:
 | `PARTIDAS_OBRA_TTL_S`            | `21600`                | F-076: vida de la lista de una obra en la caché de la réplica.               |
 | `PARTIDAS_OBRA_MAX_OBRAS`        | `64`                   | F-076: obras en memoria (sale la menos usada).                               |
 | `PARTIDAS_OBRA_FALLO_TTL_S`      | `300`                  | F-076: cuánto se recuerda un fallo de sigrid-api antes de reconsultar.        |
+| `PARTIDA_RESIDUOS_ENABLED`       | `true`                 | F-111: residuos sin partida ⇒ partida del capítulo de gestión de residuos (nunca almacén); `false` = como antes. |
 | `API_HOST`                       | `127.0.0.1`            |                                                                              |
 | `API_PORT`                       | `8003`                 | (sv2: 8000, sv3: 8001, sv5: 8002, sv6: 8003)                                 |
 | `LOG_LEVEL`                      | `INFO`                 |                                                                              |
@@ -794,6 +795,21 @@ leída a `codigo_partida_albaran`; `partida_fuera_de_lista` /
 aprobar). Sin lista (sin configuración, obra vacía, fallo, truncado, 0 hojas) o
 con cualquier excepción: WARNING y `partidas_obra_no_disponibles` en la cabecera,
 sin revisión; se valora como siempre. Infra: `infra/set_partidas_sv6.ps1`.
+
+### 9 ter. F-111 · residuos: contenedores 3/6/9 y partida del capítulo de residuos
+
+Spec: `specs/F-111-residuos-contenedores-y-partida/` (regla 27 de
+`docs/ARCHITECTURE.md`). **Tamaño** (`residuos_container_calc.py`): con tamaños en
+el contrato, el más pequeño en el que caben los m³; sin tamaños, 3, 6 o 9 m³ y
+con más de 9, paquetes de 6; precio el de la casada; tamaño distinto del de la
+casada ⇒ revisión (`residuos_tamano_distinto_de_casada`). **Partida**
+(`partida_residuos.py`): tras 9 bis, una línea de residuos sin partida leída
+recibe la hoja del capítulo de gestión de residuos de su obra (1 candidata: esa;
+2 o más: `POST sv5 /v1/albaranes/partida-residuos`, una llamada por documento,
+cliente `http_partida_residuos_client.py` con 3 intentos); sin capítulo, sin
+candidata, sin IA o sin lista ⇒ revisión y nunca almacén (el builder pasa
+`sin_almacen` al `PartidaMatcher`). La obra se lee una vez y la caché de partidas
+es la misma de 9 bis. Interruptor: `PARTIDA_RESIDUOS_ENABLED`.
 
 ---
 

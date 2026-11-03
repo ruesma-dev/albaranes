@@ -309,7 +309,8 @@ anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
       hormigón, mortero, combustible, alquiler de maquinaria y residuos) se
       marcan `review_required` con `partida_ausente_familia_destinada`, que
       **no bloquea** la aprobación. Interruptor de vuelta atrás:
-      `ALMACEN_SIN_PARTIDA_ENABLED=false`.
+      `ALMACEN_SIN_PARTIDA_ENABLED=false`. **Excepción: residuos** (F-111,
+      regla 27): una línea de residuos sin partida no va a almacén.
     - **sv4**: «Almacén (sin partida)» es la primera opción fija del combo de
       partida; elegirla, vaciar la partida o el botón «Almacén a todas las
       líneas» (que pisa también las que tienen partida, con confirmación y
@@ -957,6 +958,44 @@ anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
       `albaran_valuations.contrato_codigo` no es el seleccionado (409, D4).
     - Aprobado o con alta bloqueante, el cambio se rechaza como siempre
       (F-065 R4, F-053 R25/R26).
+
+27. **Residuos: contenedores de 3, 6 o 9 m³ y partida del capítulo de gestión
+    de residuos** (F-111, nov 2026; reglas del humano del 2026-10-29; spec
+    `specs/F-111-residuos-contenedores-y-partida/`).
+    - **Tamaño del contenedor** (sv6 `residuos_container_calc.py`, prioridad 2
+      de F-036 R22, que no cambia de orden). Fuentes: los m³ de las líneas
+      «contenedor» de la tabla del contrato > `contenedor_m3` de IA3 > m³ de la
+      descripción de la casada > estándar. **Si el contrato da tamaños, manda el
+      contrato**: el más pequeño en el que caben los m³ (1 contenedor); si no
+      caben en ninguno, paquetes de 6 si el contrato tiene el de 6 y, si no, del
+      mayor. **Si no da ninguno**, los contenedores son de **3, 6 o 9 m³**: el
+      más pequeño en el que caben (≤ 3 → 3, ≤ 6 → 6, ≤ 9 → 9, uno) y con más de
+      9 m³, `ceil(m³ / 6)` de 6, **sin mezclar tamaños** (motivo
+      `residuos_tamano_estandar=<t>m3`; el «6 por defecto» ya no existe). El
+      **precio** es siempre el de la línea casada (el precio general del
+      contrato): cambia la cantidad, no el precio. Si el tamaño elegido no es
+      el que dice la descripción de la casada, la línea va a revisión con
+      `residuos_tamano_distinto_de_casada=<elegido>/<casada>` sin tocar la
+      casada. IA3 (`valuation_residuos`, paso 4) deja `contenedor_m3 = null`
+      cuando el contrato no da el tamaño.
+    - **Partida** (sv6 `partida_residuos.py`, tras la normalización de F-076 y
+      antes de la valoración directa, IA4 y el build): una línea de familia
+      efectiva `residuos` **sin partida leída** (vacía; `ALM` es una lectura)
+      **no va a almacén**: se le busca partida entre las hojas del capítulo de
+      gestión de residuos de su obra (`ruesma_comun.sigrid.candidatas_residuos`:
+      hojas con un ANTECESOR «GESTIÓN … RESIDUO…», sin las de ajuste; reconoce,
+      no elige). Con **una** candidata, esa, sin IA; con **dos o más**, la IA de
+      sv5 elige por significado en UNA llamada por documento (`POST
+      /v1/albaranes/partida-residuos`, proveedor y modelo de IA4; solo vale un
+      código de candidata, `null` si duda). Rastro `partida_residuos:<cod>` sin
+      revisión y `codigo_partida_albaran` vuelve a la lectura (vacía). Sin
+      capítulo, sin candidata, con la IA caída o sin lista de la obra: a
+      revisión con `partida_residuos_sin_capitulo` / `_sin_candidata` /
+      `_ia_fallo` / `_sin_lista` y **nunca** `almacen_sin_partida` (la partida
+      queda vacía y el revisor elige a sabiendas). La obra se lee una vez por
+      valoración y la lista sale de la misma caché que F-076.
+      `PARTIDA_RESIDUOS_ENABLED=false` (sv6) apaga la parte de la partida; la del
+      tamaño no tiene interruptor. Lo ya valorado cambia solo al revalorar.
 
 ## Acceso a datos y sistemas externos
 
