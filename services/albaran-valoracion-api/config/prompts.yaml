@@ -1072,23 +1072,30 @@ valuation_residuos:
            OTROS RESIDUOS".
        Si ningun <TIPO> encaja por significado, usa "MEZCLA OTROS
        RESIDUOS" o la mas generica de esa partida.
-    4. TAMANO DEL CONTENEDOR (jul 2026): si el mismo <TIPO> existe en
-       VARIOS tamanos (p.ej. 6 y 8 m3), elige la linea asi:
-         a) si volumen_m3 COINCIDE EXACTO con un tamano -> la linea
-            de ESE tamano (8 m3 en el albaran y hay contenedor de 8
-            -> el de 8, 1 contenedor);
-         b) si NO coincide con ninguno -> la linea de 6 m3 del tipo
-            (el 6 es el contenedor ESTANDAR y el valor por defecto
-            ante cualquier duda; con 7 m3 y contenedores de 6 y 8,
-            se usa el de 6 y saldran 2 contenedores);
-         c) si el tipo no tiene contenedor de 6 -> la unica linea
-            del tipo (o la de menor tamano) y dilo en razon_corta.
+    4. TAMANO DEL CONTENEDOR (F-111, oct 2026). Salvo que el contrato
+       diga otra cosa, los contenedores de residuos son de 3, 6 o 9 m3.
+       a) Si el contrato da TAMANOS (en la tabla o en su texto), manda
+          el contrato: con varios tamanos del mismo tipo, elige el MAS
+          PEQUENO en el que caben los volumen_m3 del albaran (1
+          contenedor) y casa la linea de ESE tamano (con 6 y 8 m3: 7 m3
+          -> el de 8; 8 m3 -> el de 8; 5 m3 -> el de 6). Si no caben en
+          ninguno, paquetes de 6 si el contrato tiene el de 6; si no,
+          paquetes del mayor. RELLENA contenedor_m3 = los m3 de ESE
+          contenedor (de su descripcion, "6 M CUBICOS" -> 6).
+       b) Si el contrato NO da el tamano del contenedor, se usa el
+          precio general de la linea del contrato para cualquier
+          tamano, y el tamano lo fija otro servicio de forma
+          determinista con los contenedores estandar de 3, 6 o 9 m3: el
+          mas pequeno en el que caben (hasta 3 -> 3; hasta 6 -> 6; hasta
+          9 -> 9; un contenedor); con mas de 9 m3, ceil(volumen_m3 / 6)
+          contenedores de 6 (no se mezclan tamanos). En este caso NO
+          rellenes contenedor_m3: deja contenedor_m3 = null (ni la tabla
+          ni el texto del contrato lo dan) y NO lo supongas.
        Casa la linea elegida: matched_contrato_line_id = esa linea,
-       precio_unitario_contrato_db = su precio (POR contenedor), y
-       RELLENA contenedor_m3 = los m3 de ESE contenedor (de su
-       descripcion, "6 M CUBICOS" -> 6). match_method = "semantic"
-       (o "exact_concept" si coincide el tipo), y
-       match_confidence_pct segun seguridad.
+       precio_unitario_contrato_db = su precio (POR contenedor; el
+       precio general de la linea casada, sea cual sea el tamano),
+       match_method = "semantic" (o "exact_concept" si coincide el
+       tipo), y match_confidence_pct segun seguridad.
     4-bis. CONTENEDORES EXPLICITOS: contexto_linea puede traer
        contenedores, contenedores_entregados y
        contenedores_retirados. NO calcules nada con ellos (la
@@ -1235,3 +1242,57 @@ conciliacion_es:
     unitario; NUNCA importes.
 
   schema: documento_conciliacion
+
+
+# =====================================================================
+# F-111 - PARTIDA DE RESIDUOS (la llama sv6 con el proveedor de IA4).
+# Una linea de residuos sin partida NO va a almacen: se imputa a una
+# hoja del capitulo de gestion de residuos de la obra. sv6 manda las
+# candidatas (ya reconocidas) solo cuando hay 2 o mas. Elige POR
+# SIGNIFICADO una de ellas o null. NO pone precios ni inventa codigos.
+# =====================================================================
+partida_residuos_es:
+  system: >
+    Eres un experto en presupuestos de obra en Espana. Recibes lineas de
+    albaranes de RESIDUOS que llegaron sin partida y las CANDIDATAS: las
+    partidas hoja del capitulo de gestion de residuos de la obra (codigo,
+    descripcion y la ruta de capitulos en descripcion_agregada). Para
+    cada linea ELIGE POR SIGNIFICADO, SOLO ENTRE LAS CANDIDATAS, la
+    partida a la que se imputa ese residuo, leyendo la descripcion de la
+    linea y su codigo LER.
+
+    Reglas estrictas: elige solo entre las candidatas, copiando su
+    codigo tal cual. NUNCA inventes codigos ni elijas una partida que no
+    este en la lista. Pon codigo = null si ninguna encaja por
+    significado o si dos encajan igual (la linea ira a revision humana,
+    que es lo correcto). NO pones precios ni calculas nada.
+
+  task: >
+    ## Como elegir
+
+    - Lee QUE es la linea (residuo, contenedor, transporte, canon de
+      vertido, clasificacion...) por su descripcion y su codigo_ler.
+    - Busca la candidata cuya descripcion (y ruta) describe ESO mismo.
+      La generica de gestion de residuos ("Gestion de residuos",
+      "GRD010 ...") vale para el contenedor o la retirada de residuos;
+      una partida de personal ("OPERARIO EXCLUSIVO PARA CLASIFICACION")
+      no vale para un contenedor.
+    - Si dos candidatas encajan igual (por ejemplo, dos "GESTION DE
+      RESIDUOS" de fases distintas), codigo = null y dilo en
+      razon_corta.
+    - Si ninguna encaja, codigo = null.
+
+    ## Campos por linea
+
+    - line_ref: el mismo valor que llego en la entrada.
+    - codigo: el codigo de UNA candidata, o null.
+    - confianza_pct: 0-100.
+    - razon_corta: por que esa candidata (o por que ninguna).
+
+  schema_hint: >
+    Devuelve SOLO JSON valido con el esquema documento_partida_residuos:
+    {"elecciones": [{line_ref, codigo, confianza_pct, razon_corta}, ...]}.
+    Una entrada por linea de entrada. codigo SIEMPRE de una candidata o
+    null; nunca inventes codigos.
+
+  schema: documento_partida_residuos

@@ -1,6 +1,12 @@
 <!-- progress/current.md -->
 # Trabajo en curso
 
+**F-111 · `blocked` (2026-11-03): review APPROVED (`progress/review_F-111.md`), aceptada por el humano en la PARADA 2 junto con los 3 equivalentes de la mutación (C1) y la fusión en `dev`. Espera el despliegue (humano): sv5 y sv6 con comun 0.13.0 (`.\deploy.ps1 -Only sv5,sv6` → `.\check_deploy.ps1`) y revalorar los documentos afectados. Luego **T13** (líder, solo lectura): `.\scripts\medicion_F-111\run.ps1 m1_residuos.py` y `... m2_capitulos.py` desde la raíz (O1 de la review).** Rama `feature/F-111-residuos-contenedores-y-partida`, worktree `../albaranes-F-111`. Spec en `specs/F-111-residuos-contenedores-y-partida/`. PARADA 1 cerrada el 2026-10-30 (D1–D10 = a).
+
+- **Implementer, hecho (2026-11-03):** T0–T12 y T14 (un commit por tarea). Informe `progress/impl_F-111.md`, mutación `progress/mutacion_F-111.md` (completa: 113/110/3 equivalentes), cobertura de líneas cambiadas 99,7 %, `init.sh` verde. `azure-apps` `ab78985` (§15 de `albaranes.md`) local sin push. Review APPROVED. MANUAL sin marcar: **T13** (tras desplegar y revalorar, solo lectura). Aviso de init sin resolver: evals con LLM (`python -m evals.runner --con-llm --feature F-111`) no lanzado por coste; lo decide el líder/humano.
+- **Desviación:** comun sale en **0.13.0** (dev ya iba en 0.12.0), no 0.11.0. Despliegue: **comun ⇒ sv5 ⇒ sv6**.
+- **Entorno del worktree:** suites con `PYTHONPATH=C:\Users\pgris\PycharmProjects\albaranes-F-111\services\albaranes-comun` y `ARNES_SIN_CACHE=1`. *Junction* `.venv` de sv4 (a la del árbol principal): quitarla con `cmd /c rmdir` antes de `git worktree remove`.
+
 **F-116 · CERRADA (`done`, 2026-11-02).** Resumen en `history.md`.
 
 - **Implementer, hecho:** T1–T12 y T15 (un commit por tarea). Informe `progress/impl_F-116.md`, mutación `progress/mutacion_F-116.md`, `azure-apps` `ec9ed4d` local sin push. Pendientes MANUAL: T13 (M1, líder, Chrome y Edge con sv4 local) y T14 (humano despliega sv4 sola; líder M2 de solo lectura).

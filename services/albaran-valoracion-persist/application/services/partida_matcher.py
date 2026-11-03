@@ -45,6 +45,10 @@ class PartidaMatcher:
         partida: ``almacen_sin_partida``, partida final None (almacén) y
         se conserva la línea que casó la IA. Nunca se copia la partida de
         esa línea de contrato ni la de otra línea del albarán.
+      - (F-111) Con ``sin_almacen`` (residuos sin partida asignable) y el
+        albarán SIN partida: ``existing_matched`` con la casada de la IA
+        y partida final None, o ``no_action`` sin casada; nunca
+        ``almacen_sin_partida``.
     """
 
     def __init__(
@@ -68,6 +72,7 @@ class PartidaMatcher:
         contrato_lines: list[ContratoLineContextDto],
         albaran_descripcion: str | None,
         albaran_codigo_producto: str | None,
+        sin_almacen: bool = False,
     ) -> PartidaMatchResult:
         partida_norm = self._normalize(codigo_partida_albaran)
 
@@ -88,6 +93,31 @@ class PartidaMatcher:
                 ),
                 codigo_partida_final=None,
                 reasons=["alm_acopio_generates_derived_line"],
+            )
+
+        # F-111 (R25-R27, D5): línea de residuos a la que no se pudo
+        # asignar partida del capítulo de gestión de residuos. NO va a
+        # almacén: se queda SIN partida (a revisión, lo decide el humano)
+        # conservando la casada de la IA. Nunca se copia la partida de la
+        # línea de contrato (F-051).
+        if partida_norm is None and sin_almacen:
+            ia_casada = self._find_by_id(
+                contrato_lines, line.matched_contrato_line_id,
+            )
+            if ia_casada is None:
+                return PartidaMatchResult(
+                    partida_action="no_action",
+                    matched_contrato_line_id=None,
+                    derived_line=None,
+                    codigo_partida_final=None,
+                    reasons=["no_ia_match_and_no_partida"],
+                )
+            return PartidaMatchResult(
+                partida_action="existing_matched",
+                matched_contrato_line_id=ia_casada.contrato_line_id,
+                derived_line=None,
+                codigo_partida_final=None,
+                reasons=["ia_match_trusted_sin_partida"],
             )
 
         # F-051 (R1-R3, R28): el albarán no trae partida ⇒ ALMACÉN. Qué

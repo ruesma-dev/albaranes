@@ -3,17 +3,18 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **113 features**, 76 abiertas (0 en curso, 7 con la spec lista, 11 bloqueadas y 58 en backlog) y 37 terminadas.
+Resumen: **113 features**, 76 abiertas (1 en curso, 6 con la spec lista, 11 bloqueadas y 58 en backlog) y 37 terminadas.
 
 ## En curso
 
-_Ninguna feature en curso._
+| # | Feature | Prioridad | Rigor | Rama |
+|---|---|---|---|---|
+| F-111 | Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén | 2 | critico | `feature/F-111-residuos-contenedores-y-partida` |
 
 ## Spec lista
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
-| F-111 | Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén | 2 | critico | `feature/F-111-residuos-contenedores-y-partida` |
 | F-112 | Año del albarán mal leído: la IA lee la fecha con la del correo como referencia | 2 | estandar | `feature/F-112-anio-fecha-albaran` |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 43 | critico |  |
 | F-003 | Tanda 2 — Albaranes valorados, match estricto y coherencia (G3+G4+G5) | 59 | estandar | `feature/F-003-valorados-match-estricto` |
@@ -152,7 +153,7 @@ ORIGEN: el humano, 2026-10-28 («si a F-110»): en las líneas con descuento (al
 
 ### F-111 · Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén
 
-estado **spec lista** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-111-residuos-contenedores-y-partida`
+estado **en curso** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-111-residuos-contenedores-y-partida`
 
 ORIGEN: el humano, 2026-10-29, por los albaranes de HERMANOS SAN JUAN (4839 B: 8 m³ de madera valorados como 2 contenedores de 6 = 278 € en vez de 1 = 139 €; 1350 B igual). Contrato CTSU24/0524 sin tamaño en sus líneas («CONTENEDOR LER 170201 MADERA»). Hoy IA3 (prompt de sv5) y sv6 (`residuos_container_calc.py`, F-036 R22) aplican «6 m³ por defecto» y ceil(m³/6). REGLAS DEL HUMANO (literales): (1) «en residuos salvo que se diga lo contrario en el contrato los contenedores son de 3, 6 o 9m3. debe elegir uno de esos. si en contrato no se especifica que use el precio general para todos»; se elige el MÁS PEQUEÑO en el que caben los m³ (≤3 → 3, ≤6 → 6, ≤9 → 9, 1 contenedor); «no se mezclan contenedores, si son de mas de 9 paquetes de 6» (más de 9 m³ ⇒ ceil(m³/6) contenedores de 6). Si el contrato da tamaños, manda el contrato. (2) «añade en el circuito de residuos que si no tienen partida no van a almacen sino que busque la partida en el capitulo de gestion de residuos. que la busque por descripcion»: una línea de residuos sin partida no va a almacén; se busca la partida entre las del capítulo de gestión de residuos de la obra (capítulos de F-098, `ruesma_comun.sigrid.partidas`) por la descripción. A RESOLVER EN LA SPEC: cómo se reconoce el capítulo de residuos en las obras reales (medir en solo lectura); quién elige la partida (IA por significado restringida al capítulo, como IA4, frente a texto); qué pasa sin capítulo o sin candidata (revisión, nunca almacén); efecto en revalorar, en sv4 y en el alta (sv9 manda lo aprobado); alcance medido en producción (hoy 2 líneas con 8 m³ → 2). Va DESPUÉS de F-106 (comparte sv6 y la fila de valoración).
 

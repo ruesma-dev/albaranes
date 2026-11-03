@@ -105,6 +105,19 @@ class Settings(BaseSettings):
     partidas_obra_fallo_ttl_s: float = Field(300.0, alias="PARTIDAS_OBRA_FALLO_TTL_S")
 
     # ----------------------------------------------------------------- #
+    # F-111 · una línea de residuos sin partida no va a almacén: se le
+    # busca partida en el capítulo de gestión de residuos de la obra
+    # (con una candidata, esa; con varias, la elige la IA de sv5 en
+    # ``POST /v1/albaranes/partida-residuos``, misma VALUATION_API_BASE_URL).
+    # Usa el mismo lector de sigrid-api y la misma caché que F-076.
+    # PARTIDA_RESIDUOS_ENABLED=false es la vuelta atrás sin imagen (R29).
+    # ----------------------------------------------------------------- #
+    partida_residuos_enabled: bool = Field(
+        True,
+        alias="PARTIDA_RESIDUOS_ENABLED",
+    )
+
+    # ----------------------------------------------------------------- #
     # Bloque 1 (may 2026): CONCILIACIÓN de modificadores (líneas
     # sintéticas) contra la tabla de líneas de contrato de Sigrid.
     #

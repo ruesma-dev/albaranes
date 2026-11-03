@@ -5,7 +5,9 @@ Replica el wiring de ``build_app`` (interface_adapters/api/app.py) pero SOLO
 en lo que necesita el pipeline de valoración, omitiendo los endpoints FastAPI.
 Este módulo es la entrada para el modo worker (consumidor de q-valoracion).
 (F-076) ``construir_normalizador_partidas`` lo usan los DOS puntos de entrada:
-el worker y ``build_app``.
+el worker y ``build_app``. (F-111) ``construir_asignador_partida_residuos``,
+también; los dos comparten la MISMA caché de partidas por proceso
+(:func:`_puerto_partidas_obra`), así una obra se lee de sigrid-api una vez.
 
 Igual que en HTTP, ``RunValuationPipeline`` llama al servicio 5 por HTTP
 (``HttpValuationIaClient`` → ``VALUATION_API_BASE_URL``). En el piloto local,
@@ -24,6 +26,10 @@ from application.services.normalizador_partidas import (
     NormalizadorPartidas,
 )
 from application.services.partida_matcher import PartidaMatcher
+from application.services.partida_residuos import (
+    MOTIVO_SIN_LISTA,
+    AsignadorPartidaResiduos,
+)
 from application.services.price_reconciler import PriceReconciler
 from application.services.unit_category_guard import UnitCategoryGuard
 from application.services.unit_converter import UnitConverter
@@ -31,6 +37,9 @@ from application.services.valuation_builder import ValuationBuilder
 from config.settings import Settings
 from infrastructure.clients.http_conciliacion_client import (
     HttpConciliacionClient,
+)
+from infrastructure.clients.http_partida_residuos_client import (
+    HttpPartidaResiduosClient,
 )
 from infrastructure.clients.http_valuation_ia_client import (
     HttpValuationIaClient,
@@ -48,6 +57,77 @@ from infrastructure.units.yaml_unit_registry import YamlUnitRegistry
 from ruesma_comun.sigrid import CachePartidasObra
 
 logger = logging.getLogger(__name__)
+
+#: (F-111 R30) Una caché de partidas por configuración y proceso, compartida por
+#: el normalizador (F-076) y el asignador de residuos (F-111).
+_PUERTOS_COMPARTIDOS: dict[tuple, CachePartidasObra] = {}
+
+
+def _puerto_partidas_obra(settings: Settings) -> CachePartidasObra:
+    """El lector de sigrid-api y su caché, uno por configuración (R30).
+
+    Solo se llama con ``sigrid_api_configurada``. La clave va en memoria, nunca
+    al log.
+    """
+    clave = (
+        settings.sigrid_api_base_url, settings.sigrid_api_function_key,
+        settings.sigrid_api_database, settings.sigrid_api_timeout_s,
+        settings.partidas_obra_ttl_s, settings.partidas_obra_max_obras,
+        settings.partidas_obra_fallo_ttl_s,
+    )
+    if clave not in _PUERTOS_COMPARTIDOS:
+        lector = SigridApiLector(
+            base_url=settings.sigrid_api_base_url or "",
+            function_key=settings.sigrid_api_function_key or "",
+            database=settings.sigrid_api_database or "",
+            timeout_s=settings.sigrid_api_timeout_s,
+        )
+        _PUERTOS_COMPARTIDOS[clave] = CachePartidasObra(
+            lector,
+            ttl_s=settings.partidas_obra_ttl_s,
+            max_obras=settings.partidas_obra_max_obras,
+            ttl_fallo_s=settings.partidas_obra_fallo_ttl_s,
+        )
+    return _PUERTOS_COMPARTIDOS[clave]
+
+
+def construir_asignador_partida_residuos(settings: Settings) -> AsignadorPartidaResiduos:
+    """(F-111 R29, R33) El asignador de partida de residuos.
+
+    Encendido: la caché compartida con F-076 (si sigrid-api está configurado;
+    si no, puerto ``None``, WARNING y las líneas a revisión con
+    ``partida_residuos_sin_lista``) y el cliente de sv5 para elegir entre
+    varias candidatas. Apagado: ni puerto ni cliente.
+    """
+    if not settings.partida_residuos_enabled:
+        logger.info(
+            "[svc6][wiring] F-111 partida de residuos APAGADA "
+            "(PARTIDA_RESIDUOS_ENABLED=false)."
+        )
+        return AsignadorPartidaResiduos(
+            partidas=None, elector=None,
+            alm_codigo_partida=settings.alm_codigo_partida, activo=False,
+        )
+    puerto = None
+    if settings.sigrid_api_configurada:
+        puerto = _puerto_partidas_obra(settings)
+    else:
+        logger.warning(
+            "[svc6][wiring] F-111: faltan SIGRID_API_BASE_URL, "
+            "SIGRID_API_FUNCTION_KEY o SIGRID_API_DATABASE; las líneas de "
+            "residuos sin partida irán a revisión (%s).",
+            MOTIVO_SIN_LISTA,
+        )
+    logger.info("[svc6][wiring] F-111 partida de residuos ENCENDIDA.")
+    return AsignadorPartidaResiduos(
+        partidas=puerto,
+        elector=HttpPartidaResiduosClient(
+            base_url=settings.valuation_api_base_url,
+            timeout_s=settings.valuation_api_timeout_s,
+        ),
+        alm_codigo_partida=settings.alm_codigo_partida,
+        activo=True,
+    )
 
 
 def construir_normalizador_partidas(settings: Settings) -> NormalizadorPartidas:
@@ -72,18 +152,7 @@ def construir_normalizador_partidas(settings: Settings) -> NormalizadorPartidas:
             MOTIVO_PARTIDAS_NO_DISPONIBLES,
         )
     else:
-        lector = SigridApiLector(
-            base_url=settings.sigrid_api_base_url or "",
-            function_key=settings.sigrid_api_function_key or "",
-            database=settings.sigrid_api_database or "",
-            timeout_s=settings.sigrid_api_timeout_s,
-        )
-        puerto = CachePartidasObra(
-            lector,
-            ttl_s=settings.partidas_obra_ttl_s,
-            max_obras=settings.partidas_obra_max_obras,
-            ttl_fallo_s=settings.partidas_obra_fallo_ttl_s,
-        )
+        puerto = _puerto_partidas_obra(settings)
         logger.info(
             "[svc6][wiring] F-076 normalizar partidas ENCENDIDO: ttl=%ss "
             "max_obras=%s fallo=%ss",
@@ -171,6 +240,8 @@ def build_run_valuation_pipeline(settings: Settings) -> RunValuationPipeline:
         conciliacion_client=conciliacion_client,
         # F-076: normalizar la partida contra las de la obra.
         normalizador=construir_normalizador_partidas(settings),
+        # F-111: residuos sin partida ⇒ capítulo de gestión de residuos.
+        asignador_residuos=construir_asignador_partida_residuos(settings),
     )
     logger.info(
         "[ca-valorador][worker-wiring] pipeline construido; "

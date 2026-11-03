@@ -12,6 +12,10 @@ from application.pipelines.value_albaran_pipeline import (
     ValueAlbaranRequest,
 )
 from application.services.conciliacion_service import ConciliacionService
+from application.services.partida_residuos_service import (
+    PartidaResiduosService,
+    SinProveedorIA,
+)
 from application.services.schema_registry import SchemaRegistry
 from application.services.unit_category_prefilter import UnitCategoryPrefilter
 from application.services.valuation_extraction_service import (
@@ -19,6 +23,7 @@ from application.services.valuation_extraction_service import (
     ValuationExtractionService,
 )
 from config.settings import Settings
+from domain.models.partida_residuos_models import PartidaResiduosRequest
 from infrastructure.database.session_factory import SessionFactory
 from infrastructure.database.sqlalchemy_valuation_context_repository import (
     SqlAlchemyValuationContextRepository,
@@ -68,6 +73,30 @@ class ConciliarRequestBody(BaseModel):
     document_id: str
     lineas_no_casadas: list[ConciliarLineaEntrada] = []
     lineas_contrato: list[ConciliarLineaContrato] = []
+
+
+def atender_partida_residuos(
+    servicio: PartidaResiduosService, body: PartidaResiduosRequest,
+) -> Dict[str, Any]:
+    """(F-111 R31, R33) ``POST /v1/albaranes/partida-residuos``.
+
+    Sin proveedor de IA ⇒ 503 (sv6 manda las líneas a revisión con
+    ``partida_residuos_ia_fallo``); cualquier otro fallo ⇒ 500.
+    """
+    try:
+        resultado = servicio.elegir(
+            lineas=[l.model_dump() for l in body.lineas],
+            candidatas=[c.model_dump() for c in body.candidatas],
+        )
+        return resultado.model_dump()
+    except SinProveedorIA as exc:
+        logger.warning("[partida-residuos] 503 document_id=%s: %s", body.document_id, exc)
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Error eligiendo partida de residuos document_id=%s", body.document_id)
+        raise HTTPException(
+            status_code=500, detail=f"Error eligiendo partida de residuos: {exc}",
+        ) from exc
 
 
 
@@ -142,6 +171,12 @@ def build_app(settings: Settings) -> FastAPI:
         prompt_repo=prompt_repo,
         schema_registry=schema_registry,
         prompt_key=settings.ia4_prompt_key,
+    )
+    # (F-111 R33) La partida de residuos la elige el proveedor y modelo de IA4.
+    partida_residuos_service = PartidaResiduosService(
+        providers=ia4_providers,
+        prompt_repo=prompt_repo,
+        schema_registry=schema_registry,
     )
 
     pipeline = ValueAlbaranPipeline(
@@ -225,6 +260,10 @@ def build_app(settings: Settings) -> FastAPI:
                 status_code=500,
                 detail=f"Error conciliando: {exc}",
             ) from exc
+
+    @app.post("/v1/albaranes/partida-residuos")
+    def partida_residuos(body: PartidaResiduosRequest) -> Dict[str, Any]:
+        return atender_partida_residuos(partida_residuos_service, body)
 
     # ----------------------------------------------------------- #
     # GET /v1/debug/ia-logs[?date=YYYYMMDD]

@@ -674,9 +674,11 @@ def test_f043_r8_sv5_no_valida_hoy_documentos_de_fase_1_ni_de_fase_2():
 
     registro = SchemaRegistry()
 
+    # (F-111) Se añade el de la partida de residuos: tampoco es de fase 1 ni 2.
     assert set(registro._schemas) == {
         "documento_valoracion",
         "documento_conciliacion",
+        "documento_partida_residuos",
     }
 
 
