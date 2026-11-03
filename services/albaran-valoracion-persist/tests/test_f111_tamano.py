@@ -399,3 +399,24 @@ def test_f111_r9_builder_sin_distinto_de_casada_no_hay_revision():
         _escenario_builder(m3=8.0, contrato=[c6, c8], matched_id=7102, precio=150.0)
     )
     assert base_de(regs).review_required is False
+
+
+# ------------------------------------------------------------------ #
+# T12 · supervivientes de la campaña de mutación
+# ------------------------------------------------------------------ #
+def test_f111_t12_el_redondeo_es_a_2_decimales_tambien_en_los_paquetes():
+    assert _elegir_tamano([], 12.004) == (2, 6.0)
+    assert _elegir_tamano([6.004, 8.0], 14.0) == (3, 6.0)
+
+
+def test_f111_t12_un_tamano_pequeno_positivo_cuenta():
+    res = _calc(0.5, lineas=[SIN_TAMANO], casada=SIN_TAMANO, ia=0.75)
+    assert (res.num_contenedores, res.contenedor_m3) == (1, 0.75)
+
+
+def test_f111_t12_casada_a_una_centesima_es_distinta():
+    casada = _LineaContrato(descripcion="CONTENEDOR 6,01 M3")
+    res = _calc(5.0, lineas=[C6], casada=casada)
+    assert res.contenedor_m3 == 6.0
+    assert res.revision is True
+    assert "residuos_tamano_distinto_de_casada=6/6.01" in res.reasons

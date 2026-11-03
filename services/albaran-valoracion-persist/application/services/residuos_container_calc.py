@@ -69,8 +69,9 @@ _M3_REGEX = re.compile(r"(\d+(?:[.,]\d+)?)\s*m\s*[3³c]", re.IGNORECASE)
 # del paquete cuando los m³ no caben en el mayor.
 _TAMANOS_ESTANDAR = (3.0, 6.0, 9.0)
 _TAMANO_PAQUETE = 6.0
-# Tolerancia de m³ (la de siempre): diferencias por debajo no cuentan.
-_TOLERANCIA_M3 = 0.01
+# Tolerancia de m³ (la de siempre, 0,01): los m³ y los tamaños se comparan
+# redondeados a 2 decimales.
+_DECIMALES_M3 = 2
 #: (F-111 R3) Motivo sin revisión: ``residuos_tamano_estandar=<t>m3``.
 MOTIVO_TAMANO_ESTANDAR = "residuos_tamano_estandar"
 #: (F-111 R9) Motivo con revisión: ``residuos_tamano_distinto_de_casada=<e>/<c>``.
@@ -116,8 +117,8 @@ def _tamano_contenedor(contrato_line: Any) -> Optional[float]:
 
 
 def _caben(m3: float, tamano: float) -> bool:
-    """Los m³ caben en el contenedor, con la tolerancia de 0,01 m³."""
-    return round(m3, 2) <= tamano + _TOLERANCIA_M3 / 2
+    """Los m³ caben en el contenedor (a 0,01 m³: 6,004 caben en el de 6)."""
+    return round(m3, _DECIMALES_M3) <= round(tamano, _DECIMALES_M3)
 
 
 def _elegir_tamano(tamanos: list[float], m3: float) -> tuple[int, float]:
@@ -133,11 +134,11 @@ def _elegir_tamano(tamanos: list[float], m3: float) -> tuple[int, float]:
     for tamano in lista:
         if _caben(m3, tamano):
             return 1, tamano
-    if not tamanos or any(abs(t - _TAMANO_PAQUETE) < _TOLERANCIA_M3 for t in lista):
+    if not tamanos or any(round(t, _DECIMALES_M3) == _TAMANO_PAQUETE for t in lista):
         paquete = _TAMANO_PAQUETE
     else:
         paquete = lista[-1]
-    return int(math.ceil(round(m3, 2) / paquete)), paquete
+    return int(math.ceil(round(m3, _DECIMALES_M3) / paquete)), paquete
 
 
 def _tamanos_del_contrato(contrato_lines: Any) -> list[float]:
@@ -254,7 +255,7 @@ def calcular_contenedores_residuos(
     if not tamanos:
         razon_defecto.append(f"{MOTIVO_TAMANO_ESTANDAR}={tam:g}m3")
     revision = False
-    if casada_m3 is not None and abs(casada_m3 - tam) >= _TOLERANCIA_M3:
+    if casada_m3 is not None and round(casada_m3, _DECIMALES_M3) != round(tam, _DECIMALES_M3):
         razon_defecto.append(
             f"{MOTIVO_TAMANO_DISTINTO_DE_CASADA}={tam:g}/{casada_m3:g}"
         )

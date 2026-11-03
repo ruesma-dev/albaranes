@@ -321,3 +321,14 @@ def test_f111_r31_build_app_registra_la_ruta(monkeypatch):
     body = PartidaResiduosRequest(document_id="d1", lineas=LINEAS[:1], candidatas=CANDIDATAS)
     assert rutas["/v1/albaranes/partida-residuos"](body) == {"elecciones": []}
     assert recibidos["lineas"][0]["line_ref"] == 10
+
+
+def test_f111_t12_el_texto_conserva_las_tildes():
+    cliente = _Cliente(_doc())
+    _servicio(cliente).elegir(
+        lineas=[{"line_ref": 1, "descripcion": "Clasificación", "codigo_ler": None}],
+        candidatas=CANDIDATAS,
+    )
+    texto = cliente.llamadas[0]["user_text"]
+    assert "GESTIÓN RESIDUOS" in texto
+    assert "Clasificación" in texto

@@ -108,7 +108,10 @@ class AsignadorPartidaResiduos:
     ) -> None:
         self._partidas = partidas
         self._elector = elector
-        self._alm = (alm_codigo_partida or "").strip().upper()
+        # ``alm_codigo_partida`` se acepta por simetría con el normalizador de
+        # F-076, pero no hace falta: ``ALM`` es una lectura (no vacía) y por
+        # eso ya no se busca (R28).
+        del alm_codigo_partida
         self._activo = bool(activo)
 
     # ------------------------------------------------------------------ #

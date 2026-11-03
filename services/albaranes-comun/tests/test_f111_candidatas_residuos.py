@@ -190,3 +190,10 @@ def test_f111_t5_version_0130():
         encoding="utf-8"
     )
     assert 'version = "0.13.0"' in pyproject
+
+
+def test_f111_t12_ruta_que_no_acaba_en_la_hoja_no_pierde_antecesores():
+    """Si el último tramo no es la hoja, todos los tramos son antecesores."""
+    hoja = P.PartidaObra("9.1", "Canon", "CD › GESTIÓN DE RESIDUOS")
+    lista = P.ListaPartidasObra(obra="x", hojas=(hoja,), no_hojas=())
+    assert candidatas_residuos(lista) == (hoja,)

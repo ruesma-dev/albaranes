@@ -744,7 +744,7 @@ def _sin_tildes(texto: str) -> str:
 def _antecesores(hoja: PartidaObra) -> list[str]:
     """Los tramos de la ruta raíz→hoja SIN la propia hoja."""
     tramos = (hoja.descripcion_agregada or "").split(_SEPARADOR_RUTA)
-    if hoja.descripcion and tramos and tramos[-1] == hoja.descripcion:
+    if hoja.descripcion and tramos[-1] == hoja.descripcion:
         tramos = tramos[:-1]
     return [t for t in tramos if t]
 

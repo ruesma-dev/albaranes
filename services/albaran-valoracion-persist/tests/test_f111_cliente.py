@@ -148,3 +148,54 @@ def test_f111_r33_un_intento_minimo_y_codigo_vacio_es_null():
         document_id="d", lineas=LINEAS, candidatas=CANDIDATAS,
     ) == {1: None}
     assert len(llamadas) == 1
+
+
+# T12 · supervivientes de la campaña de mutación
+def test_f111_t12_tres_intentos_por_defecto():
+    llamadas = []
+
+    def manejador(request):
+        llamadas.append(1)
+        return httpx.Response(502, text="caído")
+
+    with pytest.raises(PartidaResiduosError):
+        _cliente(manejador).elegir(document_id="d", lineas=LINEAS, candidatas=CANDIDATAS)
+    assert len(llamadas) == 3
+
+
+def test_f111_t12_un_intento_es_un_intento():
+    llamadas = []
+
+    def manejador(request):
+        llamadas.append(1)
+        return httpx.Response(500, text="caído")
+
+    with pytest.raises(PartidaResiduosError):
+        _cliente(manejador, intentos=1).elegir(document_id="d", lineas=LINEAS, candidatas=CANDIDATAS)
+    assert len(llamadas) == 1
+
+
+@pytest.mark.parametrize("estado", [500, 404])
+def test_f111_t12_el_error_cita_el_cuerpo_recortado_a_200(estado):
+    cuerpo = "a" * 150 + "b" * 150
+
+    with pytest.raises(PartidaResiduosError) as exc:
+        _cliente(lambda r: httpx.Response(estado, text=cuerpo), intentos=1).elegir(
+            document_id="d", lineas=LINEAS, candidatas=CANDIDATAS,
+        )
+    mensaje = str(exc.value)
+    assert str(estado) in mensaje
+    assert "a" * 150 + "b" * 50 in mensaje
+    assert "b" * 51 not in mensaje
+
+
+def test_f111_t12_un_400_es_fallo_sin_reintentar():
+    llamadas = []
+
+    def manejador(request):
+        llamadas.append(1)
+        return httpx.Response(400, text="Bad Request")
+
+    with pytest.raises(PartidaResiduosError, match="400"):
+        _cliente(manejador).elegir(document_id="d", lineas=LINEAS, candidatas=CANDIDATAS)
+    assert len(llamadas) == 1

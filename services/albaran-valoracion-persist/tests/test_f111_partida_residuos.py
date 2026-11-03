@@ -481,3 +481,42 @@ def test_f111_r24_sintetica_sin_asignacion_va_con_la_base_a_almacen():
     _cab, regs = builder.build(envelope=_envelope(), existing_document_already_valued=False)
     sinteticas = [r for r in regs if r.line_kind == "synthetic_modifier"]
     assert sinteticas and all(s.codigo_partida_final is None for s in sinteticas)
+
+
+# ------------------------------------------------------------------ #
+# T12 · supervivientes de la campaña de mutación
+# ------------------------------------------------------------------ #
+def _capitulo_con(n):
+    filas = [(1, 0, "CD", "COSTES"), (2, 1, "32", "GESTION DE RESIDUOS")]
+    return _lista(filas + [(10 + i, 2, f"32.0{i}", f"Hoja {i}") for i in range(1, n + 1)])
+
+
+def test_f111_t12_con_5_candidatas_no_hay_resto_y_con_6_uno():
+    asignador, _ = _asignador(_capitulo_con(5), elector=_Elector({}))
+    assert asignador.asignar(envelope=_envelope(), obra="x").por_linea[700].motivo == (
+        f"{MOTIVO_SIN_CANDIDATA}:32.01,32.02,32.03,32.04,32.05"
+    )
+    asignador, _ = _asignador(_capitulo_con(6), elector=_Elector({}))
+    assert asignador.asignar(envelope=_envelope(), obra="x").por_linea[700].motivo.endswith("(+1)")
+
+
+def test_f111_t12_los_resultados_son_inmutables():
+    import dataclasses
+
+    asignador, _ = _asignador(_lista(FILAS_UNA))
+    asignacion = asignador.asignar(envelope=_envelope(), obra="0694")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        asignacion.sin_almacen = frozenset({1})
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        asignacion.por_linea[700].codigo = "x"
+
+
+def test_f111_t12_el_log_cuenta_asignadas_y_a_revision(caplog):
+    import logging
+
+    elector = _Elector({700: "32.01", 701: None})
+    asignador, _ = _asignador(_lista(FILAS_DOS), elector=elector)
+    env = _envelope(LineaResiduos(merge_line_id=700), LineaResiduos(merge_line_id=701))
+    with caplog.at_level(logging.INFO, logger="application.services.partida_residuos"):
+        asignador.asignar(envelope=env, obra="0686")
+    assert any("asignadas=1 a_revision=1" in r.getMessage() for r in caplog.records)
