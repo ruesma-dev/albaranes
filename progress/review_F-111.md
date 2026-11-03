@@ -45,7 +45,6 @@ un equivalente) y las MANUAL listadas.
 ## Checkpoints
 
 **C1** [x] init.sh exit 0 · [x] ficheros del arnés presentes.
-
 **C2** [x] una sola `in_progress` (F-111) · [x] rama `feature/F-111-residuos-contenedores-y-partida` · [x]
 `current.md` con la sesión activa · [x] las `done` tienen su resumen (lo valida init.sh).
 
@@ -95,13 +94,11 @@ un equivalente) y las MANUAL listadas.
 - [x] Ningún N/A sin motivo.
 
 **C4 ter** [x] con motivo escrito (exigencia `aviso`). La puerta señala 7 rutas sensibles tocadas (prompts YAML,
-schemas e IA de sv5, red de sv6) y no hay `progress/evals_F-111.md`. Motivos:
+schemas e IA de sv5, red de sv6) y no hay `progress/evals_F-111.md`. No bloquea (`aviso`). Motivos:
 - (1) **D8 = (a)**, decidida por el humano en la PARADA 1: sin caso nuevo en el banco. El número de contenedores es
   determinista en sv6 y tiene test unitario; el prompt se prueba por texto (R12–R16, R32).
 - (2) Los fixtures de `evals/fixtures/` siguen vacíos: la pasada daría NO_EVALUABLE.
 - (3) La pasada `--con-llm` cuesta dinero y la decide el humano.
-
-No bloquea: es un `aviso`.
 
 **C5** [x] T0–T12 y T14 `[x]`, con su commit `F-111 Tn:`. T13 es MANUAL y queda fuera de esta review. · [x] sin
 temporales sin trackear en el worktree. · [x] `features.json` en `in_progress`, que es el estado real.
@@ -137,10 +134,7 @@ temporales sin trackear en el worktree. · [x] `features.json` en `in_progress`,
   debe buscar en concreto `contenedor=6` con 8 m³.
 - **O3 · Importación privada.** `partida_residuos.py` importa `_familia_de` de `valuation_builder`. El design pedía
   «reutilizable»; una función pública (o en `familia`) sería más limpia. Cosmético.
-- **O4 · Coste de los fallos.** El cliente reintenta 3 veces también el 500 genérico de sv5, que puede ser un fallo
-  determinista del LLM: hasta 3 llamadas de pago por documento. Aceptable al volumen medido (~4 documentos).
-
-## Automejora (propuesta, no aplicada)
-
-- `CHECKPOINTS.md` C4: exigir que las MANUAL apunten a scripts **versionados** o a un comando autocontenido. Una
-  referencia a un scratchpad de sesión no se puede repetir (O1).
+- **O4 · Coste de los fallos.** El cliente reintenta 3 veces también el 500 genérico de sv5 (posible fallo
+  determinista del LLM): hasta 3 llamadas de pago por documento. Aceptable al volumen medido (~4 documentos).
+- **Automejora (propuesta, no aplicada):** `CHECKPOINTS.md` C4 exige que las MANUAL apunten a scripts versionados o a un
+  comando autocontenido; un scratchpad de sesión no se puede repetir (O1).
