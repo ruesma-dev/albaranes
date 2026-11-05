@@ -1,7 +1,7 @@
 # F-111 · Diseño técnico
 
-Servicios: **sv6** (reglas de contenedor y asignación de partida), **sv5** (prompt de IA3 y un endpoint de IA
-nuevo), **comun** 0.10.0 → **0.11.0** (reconocer el capítulo; F-106 sube a 0.10.0). Sin DDL, sin colas, sin cambios en
+Servicios: **sv6** (reglas de contenedor y asignación de partida; parte C en §13), **sv5** (prompt de IA3 y un
+endpoint de IA nuevo), **comun** 0.10.0 → **0.11.0** (reconocer el capítulo; F-106 sube a 0.10.0). Sin DDL, sin colas, sin cambios en
 sv3, sv4 ni sv9. Va después de F-106 (§11).
 
 ## 1. Límite de servicio
@@ -120,6 +120,7 @@ La familia: `familia_efectiva(ctx.tipo_familia, clasificacion)` con la clasifica
 | `services/albaran-valoracion-persist/infrastructure/clients/http_partida_residuos_client.py` | adaptador |
 | `services/albaran-valoracion-api/application/services/partida_residuos_service.py` | servicio IA |
 | `services/albaran-valoracion-api/domain/models/partida_residuos_models.py` | cuerpo y respuesta |
+| sv6 `tests/test_f111_partida_contrato.py` | parte C, R37–R47 (§13) |
 | tests: sv6 `tests/test_f111_{tamano,partida_residuos,pipeline,cliente}.py`; sv5 `tests/test_f111_{prompt_residuos,partida_residuos}.py`; comun `tests/test_f111_candidatas_residuos.py` | R1–R36 |
 
 ## 7. Ficheros a modificar
@@ -136,7 +137,8 @@ La familia: `familia_efectiva(ctx.tipo_familia, clasificacion)` con la clasifica
 | `services/albaran-valoracion-api/config/prompts/svc5_prompt_valuation_es.yaml` | regla 4 del bloque de residuos (D1) |
 | `services/albaran-valoracion-api/interface_adapters/api/app.py` | endpoint |
 | `services/albaranes-comun/ruesma_comun/sigrid/partidas.py`, `sigrid/__init__.py`, `pyproject.toml`, `ruesma_comun/__init__.py` | R17–R19, 0.11.0 |
-| `docs/ARCHITECTURE.md` | R36 |
+| `docs/ARCHITECTURE.md` | R36; R47 (parte C) |
+| `services/albaran-valoracion-persist/application/services/partida_residuos.py` | parte C (§13), ya creado en B |
 | `C:\Users\pgris\PycharmProjects\azure-apps\albaranes.md` | solo si lista los endpoints internos de sv5 (lo comprueba el implementer) |
 
 ## 8. Ficheros que NO se tocan
@@ -151,43 +153,15 @@ sv6 `normalizador_partidas.py` (F-076), `conciliacion_orchestrator.py`, `price_r
 Ninguno nuevo. sv6 reutiliza `SQL_OBRA_DEL_DOCUMENTO` y la lista de `SQL_PARTIDAS_POR_OBRA` (sigrid-api, lectura,
 `NO_TOLERA`). Sin DDL.
 
-## 10. Decisiones abiertas (PARADA 1)
+## 10. Decisiones de la PARADA 1 de A y B (cerradas)
 
-**PARADA 1 cerrada por el humano el 2026-10-30 («doy por bueno a»): D1–D10 = (a).**
-
-- **D1 · `svc5_prompt_valuation_es.yaml`.** No lo carga nadie (`settings.prompts_yaml_path = config/prompts.yaml`;
-  `sv5.md:105` lo llama «versión histórica»). (a) **Recomendada**: corregir su regla 4 para que ningún fichero diga «6
-  por defecto». (b) No tocarlo. (c) Borrarlo (otra feature).
-- **D2 · m³ que no caben en ningún tamaño del contrato.** (a) **Recomendada**: paquetes de 6 si el contrato tiene el
-  de 6 (la regla del humano para el estándar); si no, `ceil(m³ / mayor)` del mayor. (b) Siempre del mayor. (c) A
-  revisión sin número. Hoy no hay ningún caso medido.
-- **D3 · Quién elige con varias candidatas.** (a) **Recomendada**: 1 ⇒ esa sin IA; ≥ 2 ⇒ IA en sv5 por significado,
-  restringida a las candidatas, `null` si duda (R21–R22, R31–R34; en las 8 líneas: 3 sin IA, 0686 con IA, 0669 a
-  revisión, 0459 con IA). (b) Texto determinista (palabras de la descripción): choca con «la clasificación la decide la
-  IA» y no separa 32.01 de 37.06.01. (c) Con ≥ 2, a revisión con las candidatas listadas, sin IA (más barato; deja 0686
-  y 0459 a mano). (d) Usar la partida de la línea de contrato casada: F-051 lo prohíbe (no se copia la del contrato).
-- **D4 · Partida asignada: ¿revisión?** (a) **Recomendada**: sin revisión, solo el motivo `partida_residuos:<cod>`
-  (como `partida_normalizada`). (b) Revisión no bloqueante cuando la eligió la IA.
-- **D5 · Sin capítulo o sin candidata («nunca a almacén»).** En F-051 almacén = partida final vacía, así que la línea
-  queda vacía igualmente. (a) **Recomendada**: revisión con motivo y sin `almacen_sin_partida` (sv4 la sigue pintando
-  vacía; el revisor elige partida o almacén a sabiendas; F-106 conserva su elección). (b) Además, sv4 no deja aprobar y
-  sv9 la rechaza (`no_admitido`) si es de residuos y va vacía sin edición humana: toca sv4 y sv9.
-- **D6 · Qué se ve en sv4.** (a) **Recomendada**: nada nuevo; los motivos salen en la traza de F-036 R23 como texto.
-  (b) Textos legibles para los motivos nuevos en sv4 (una tarea más, otro servicio).
-- **D7 · Lo ya valorado y lo aprobado.** No hay revaloración automática: los 2 documentos de contenedores (uno aprobado,
-  ya en Sigrid con 278 €) y los 8 de partida cambian solo si se revaloran desde sv4 (aprobado = solo lectura: hay que
-  desaprobar). (a) **Recomendada**: el líder lista en solo lectura los afectados tras desplegar (T13) y el humano decide
-  caso a caso; el aprobado se corrige en Sigrid a mano. Con F-106, una cantidad editada a mano se conserva al revalorar.
-  (b) Script de revaloración masiva (escritura en producción: no la lanza un agente).
-- **D8 · Banco de evals.** (a) **Recomendada**: sin caso nuevo; el número de contenedores es determinista en sv6 y su
-  test es unitario; el prompt se prueba por texto. (b) Añadir un caso RES (8 m³ sin tamaño) al banco de F-084 y
-  re-medir IA3 (coste de una pasada).
-- **D9 · Orden con F-100.** F-100 (blocked, espera F-106) cambia `run_valuation_pipeline.py`, `composition.py`,
-  `config/settings.py`, `valuation_builder.py`, `valuation_residuos` (sintéticas) y `app.py` de sv5: **los mismos
-  ficheros** que F-111. (a) **Recomendada**: F-111 antes (es pequeña y ya hay importes mal); F-100 rebasa y su prefiltro
-  usa la partida asignada (su R25 lee la del sobre). (b) F-100 antes y F-111 rebasa.
-- **D10 · Reconocer el capítulo.** (a) **Recomendada**: patrón fijo «GESTION» + «RESIDUO» en un antecesor (17 de 17
-  obras). (b) Patrón por variable de entorno en sv6.
+**Cerrada por el humano el 2026-10-30 («doy por bueno a»): D1–D10 = (a).** Texto completo de las alternativas en el
+historial de git de este fichero (commit de la spec, 2026-10-29) y resumen en `progress/spec_F-111.md` §3.
+D1 corregir también `svc5_prompt_valuation_es.yaml` · D2 m³ fuera de los tamaños del contrato ⇒ paquetes de 6 si el
+contrato tiene el de 6, si no del mayor · D3 1 candidata sin IA, ≥ 2 IA en sv5 · D4 partida asignada sin revisión ·
+D5 sin partida ⇒ revisión sin `almacen_sin_partida` (sin tocar sv4/sv9) · D6 nada nuevo en sv4 · D7 lo ya valorado,
+caso a caso tras desplegar (T13) · D8 sin caso nuevo en el banco de evals · D9 F-111 antes de F-100 · D10 patrón fijo
+«GESTION» + «RESIDUO». La D3 (d) descartada entonces («usar la partida de la línea de contrato») la reabre la parte C.
 
 ## 11. Encaje con F-106
 
@@ -207,3 +181,50 @@ editado. F-111 se rebasa sobre `dev` con F-106 antes de empezar.
 - **R-4 · Coste**: una llamada de IA por documento de residuos sin partida con ≥ 2 candidatas (hoy, ~4 documentos).
 - Despliegue (lo lanza el humano): comun 0.11.0 ⇒ sv5 (endpoint) ⇒ sv6. sv6 sin sv5 nuevo ⇒ 404 ⇒ R26
   (`partida_residuos_ia_fallo`), sin romper. Rigor **critico**: fase RED, cobertura y mutación completa.
+
+## 13. Parte C · primero la partida del contrato (2026-11-05/06; PARADA 1: D1=b, D2=a, D3=a)
+
+**Medición (líder, producción, solo lectura, 2026-11-05).** Las 8 líneas de §2, por obra: 0686 (3 docs) contrato con
+`32.01` (120 líneas) y `CI.03A.7` ⇒ `32.01` sin IA (hoy: capítulo con 2 ⇒ IA); 0669 (1) `31.01`, `102.08.01`,
+`CI.03A.7` ⇒ IA entre las 2 del capítulo; 0694 y 0697 (1 y 1) solo `CI.03A.7` (MAQUINARIA AJENA › CONTENEDORES) ⇒
+`CI.03A.7` (paso 2); 0459 y 0687 (1 y 1) sin partidas en el contrato ⇒ capítulo (0459: 19 candidatas ⇒ IA; 0687: 1 ⇒
+`19.01`). Detalle en `progress/spec_F-111.md` §5.
+
+**Cambio, solo en `application/services/partida_residuos.py`** (application, sin I/O):
+- Función pura nueva `partidas_del_contrato(lineas_contrato, lista, alm) -> tuple[PartidaObra, ...]` (R37): por cada
+  `codigo_partida` con `normalizar_partida` no `None`, `resolver_partida_obra(lista, cod, alm)`; vale si el motivo es
+  `exacta`/`normalizada` y `not lista.cod_repetido(codigo)`; la hoja es la de `lista.hojas` con ese código; sin
+  duplicados, orden de primera aparición. Nada de parecido ni prefijos: lo que no casa, fuera.
+- `asignar`, tras obtener la lista: `contrato = partidas_del_contrato(...)`; `capitulo = candidatas_residuos(lista)`;
+  `paso1 = [c for c in contrato if c.codigo in {k.codigo for k in capitulo}]`. Conjunto y prefijo:
+  `paso1` ⇒ (`paso1`, `partida_residuos_contrato:`); si no, `contrato` ⇒ (`contrato`, `partida_residuos_contrato_hoja:`);
+  si no, (`capitulo`, `partida_residuos:`). Con el conjunto elegido, la lógica de hoy sin cambios: 0 ⇒
+  `sin_capitulo` (solo posible en el paso 3), 1 ⇒ esa sin IA, ≥ 2 ⇒ `_elegir_con_ia` con ESE conjunto (R38–R43).
+- `ResultadoPartidaResiduos` no cambia (el motivo ya lleva el prefijo); `anotar` no cambia: los motivos de asignación
+  no van a cabecera ni a revisión, y la cabecera de revisión sigue partiendo por «:» (R42, R43).
+- Constantes nuevas `PREFIJO_PARTIDA_RESIDUOS_CONTRATO = "partida_residuos_contrato:"` y
+  `PREFIJO_PARTIDA_RESIDUOS_CONTRATO_HOJA = "partida_residuos_contrato_hoja:"` (R46); el log añade `paso=`.
+- `alm_codigo_partida` deja de descartarse (`del`): se guarda para `partidas_del_contrato` (un `ALM` del contrato es
+  `no_aplica`, no una hoja). La docstring del módulo explica los tres pasos.
+
+**No cambia:** pipeline (`asignar` ya recibe el sobre con `lineas_contrato`, la obra y la lista de la caché; R30),
+composición, settings (mismo `PARTIDA_RESIDUOS_ENABLED`, R45), matcher, builder, comun (todo lo necesario ya existe:
+`resolver_partida_obra`, `cod_repetido`, `candidatas_residuos`; sin subir versión), sv3, sv4, sv9, DDL.
+
+**sv5 (D-C1, abierta).** El prompt `partida_residuos_es` dice que las candidatas son «las partidas hoja del capítulo de
+gestión de residuos»; en el paso 2 no lo son. (a) **Recomendada**: cambiar solo esa frase a «partidas hoja de la obra
+(del contrato del proveedor o del capítulo de gestión de residuos)», sin tocar reglas ni esquema (R48; redespliegue
+de sv5). (b) No tocar sv5: hoy no hay ningún caso medido de paso 2 con ≥ 2 partidas (0694/0697 tienen una). Si (b),
+R48 y T18 se quitan.
+
+**Interpretaciones a validar** (`progress/current.md`): (i) R43: la IA que no elige en el paso 1/2 manda a revisión, no
+cae al paso siguiente (lectura literal de D2=a); (ii) R37: «partidas del contrato» son las de TODAS las líneas del
+contrato del sobre, no solo la casada (D1=b lo pide para `CI.03A.7`); (iii) los motivos de revisión del paso 1/2 son
+los mismos de la parte B (sv4 no los distingue; el código del conjunto en el motivo sí).
+
+**Riesgos.** C-1: un contrato con muchas partidas ajenas a residuos (proveedor multiproducto) lleva al paso 2 con IA
+entre partidas que no son de residuos; la IA puede devolver `null` (revisión). C-2: la parte C confía en el
+`codigo_partida` de `lineas_contrato`, que rellena sv5 de `cl.codigo_partida`
+(`sqlalchemy_valuation_context_repository.py:215,375`): sin cambio, pero si llega vacío, paso 3. C-3: es una
+excepción explícita a F-051 («sv6 no copia la partida del contrato»), acotada a residuos sin lectura (R47).
+Despliegue (lo lanza el humano): sv6; sv5 solo si D-C1 = (a). Rigor **critico**: RED, cobertura y mutación de lo nuevo.
