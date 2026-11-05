@@ -1429,6 +1429,20 @@
         "sv4-front"
       ],
       "branch": "feature/F-116-guardado-automatico-ficha"
+    },
+    {
+      "id": "F-117",
+      "title": "Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8)",
+      "description": "ORIGEN: el humano, 2026-11-05: «Que la valoración proponga sola la equivalente en la obra cuando la partida del albarán no exista». Caso: obra 0719, contrato CTSB26/0373, línea «grua pk 50 - montar muro y hormigonar» 9 UD × 60 € con la partida leída CI.03.08; la obra no la tiene (numera CI.03A.n MAQUINARIA AJENA, CI.03P.n PROPIA); sv6 la dejó con partida_fuera_de_lista, se aprobó y sigrid-api rechazó el alta (partida_no_encontrada ⇒ no_admitido). La equivalente es CI.03A.8 (CAMION GRUA). ALCANCE (spec): regla determinista en comun (equivalentes_partida: letra pegada al número solo en la hoja; sufijo de ≥3 segmentos, según D2) aplicada en la normalización de F-076 en sv6; única ⇒ se valora con ella, motivo partida_equivalente:<leída>><cod> y revisión no bloqueante; varias ⇒ revisión con las candidatas; ninguna ⇒ como hoy. Nunca almacén ni partida inventada. Excepción acotada a H1 de F-049 (D1). Medición y decisiones D1–D9 en progress/spec_F-117.md. Fuera: que sv4 impida aprobar con partida_fuera_de_lista; la lectura que es un capítulo (CD.02 de 0692).",
+      "status": "spec_ready",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 2,
+      "servicios": [
+        "sv6-valoracion-persist",
+        "comun"
+      ],
+      "branch": "feature/F-117-partida-equivalente-en-obra"
     }
   ]
 }
