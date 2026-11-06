@@ -38,12 +38,25 @@ from domain.models.valuation_envelope import ValuationEnvelope
 from domain.models.valuation_records import LineValuationRecord, ValuationHeaderRecord
 from domain.ports.elige_partida_port import EligePartidaPort
 from domain.ports.partidas_obra_port import PartidasObraPort
-from ruesma_comun.sigrid import PartidaObra, candidatas_residuos, normalizar_partida
+from ruesma_comun.sigrid import (
+    ListaPartidasObra,
+    PartidaObra,
+    candidatas_residuos,
+    normalizar_partida,
+    resolver_partida_obra,
+)
 
 logger = logging.getLogger(__name__)
 
 #: (R23) Rastro sin revisión de una partida asignada: ``partida_residuos:<cod>``.
 PREFIJO_PARTIDA_RESIDUOS = "partida_residuos:"
+#: (R42, parte C) Paso 1: la partida del contrato es del capítulo de residuos.
+PREFIJO_PARTIDA_RESIDUOS_CONTRATO = "partida_residuos_contrato:"
+#: (R42, parte C) Paso 2: la partida del contrato es otra hoja de la obra.
+PREFIJO_PARTIDA_RESIDUOS_CONTRATO_HOJA = "partida_residuos_contrato_hoja:"
+#: (R43, parte C) La IA no eligió entre las del contrato: la línea cayó al
+#: capítulo. Rastro sin revisión, con los códigos del conjunto.
+MOTIVO_CONTRATO_SIN_ELECCION = "partida_residuos_contrato_sin_eleccion"
 #: (R25) La obra no tiene capítulo de gestión de residuos.
 MOTIVO_SIN_CAPITULO = "partida_residuos_sin_capitulo"
 #: (R26) La IA no eligió ninguna candidata (o eligió algo que no lo es).
@@ -69,6 +82,9 @@ class ResultadoPartidaResiduos:
     motivo: str
     #: La lectura con la que llegó (vacía), para devolverla al registro.
     leida: str | None = None
+    #: (R43) ``partida_residuos_contrato_sin_eleccion:<cods>`` si la línea cayó
+    #: al capítulo porque la IA no eligió entre las del contrato.
+    intento: str | None = None
 
     @property
     def revision(self) -> bool:
@@ -95,6 +111,37 @@ def _motivo_con_candidatas(motivo: str, candidatas: tuple[PartidaObra, ...]) -> 
     return f"{motivo}:{citados}" + (f"(+{resto})" if resto > 0 else "")
 
 
+#: Motivos de :func:`resolver_partida_obra` con los que una lectura es UNA hoja.
+_RESOLUCIONES_HOJA = frozenset({"exacta", "normalizada"})
+
+
+def partidas_del_contrato(
+    lineas_contrato: Any, lista: ListaPartidasObra, alm: str | None,
+) -> tuple[PartidaObra, ...]:
+    """(R37) Las hojas de la obra que traen las líneas de contrato del sobre.
+
+    Por cada ``codigo_partida`` legible, :func:`resolver_partida_obra`: vale si
+    casa exacta o normalizada con UNA hoja y su cod no está repetido en la obra
+    (F-098 R12). Fuera las vacías, las ``alm``, las que no casan, las ambiguas y
+    las que chocan con un no hoja. Sin duplicados (dos lecturas de la misma hoja
+    cuentan una vez), en el orden de la primera línea que la trae. Nada de
+    parecidos ni prefijos.
+    """
+    vistas: dict[str, PartidaObra] = {}
+    for linea in lineas_contrato or ():
+        lectura = getattr(linea, "codigo_partida", None)
+        if normalizar_partida(lectura) is None:
+            continue
+        resolucion = resolver_partida_obra(lista, lectura, alm)
+        codigo = resolucion.codigo
+        if resolucion.motivo not in _RESOLUCIONES_HOJA or codigo in vistas:
+            continue
+        if lista.cod_repetido(codigo):
+            continue
+        vistas[codigo] = next(h for h in lista.hojas if h.codigo == codigo)
+    return tuple(vistas.values())
+
+
 class AsignadorPartidaResiduos:
     """Partida del capítulo de gestión de residuos para las líneas sin partida."""
 
@@ -108,10 +155,9 @@ class AsignadorPartidaResiduos:
     ) -> None:
         self._partidas = partidas
         self._elector = elector
-        # ``alm_codigo_partida`` se acepta por simetría con el normalizador de
-        # F-076, pero no hace falta: ``ALM`` es una lectura (no vacía) y por
-        # eso ya no se busca (R28).
-        del alm_codigo_partida
+        # (R37) Un ``ALM`` en el contrato es ``no_aplica``, no una hoja. En el
+        # albarán, ``ALM`` es una lectura (no vacía) y no se busca (R28).
+        self._alm = alm_codigo_partida
         self._activo = bool(activo)
 
     # ------------------------------------------------------------------ #
