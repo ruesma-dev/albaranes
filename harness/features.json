@@ -1429,6 +1429,20 @@
         "sv4-front"
       ],
       "branch": "feature/F-116-guardado-automatico-ficha"
+    },
+    {
+      "id": "F-118",
+      "title": "Incremento sin tarifa: la valoración pone importe 0, no null, y el albarán se puede aprobar",
+      "description": "ORIGEN: el humano, 2026-11-06, por el correo del administrativo de obra sobre los albaranes de Traiber Beton de la 0707 (1261029152341 y 1261029123045): «Guardar y aprobar» falla con «Líneas sin cantidad o importe: 2, 4». Esas filas son sintéticas de sv6 (incremento por año 2026 y exceso de tiempo de descarga) identificadas sin tarifa: sv6 las deja con precio e importe NULL y motivo `modifier_identified_no_tariff` (valuation_builder.py, «el revisor decide si factura»), y sv4 no aprueba filas con importe NULL. DECISIÓN DEL HUMANO: una línea que pone la app sin tarifa debe quedar con importe 0, no null; y como en el alta a Sigrid null y 0 valen lo mismo (`es_linea_a_registrar` de comun ya excluye ambos), esa línea no debe bloquear la aprobación ni viajar a Sigrid. A RESOLVER EN LA SPEC: (1) si se pone 0 en precio e importe o solo en importe, y si se mantiene `modifier_identified_no_tariff` como aviso de revisión; (2) si alcanza también a la sintética de LER sin tarifa (F-036 R17, decisión del 2026-08-22: se emite sin precio para que el revisor ponga el importe a mano); (3) si sv4 debe además dejar de bloquear filas con importe NULL que vengan de la app (las ya valoradas en producción, sin revalorar) o basta con revalorar; (4) medir en producción (solo lectura) cuántas filas hay hoy con importe NULL por motivo y en cuántos documentos sin aprobar. Contorno mientras tanto: en la ficha, poner importe 0 en esas filas o borrarlas.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 2,
+      "servicios": [
+        "sv6-valoracion-persist",
+        "sv4-front"
+      ],
+      "branch": "feature/F-118-incremento-sin-tarifa-importe-cero"
     }
   ]
 }
