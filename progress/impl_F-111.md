@@ -1,210 +1,146 @@
 # Informe del implementer · F-111 (residuos: contenedores 3/6/9 y partida de gestión de residuos)
 
 - Rama: `feature/F-111-residuos-contenedores-y-partida` (worktree `../albaranes-F-111`).
-- Spec: `specs/F-111-residuos-contenedores-y-partida/`. PARADA 1: D1–D10 = (a), 2026-10-30.
-- Rigor: `critico`. Servicios: **sv6** (valorador), **sv5** (endpoint nuevo), **comun 0.13.0**.
-- Estado: T0–T12 y T14 hechas. **T13 MANUAL pendiente** (humano/líder, tras desplegar y revalorar).
+- Spec: `specs/F-111-residuos-contenedores-y-partida/`. Rigor `critico`.
+- Estado: A y B (T0–T12, T14) hechas y aprobadas el 2026-11-03; **parte C (T15–T21) hecha el 2026-11-06**.
+  **T13 MANUAL pendiente** (líder, solo lectura, tras desplegar sv5 y sv6 y revalorar).
 
-## 0. Fusión de dev y validez de la spec
+## Partes A y B (resumen; informe íntegro en `progress/impl_F-111_partes_AB.md`)
 
-- `git merge dev` (8d5b702), commit `678c865`. Conflictos solo de papeleo (`progress/current.md`,
-  `BACKLOG.md` regenerado, inventario de mutación), resueltos sin tocar código.
-- Lo que entró en dev desde la spec (F-106, F-115, F-108, F-110, F-113, F-116, comun 0.12.0) **no choca**
-  con la spec: nada de eso toca `residuos_container_calc`, el `PartidaMatcher` ni el normalizador de F-076.
-  **Única desviación**: comun ya iba por 0.12.0 (F-110), así que `candidatas_residuos` sale en **0.13.0**
-  y no en la 0.11.0 que decía T5. El test de versión de F-110 pasa a `>= 0.12.0`.
+- A: tamaño de contenedor 3/6/9 m³ (sv6 `residuos_container_calc.py`, prompt de IA3). B: una línea de residuos
+  sin partida no va a almacén; partida del capítulo de gestión de residuos (comun 0.13.0 `candidatas_residuos`,
+  sv5 `POST /v1/albaranes/partida-residuos`, sv6 `partida_residuos.py`, matcher `sin_almacen`, pipeline).
+- RED de T1–T10, tests, mutación (113/110/3 equivalentes, `progress/mutacion_F-111.md`) y cobertura (99,7 %):
+  en el informe íntegro. Review APPROVED (`progress/review_F-111.md`).
 
-## 1. Qué cambió
+## Parte C · primero la partida del contrato (T15–T21)
 
-### Parte A · tamaño del contenedor (sv6 + prompt de IA3)
-- `sv6 application/services/residuos_container_calc.py`. La lógica nueva está en `_elegir_tamano`:
-  - Con tamaños en el contrato, elige el más pequeño en el que caben los m³ (1 contenedor). Si no caben en ninguno, hace paquetes de 6 cuando el contrato tiene el de 6 y, si no, del mayor.
-  - Sin tamaños: 3/6/9 m³. Con más de 9 m³, `ceil(m³/6)` de 6.
-  - Fuentes por orden: tabla del contrato (`_tamanos_del_contrato`, todas las líneas «contenedor») > `contenedor_m3` de IA3 > m³ de la descripción de la casada > estándar.
-  - Motivos nuevos:
-    - `residuos_tamano_estandar=<t>m3`.
-    - `residuos_tamano_distinto_de_casada=<t>/<c>`, que además pone `revision=True`.
-  - `residuos_tamano_defecto_6m3` deja de escribirse.
-  - La comparación es a 0,01 m³: redondeo a 2 decimales.
-- `valuation_builder.py`: `residuos_calc.revision` ⇒ `review_required` en la línea y la cabecera (R9). El precio sigue siendo el de la casada: cambia la cantidad, nunca el precio.
-- sv5 `config/prompts.yaml`, paso 4 de `valuation_residuos`:
-  - Regla 3/6/9: «manda el contrato».
-  - `contenedor_m3 = null` cuando el contrato no da el tamaño.
-  - Precio general de la casada.
-- sv5 `svc5_prompt_valuation_es.yaml`: la regla 4 ya no dice «el por defecto».
+Regla del humano (2026-11-05): «que mire primero en las líneas del contrato si tiene partida; si es de gestión de
+residuos que coja esa, y si no que busque». Decisiones: D1=b, D2=a, D3=a, D-C1=a, interpretación (i) enmendada
+(caída al capítulo, R43), (ii) y (iii) aceptadas (`progress/spec_F-111.md` §7).
 
-### Parte B · partida de residuos (comun + sv5 + sv6)
-- comun `ruesma_comun/sigrid/partidas.py`: `candidatas_residuos(lista)` devuelve las hojas con un **antecesor** «GESTIÓN … RESIDUO…».
-  - Compara sin tildes (NFKD) y deja fuera las de `AJUSTE`.
-  - Si la ruta acaba en la propia hoja, la descarta; si no, no.
-  - Exportada en `ruesma_comun.sigrid`. Versión 0.13.0, con nota en el README.
-- sv5, endpoint nuevo `POST /v1/albaranes/partida-residuos`:
-  - Ficheros: `partida_residuos_models.py`, `partida_residuos_service.py`, el esquema `documento_partida_residuos` y el prompt `partida_residuos_es`.
-  - Usa el proveedor y el modelo de IA4.
-  - Devuelve un resultado por línea, en el orden de entrada. Un código fuera de las candidatas ⇒ `null` (`codigo_fuera_de_candidatas:<x>`).
-  - Sin proveedor ⇒ 503; cualquier otro error ⇒ 500. No persiste nada ni pone precios.
-- sv6, ficheros nuevos:
-  - `domain/ports/elige_partida_port.py`.
-  - `infrastructure/clients/http_partida_residuos_client.py`: tenacity con 3 intentos ante 5xx, timeout o error de transporte; un 4xx falla sin reintentar; el cuerpo del error se recorta a 200 caracteres.
-- sv6 `application/services/partida_residuos.py`, `AsignadorPartidaResiduos`:
-  - Busca las líneas de familia efectiva `residuos` cuya partida leída está vacía. `ALM` cuenta como lectura y no se busca.
-  - 0 candidatas ⇒ `partida_residuos_sin_capitulo`.
-  - 1 candidata ⇒ esa, sin IA.
-  - 2 o más ⇒ una sola llamada a la IA por documento. Respuesta inválida ⇒ `_sin_candidata`; la IA caída ⇒ `_ia_fallo`; sin obra o sin lista ⇒ `_sin_lista`.
-  - `anotar` deja el rastro:
-    - `codigo_partida_albaran` vuelve a la lectura.
-    - Sin revisión, el motivo `partida_residuos:<cod>`.
-    - Con revisión, `review_required` en la línea y la cabecera, y `almacen_sin_partida` pasa a `no_action`.
-- `partida_matcher.py`: `match(..., sin_almacen=False)`. Con `sin_almacen` y sin partida:
-  - con la casada de la IA ⇒ `existing_matched` sin partida;
-  - sin ella ⇒ `no_action`;
-  - nunca `almacen_sin_partida`.
-  El builder lo pasa por línea con `build(..., sin_almacen=)`.
-- `run_valuation_pipeline.py`:
-  - Orden de pasos: normalizar (F-076) ⇒ asignar residuos ⇒ valoración directa / IA4 ⇒ build ⇒ `anotar`. `anotar` se llama en las **dos** ramas que persisten.
-  - La obra se lee **una vez** por valoración con `_obra` y su `memo`; los fallos también se recuerdan.
-  - `_asignar_partida_residuos` nunca lanza: si algo falla, devuelve `degradada`.
-- Cableado:
-  - `settings.py`: `PARTIDA_RESIDUOS_ENABLED` (defecto `true`).
-  - `composition.py`:
-    - `_puerto_partidas_obra` da la **misma** `CachePartidasObra` al normalizador y al asignador, una por configuración.
-    - `construir_asignador_partida_residuos`. Apagado ⇒ ni puerto ni cliente. Sin sigrid-api ⇒ puerto `None` y un WARNING.
-  - Lo usan el worker y `api/app.py`.
-- Documentación:
-  - `docs/ARCHITECTURE.md`: regla 27 y la excepción de residuos en la regla 16.
-  - `sv6.md`: variable y §9 ter.
-  - `sv5.md`: §5.3.
-  - `azure-apps/albaranes.md` §15 (repositorio `azure-apps`, commit `ab78985`, «sin desplegar»): endpoint interno de sv5, variable de sv6 y motivos nuevos.
+### C.1 Qué cambió
 
-### Tests de otras features retocados (solo lo que la regla nueva cambia)
-- `test_f036_r22_contenedores_prioridades.py`: «los nombres…» pasa de 7 m³ ⇒ 2 × 6 a **1 × 9** (`residuos_tamano_estandar=9m3`); R10.
-- `test_f110_linea_a_sigrid.py`: versión de comun `>= 0.12.0`.
-- `test_f043_contexto_clasificacion.py`: añade el esquema `documento_partida_residuos` al conjunto esperado.
-- `test_f078_fila_completa.py`: el `_Builder.build` falso acepta `sin_almacen`.
+- **sv6 `application/services/partida_residuos.py`** (único fichero de producción de sv6 tocado):
+  - Función pura nueva `partidas_del_contrato(lineas_contrato, lista, alm)` (R37): por cada `codigo_partida`
+    legible, `resolver_partida_obra`; vale solo `exacta`/`normalizada` y sin `cod_repetido`; la hoja es la de
+    `lista.hojas` con ese cod; sin duplicados, en orden de primera aparición.
+  - `asignar` elige el paso UNA vez por documento: paso 1 (del contrato y del capítulo, prefijo
+    `partida_residuos_contrato:`), paso 2 (todas las del contrato, `partida_residuos_contrato_hoja:`), paso 3
+    (el capítulo, `partida_residuos:`, la parte B tal cual).
+  - `_resolver(documento, lineas, conjunto, prefijo, intento)` extraído: 0 ⇒ `sin_capitulo`, 1 ⇒ esa sin IA,
+    ≥ 2 ⇒ IA solo entre el conjunto. Devuelve asignadas, pendientes y el motivo de revisión.
+  - (R43) Si en el paso 1/2 quedan pendientes (IA `null`, fuera del conjunto, sin respuesta, fallo o sin elector),
+    SOLO esas se resuelven contra el capítulo (segunda llamada como mucho, R41), con
+    `intento = partida_residuos_contrato_sin_eleccion:<cods del conjunto, hasta 5>`.
+  - `ResultadoPartidaResiduos.intento` (defecto `None`); `anotar` lo añade a la línea antes del motivo final,
+    nunca a la cabecera ni a revisión.
+  - Constantes `PREFIJO_PARTIDA_RESIDUOS_CONTRATO`, `PREFIJO_PARTIDA_RESIDUOS_CONTRATO_HOJA`,
+    `MOTIVO_CONTRATO_SIN_ELECCION` (R46). Log con `paso=` (`contrato`/`contrato_hoja`/`capitulo`) y
+    `caidas_al_capitulo=`.
+  - `alm_codigo_partida` deja de descartarse: `self._alm` va a `partidas_del_contrato` (un `ALM` del contrato
+    es `no_aplica`). Docstring del módulo con los tres pasos.
+- **sv5 `config/prompts.yaml`** (`partida_residuos_es`, R48): la frase de candidatas pasa a «las partidas hoja de
+  la obra (del contrato del proveedor o del capitulo de gestion de residuos)»; reglas y esquema sin tocar. Se
+  actualiza también el comentario de cabecera del bloque.
+- **`docs/ARCHITECTURE.md`** (R47): punto 16 (excepción de residuos a F-051: la única copia de partida del
+  contrato, solo residuos sin lectura y siempre validada contra la obra) y punto 27 (los tres pasos, la caída al
+  capítulo y los rastros nuevos).
+- **No cambian**: pipeline, composición, settings (mismo `PARTIDA_RESIDUOS_ENABLED`), matcher, builder, comun,
+  DDL. `azure-apps/albaranes.md` tampoco (ni endpoint ni contrato nuevos, T19).
 
-### Ficheros de test nuevos
-- sv6: `test_f111_tamano.py`, `test_f111_cliente.py`, `test_f111_partida_residuos.py`, `test_f111_pipeline.py`.
-- sv5: `test_f111_prompt_residuos.py`, `test_f111_partida_residuos.py`.
-- comun: `test_f111_candidatas_residuos.py`.
+### C.2 Tests
 
-## 2. Decisiones de diseño y desviaciones (justificadas)
-1. **comun 0.13.0** en lugar de 0.11.0: dev ya estaba en 0.12.0 (ver §0).
-2. **Tolerancia redondeando a 2 decimales** en vez de `±0,01/2`. Es el mismo criterio de 0,01 m³ (6,004 cabe en el de 6) y lo pidió la mutación: la aritmética de tolerancia tenía mutantes indistinguibles.
-3. `alm_codigo_partida` se acepta en `AsignadorPartidaResiduos` por simetría con F-076, pero se descarta (`del`). `ALM` es una lectura no vacía y por eso nunca se busca (R28). El atributo `_alm` era código muerto.
-4. La importación de `construir_asignador_partida_residuos` en `api/app.py` va en **su propia línea**: el test de F-076 que busca la importación literal del normalizador sigue pasando.
-5. sv5 se prueba con el stub de FastAPI de siempre (el intérprete de tests no trae FastAPI). La lógica del endpoint vive en la función de módulo `atender_partida_residuos`, que el test llama directamente.
+- Nuevo sv6 `tests/test_f111_partida_contrato.py` (36 tests): las 6 obras medidas en listas sintéticas (0686,
+  0669, 0694, 0687, 0459, sin capítulo), descartes de R37 (`ALM`, vacía, no hoja, inexistente, ambigua,
+  cod repetido, duplicados, `alm=None`), R41 (dos llamadas como mucho, solo las caídas en la segunda), R43
+  (5 variantes de «no elige» en 0669 ⇒ IA del capítulo; capítulo de 1; capítulo que también falla ⇒ revisión;
+  obra sin capítulo; sin elector; hasta 5 códigos), R44, R45, `anotar` (orden intento ⇒ motivo, cabecera intacta)
+  y R46 (constantes y `paso=` en el log).
+- Nuevo test de pipeline `test_f111_r38_el_pipeline_toma_la_partida_del_contrato` (paso 1 de punta a punta).
+- sv5 `tests/test_f111_partida_residuos.py`: `test_f111_r48_...` (frase nueva, la vieja fuera, reglas de R32).
+- **Retocados** (sin relajar aserciones): los helpers `_envelope` de `test_f111_partida_residuos.py` y
+  `test_f111_pipeline.py` de sv6 dejan el contrato **sin partidas** (R40) para seguir probando el paso 3: el
+  escenario compartido trae `32.01` en el contrato y, con la parte C, esos tests habrían pasado al paso 1. Se
+  hace con **copias** (`model_copy`): la primera versión mutaba los DTO de `CONTRATO_SALMEDINA`, compartidos
+  por módulo, y rompía un test del matcher que se ejecutaba después (detectado y corregido antes del commit).
 
-## 3. Fase RED (trazas reales)
+### C.3 Decisiones y desviaciones
 
-Todos los comandos se lanzan desde la carpeta del servicio, con `PYTHONPATH=<worktree>/services/albaranes-comun` y `ARNES_SIN_CACHE=1`. Las trazas completas están en el scratchpad de la sesión (`f111/red_t*.txt`).
+1. Sin desviaciones de la spec. Detalles no fijados por ella, resueltos así:
+   - En el paso 1/2 el conjunto va **en el orden del contrato** (primera aparición); en el paso 3, en el de la
+     lista (como B). El intento cita los códigos del conjunto del paso 1/2 en ese orden.
+   - Si el conjunto del paso 1 coincide con el capítulo y la IA no elige, la línea vuelve a la IA con el capítulo
+     (segunda llamada): es lo que dice R43 literalmente; no se ha optimizado.
+   - El motivo de revisión tras una caída cita las candidatas del **capítulo** (los de la parte B), y la línea
+     conserva además el intento.
+2. Línea base de init.sh al empezar (2026-11-06): todo verde salvo sv6, que salió rojo **solo** porque el fichero
+   RED de T15 ya estaba escrito (`ImportError` de `MOTIVO_CONTRATO_SIN_ELECCION`); el resto de suites, verde.
 
-**T1 (parte A, R1–R11)**: `python -m pytest tests/test_f111_red_tmp.py -q --tb=line`. Es el fichero RED que luego pasó a `test_f111_tamano.py`.
-```
-E   AttributeError: 'ResultadoContenedores' object has no attribute 'revision'
-E   AssertionError: assert '3, 6 o 9' in 'Cálculo determinista de la valoración por CONTENEDORES (residuos)...'
-E   assert 2.0 == 1.0   (…cantidad_convertida: 4839 B, 8 m³ sin tamaño daba 2 × 6)
-E   AssertionError: assert 'residuos_tamano_distinto_de_casada=8/6' in [..., 'residuos_contenedores=2 (m3=7 / contenedor=6 m3)']
-FAILED ...test_f111_r1_el_estandar_es_el_mas_pequeno_en_el_que_caben[0.5-3.0]   (… y [2.0-3.0] … [9.0-9.0])
-FAILED ...test_f111_r7_sin_el_6_paquetes_del_mayor
-FAILED ...test_f111_r4_builder_4839b_8m3_sin_tamano_es_1_por_139
-27 failed, 19 passed in 1.05s
-```
-**T3 (R9 en el builder)**: `python -m pytest tests/test_f111_tamano.py -k builder -q --tb=line`
-```
-E   assert False is True   (LineValuationRecord(...7101...).review_required)
-FAILED tests/test_f111_tamano.py::test_f111_r9_builder_la_revision_del_tamano_marca_la_linea_y_la_cabecera
-1 failed, 4 passed, 43 deselected in 0.99s
-```
-**T4 (prompt de IA3, R12–R16)**: `python -m pytest tests/test_f111_prompt_residuos.py -q --tb=line` (sv5)
-```
-tests\test_f111_prompt_residuos.py:92: assert 'el por defecto' not in 'valuation_e..._valoracion '
-FAILED tests/test_f111_prompt_residuos.py::test_f111_r12_el_prompt_no_dice_6_por_defecto
-FAILED tests/test_f111_prompt_residuos.py::test_f111_r13_contenedor_m3_null_sin_tamano_en_el_contrato
-6 failed in 0.56s
-```
-**T5 (comun, R17–R19)**: `python -m pytest tests/test_f111_candidatas_residuos.py -q --tb=line` (comun)
-```
-E   ImportError: cannot import name 'candidatas_residuos' from 'ruesma_comun.sigrid'
-1 error in 0.33s
-```
-**T6 (endpoint de sv5, R31–R33)**: `python -m pytest tests/test_f111_partida_residuos.py -q --tb=line` (sv5)
-```
-E   ModuleNotFoundError: No module named 'application.services.partida_residuos_service'
-1 error in 0.83s
-```
-**T7 (cliente sv6, R33–R34)**: `python -m pytest tests/test_f111_cliente.py -q --tb=line`
-```
-E   ModuleNotFoundError: No module named 'domain.ports.elige_partida_port'
-1 error in 0.53s
-```
-**T8 (asignador, R20–R29, R35)**: `python -m pytest tests/test_f111_partida_residuos.py -q --tb=line`
-```
-E   ModuleNotFoundError: No module named 'application.services.partida_residuos'
-1 error in 0.46s
-```
-**T9 (matcher `sin_almacen`, R24–R25)**: `python -m pytest tests/test_f111_partida_residuos.py -k "matcher or sintetica" -q --tb=line`
-```
-E   TypeError: PartidaMatcher.match() got an unexpected keyword argument 'sin_almacen'
-E   TypeError: ValuationBuilder.build() got an unexpected keyword argument 'sin_almacen'
-FAILED ...test_f111_r25_matcher_sin_almacen_conserva_la_casada_sin_partida
-FAILED ...test_f111_r24_sintetica_ler_hereda_la_partida_asignada
-7 failed, 1 passed, 23 deselected in 1.51s
-```
-**T10 (pipeline, R20/R27/R29/R30)**: `python -m pytest tests/test_f111_pipeline.py -q --tb=line`
-```
-FAILED tests/test_f111_pipeline.py::test_f111_r20_la_linea_sin_partida_va_a_la_del_capitulo
-FAILED tests/test_f111_pipeline.py::test_f111_r30_la_obra_se_lee_una_vez_con_f076_tambien
-FAILED tests/test_f111_pipeline.py::test_f111_r25_valoracion_directa_sin_capitulo_no_queda_en_almacen
-FAILED tests/test_f111_pipeline.py::test_f111_t10_anotar_va_antes_de_persistir_en_las_dos_ramas
-13 failed in 3.95s
-```
-**T10 (cableado)**: el mismo comando, después del cambio del pipeline y antes del de `composition`:
-```
-     +    where None = <...RunValuationPipeline object ...>._asignador_residuos
-FAILED tests/test_f111_pipeline.py::test_f111_r30_el_asignador_comparte_la_cache_de_f076
-FAILED tests/test_f111_pipeline.py::test_f111_t10_el_worker_y_la_api_cablean_el_asignador
-6 failed, 13 passed in 4.07s
-```
-Tras cada RED se escribió el código y el mismo comando quedó en verde (commits T1–T10).
+### C.4 Fase RED (trazas reales)
 
-## 4. Tests (salida real)
+Desde la carpeta del servicio, con `PYTHONPATH=C:\Users\pgris\PycharmProjects\albaranes-F-111\services\albaranes-comun`.
 
-Las suites se lanzaron de una en una, sin otra en paralelo:
-- sv6: **627 passed, 1 skipped**.
-- sv5: **148 passed**.
-- comun: **1424 passed**.
+**T15** (antes de cualquier código): `python -m pytest tests/test_f111_partida_contrato.py -q --tb=line -p no:cacheprovider`
+```
+tests\test_f111_partida_contrato.py:22: in <module>
+    from application.services.partida_residuos import (
+E   ImportError: cannot import name 'MOTIVO_CONTRATO_SIN_ELECCION' from 'application.services.partida_residuos'
+ERROR tests/test_f111_partida_contrato.py
+1 error in 6.47s
+```
+**T17** (con T16 hecho: constantes y `partidas_del_contrato`, `asignar` aún de la parte B), mismo comando:
+```
+test_f111_partida_contrato.py:211: AssertionError: assert None == '32.01'                       (0686, paso 1)
+test_f111_partida_contrato.py:226: AssertionError: assert ['102.08.01',....01', '31.02'] == ['31.01', '102.08.01']  (0669)
+test_f111_partida_contrato.py:241: AssertionError: assert '23.01' == 'CI.03A.7'                   (0694, paso 2)
+test_f111_partida_contrato.py:282: AssertionError: assert 'partida_resi..._sin_capitulo' == 'partida_resi...hoja:CI.03A.7'
+test_f111_partida_contrato.py:301: AssertionError: assert 1 == 2          (×5, R43: no había segunda llamada)
+test_f111_partida_contrato.py:350: AssertionError: assert None == 'partida_residuos_contrato_sin_eleccion:31.01,102.08.01'
+test_f111_partida_contrato.py:424: AssertionError: assert 'partida_residuos_contrato:32.01' in [..., 'partida_residuos_ia_fallo:32.01,37.06.01']
+test_f111_partida_contrato.py:438: AssertionError: assert ['partida_res...,31.01,31.02'] == ['partida_res...siduos:31.02']
+INFO ... [partida-residuos] document_id=doc-SS-0000589 obra=0686 candidatas=1 asignadas=1 a_revision=0   (sin paso=)
+22 failed, 14 passed in 5.17s
+```
+Los 14 que pasaban eran los de R37 (T16, `-k "r37 or constantes"`: 7 passed), R40 y R44/R45 (la parte B ya los
+cumplía). Tras T17: `tests/test_f111_partida_contrato.py tests/test_f111_partida_residuos.py
+tests/test_f111_pipeline.py` ⇒ **90 passed in 7.07s**.
 
-`bash harness/init.sh` (entorno del worktree), 2026-11-03: **ENTORNO LISTO**, salida 0. Raíz 1919 passed · sv1 236 ·
-sv2 496 · sv3 1608 · sv4 2562 · sv5 148 · sv6 627 (+1 skipped) · sv9 1186 · comun 1424; todas en verde.
-La 1.ª pasada salió roja solo por `test_f039_r2…`: faltaba la fila de `mutacion_F-111.md` en
-`progress/inventario_mutacion_F-039.md` (añadida, recuento 66). Avisos no bloqueantes: **PUERTA RUTAS SENSIBLES [evals]**
-(7 rutas de prompts/redes de sv5/sv6, falta `progress/evals_F-111.md`): **no lanzado** porque
-`python -m evals.runner --con-llm --feature F-111` llama a LLM reales con coste; queda para el líder/humano.
+**T18** (sv5): `python -m pytest tests/test_f111_partida_residuos.py -q --tb=line -p no:cacheprovider`
+```
+tests\test_f111_partida_residuos.py:207: AssertionError: assert 'partidas hoja de la obra (del contrato del proveedor o del capitulo de gestion de residuos)' in 'eres un experto en presupuestos de obra en espana. ...'
+FAILED tests/test_f111_partida_residuos.py::test_f111_r48_las_candidatas_son_hojas_de_la_obra_del_contrato_o_del_capitulo
+1 failed, 17 passed in 32.59s
+```
+Tras el cambio del prompt: **18 passed in 40.27s**.
 
-## 5. Mutación (rigor `critico`)
+### C.5 Mutación y cobertura (T20)
 
-`python -m harness.mutacion --feature F-111` dejó el informe en `progress/mutacion_F-111.md`. Cubre `residuos_container_calc.py`, `partida_residuos.py`, `candidatas_residuos` (partidas.py) y `partida_residuos_service.py`, con cliente y matcher incluidos.
+Informe: `progress/mutacion_F-111_C.md` (fila nueva en `progress/inventario_mutacion_F-039.md`, recuento 67).
+Comando: `python -m harness.mutacion --feature F-111 --base 16023b0 --max-mutantes 0 [--workers 1] --salida
+progress/mutacion_F-111_C.md` (alcance: el diff de la parte C, solo `partida_residuos.py`, 167 líneas).
 
-- **Pasada 1**: 28 supervivientes. Se mataron todos en T12 (`e33da75`), simplificando código (redondeo, `_alm` muerto, `tramos and` redundante) y con tests nuevos. El detalle está en el anexo del informe de mutación.
-- **Pasada 2** (definitiva): **113 mutantes, 110 muertos, 3 supervivientes, 0 timeouts, 1300,6 s**. Los 3 son **equivalentes** y están justificados en el informe:
-  - `indent` 2→3 (×2): sangría del JSON del prompt, cosmético.
-  - `split(":",1)` → `split(":",2)`: el elemento `[0]` es idéntico.
+- **Herramienta, pasada 1** (`b69192a`, 4 workers): 14 mutantes, 13 muertos, **1 superviviente** (`caidas = 0 → 1`,
+  solo visible en el log): hueco real, test nuevo del log.
+- **Mutantes a mano** (la herramienta genera pocos en este diff): 28 sobre `partidas_del_contrato`, la elección de
+  paso y la caída al capítulo; **4 supervivientes**: 2 equivalentes (filtro de vacías y deduplicado redundantes:
+  código eliminado) y 2 huecos (`alm` de `asignar` y `lineas_contrato=None`: tests nuevos). Ronda 2: 25/25 muertos
+  más el de `cod_repetido` reformulado (muerto). Tabla en el informe de mutación.
+- **Herramienta, pasada 2 (definitiva)** sobre `2e8ea2e`, 1 worker: **13 mutantes, 13 muertos, 0 supervivientes**,
+  0 timeouts, 612,3 s.
 
-## 6. Fuera de alcance y pendiente
+### C.6 Fuera de alcance y pendiente
 
-- **T13 MANUAL** (humano o líder, solo lectura, tras desplegar y revalorar): repetir la medición de `progress/spec_F-111.md` §2 y listar los documentos de D7. Sin marcar.
-- **Orden de despliegue**: **comun 0.13.0 ⇒ sv5 ⇒ sv6**. sv6 llama a un endpoint de sv5 que antes no existía; con sv6 desplegado antes, esas líneas irían a revisión con `partida_residuos_ia_fallo`, nunca a almacén. Sin DDL, sin colas nuevas y sin variables obligatorias (`PARTIDA_RESIDUOS_ENABLED` vale `true` por defecto).
+- **T13 MANUAL** (líder, solo lectura, tras desplegar y revalorar): las 8 líneas de `design.md` §13 (0686 ⇒
+  `partida_residuos_contrato:32.01`, 0694/0697 ⇒ `partida_residuos_contrato_hoja:CI.03A.7`, 0687 ⇒
+  `partida_residuos:19.01`) y contar las `partida_residuos_contrato_sin_eleccion`.
+- **Despliegue** (humano): **sv5 y sv6** (comun sin cambios). Si sv6 sale antes que sv5, la IA recibe la frase
+  vieja en el paso 2: elige igual (las reglas no cambian), solo la descripción de las candidatas es inexacta.
 - **Lo ya valorado** cambia solo al revalorar (D7).
-- **Entorno**: `services/albaranes-front/.venv` del worktree es una **junction** a la `.venv` de sv4 del árbol principal (`C:\Users\pgris\PycharmProjects\albaranes\services\albaranes-front\.venv`), creada el 2026-11-02 para que `init.sh` corra la suite de sv4. No se versiona. Se quita al borrar el worktree.
-- Ningún cambio en `.env`, ningún push, ningún despliegue, nada contra producción.
+- Evals con LLM (`python -m evals.runner --con-llm --feature F-111`) no lanzados (coste): lo decide líder/humano.
+- Entorno: *junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
+- Nada contra producción, sin `.env`, sin push, sin despliegue.
 
-## Evidencias
+## Evidencias (parte C)
 
-| Evidencia | Valor |
-|---|---|
-| Tests ejecutados (suites tocadas) | sv6 627 passed + 1 skipped · sv5 148 passed · comun 1424 passed |
-| `bash harness/init.sh` | verde (ENTORNO LISTO, salida 0); aviso evals sin lanzar |
-| Cobertura de las líneas cambiadas | **99,7 %** (397/398, umbral 80 %, `critico`), línea PUERTA COBERTURA |
-| Mutantes generados / muertos / supervivientes | 113 / 110 / 3 (equivalentes, justificados); pasada 1: 28 supervivientes, todos resueltos |
-| Tiempo de la campaña de mutación | 1300,6 s (4 workers, media 11,5 s por mutante) |
-| Tiempo de las suites (init.sh) | sv6 32,8 s · sv5 83,9 s · comun 138,6 s · raíz 639,5 s · sv4 574,2 s |
+PENDIENTE_EVIDENCIAS
