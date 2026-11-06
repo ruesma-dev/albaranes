@@ -1443,6 +1443,20 @@
         "sv4-front"
       ],
       "branch": "feature/F-118-incremento-sin-tarifa-importe-cero"
+    },
+    {
+      "id": "F-119",
+      "title": "Línea sin unidad en el albarán: se toma la de la línea de contrato similar o la del documento del contrato y, si no, UD por defecto",
+      "description": "ORIGEN: el humano, 2026-11-06, a raíz del correo del administrativo de obra sobre los albaranes de Feymaco y Segura Sarria (0707): «hay que revisarlos porque no viene ud: m3, ml, etc porque en el albarán no viene». DECISIÓN DEL HUMANO: si la línea del albarán no trae unidad y no se puede deducir para el caso general, la valoración debe (1) tomar la unidad de la línea de contrato similar (la casada o la más parecida), o (2) la que diga el documento del contrato; y (3) si no se sabe, poner UD por defecto. Hoy sv6 marca `no_albaran_unit_assumed_same` / `unit_category_partially_unknown` y la línea va a revisión. A RESOLVER EN LA SPEC: qué es «deducir para casos generales» (familia, concepto, unidad impresa en cabecera), en qué fase se decide (IA3 en sv5 con el contrato, regla en sv6 o ambas), qué rastro deja cada origen de la unidad y si con unidad resuelta así la línea deja de ir a revisión; medir en producción (solo lectura) cuántas líneas llegan sin unidad y por proveedor. RELACIÓN: F-024 (pending) trata la unidad que SÍ está impresa y la IA no lee; esta trata la que no viene en el papel. Si la spec las une, se decide ahí.",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 2,
+      "servicios": [
+        "sv6-valoracion-persist",
+        "sv5-valoracion-api"
+      ],
+      "branch": "feature/F-119-unidad-por-defecto-desde-contrato"
     }
   ]
 }
