@@ -51,9 +51,9 @@ residuos que coja esa, y si no que busque». Decisiones: D1=b, D2=a, D3=a, D-C1=
 
 ### C.2 Tests
 
-- Nuevo sv6 `tests/test_f111_partida_contrato.py` (36 tests): las 6 obras medidas en listas sintéticas (0686,
+- Nuevo sv6 `tests/test_f111_partida_contrato.py` (39 tests recogidos, 33 funciones): las 6 obras medidas en listas sintéticas (0686,
   0669, 0694, 0687, 0459, sin capítulo), descartes de R37 (`ALM`, vacía, no hoja, inexistente, ambigua,
-  cod repetido, duplicados, `alm=None`), R41 (dos llamadas como mucho, solo las caídas en la segunda), R43
+  cod repetido, duplicados, `alm=None`, contrato `None`, `ALM` vía `asignar`), R41 (dos llamadas como mucho, solo las caídas en la segunda), R43
   (5 variantes de «no elige» en 0669 ⇒ IA del capítulo; capítulo de 1; capítulo que también falla ⇒ revisión;
   obra sin capítulo; sin elector; hasta 5 códigos), R44, R45, `anotar` (orden intento ⇒ motivo, cabecera intacta)
   y R46 (constantes y `paso=` en el log).
@@ -143,4 +143,13 @@ progress/mutacion_F-111_C.md` (alcance: el diff de la parte C, solo `partida_res
 
 ## Evidencias (parte C)
 
-PENDIENTE_EVIDENCIAS
+| Evidencia | Valor |
+|---|---|
+| `bash harness/init.sh` (T21, 2026-11-06, `PYTHONPATH` a la comun del worktree, `ARNES_SIN_CACHE=1`) | **ENTORNO LISTO**, salida 0 |
+| Tests ejecutados (init.sh) | raíz 1919 · sv1 236 · sv2 496 · sv3 1608 · sv4 2562 · **sv5 149** · **sv6 667 (+1 skipped)** · sv9 1186 · comun 1424; todo verde |
+| Tests nuevos de la parte C | sv6 +40 (`test_f111_partida_contrato.py` 39, pipeline 1) · sv5 +1 |
+| Cobertura de las líneas cambiadas | **100,0 %** (57/57, umbral 80 %, `critico`), línea PUERTA COBERTURA |
+| Mutantes generados / supervivientes | herramienta pasada 2: **13 / 0** (pasada 1: 14 / 1, resuelto) · a mano: 28 / 4 ⇒ 2 equivalentes eliminados + 2 tests; ronda 2: 26 / 0 |
+| Tiempo de la campaña de mutación | pasada 2: 612,3 s (1 worker) · pasada 1: 357,0 s (4 workers) |
+| Tiempo de las suites (init.sh) | sv6 90,6 s · sv5 149,4 s · comun 233,0 s · raíz 2176,6 s · sv4 1426,4 s |
+| Avisos no bloqueantes | PUERTA RUTAS SENSIBLES [evals]: `prompts.yaml` de sv5 y `partida_residuos.py` sin `progress/evals_F-111.md`; **no lanzado** (`python -m evals.runner --con-llm --feature F-111` llama a LLM reales con coste): lo decide líder/humano |
