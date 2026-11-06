@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **113 features**, 76 abiertas (0 en curso, 6 con la spec lista, 12 bloqueadas y 58 en backlog) y 37 terminadas.
+Resumen: **115 features**, 78 abiertas (0 en curso, 6 con la spec lista, 12 bloqueadas y 60 en backlog) y 37 terminadas.
 
 ## En curso
 
@@ -41,6 +41,8 @@ _Ninguna feature en curso._
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
+| F-118 | Incremento sin tarifa: la valoración pone importe 0, no null, y el albarán se puede aprobar | 2 | estandar | `feature/F-118-incremento-sin-tarifa-importe-cero` |
+| F-119 | Línea sin unidad en el albarán: se toma la de la línea de contrato similar o la del documento del contrato y, si no, UD por defecto | 2 | estandar | `feature/F-119-unidad-por-defecto-desde-contrato` |
 | F-095 | Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto | 8 | critico |  |
 | F-105 | Traer a IA3 todos los documentos de contrato (PDF y anexos) de cada contrato, no solo el de gra_rep_ide | 9 | critico |  |
 | F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 10 | critico |  |
@@ -161,6 +163,18 @@ ORIGEN: el humano, 2026-10-29, por los albaranes de HERMANOS SAN JUAN (4839 B: 8
 estado **spec lista** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-112-anio-fecha-albaran`
 
 ORIGEN: el humano, 2026-10-29, por los albaranes de HERMANOS SAN JUAN: 5176 B leído con fecha 17-10-2022 y 5629 B con 16-10-2024 (llegaron el 28-10-2026); los tres del 14-10 (1909 B, 1350 B, 2910 B) con 2020 y 2023. Día y mes parecen bien; el año sale imposible (marca `fecha_albaran_fuera_de_rango` en sv3; sv9 ya no da de alta con `fecha_no_plausible`). PROPUESTA del líder, aceptada por el humano para spec: dar a la IA de lectura (sv2, IA1/IA2) la fecha de recepción del correo como referencia para leer el año; la fecha la sigue leyendo la IA, sin corrección determinista. A RESOLVER EN LA SPEC: dónde entra la fecha del correo en el prompt (IA1 Gemini, IA2 OpenAI o ambas) y qué hacer si el albarán imprime de verdad otra fecha antigua; medir en producción (solo lectura) cuántos documentos tienen la fecha a más de 1 año de su correo y de qué proveedores; banco de evals si existe para la cabecera. FUERA: los números de albarán mal leídos (4889/4839, 5029/5629), que se corrigen a mano. Va DESPUÉS de F-106; F-108 (fecha editable con calendario) facilita la corrección a mano.
+
+### F-118 · Incremento sin tarifa: la valoración pone importe 0, no null, y el albarán se puede aprobar
+
+estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-118-incremento-sin-tarifa-importe-cero`
+
+ORIGEN: el humano, 2026-11-06, por el correo del administrativo de obra sobre los albaranes de Traiber Beton de la 0707 (1261029152341 y 1261029123045): «Guardar y aprobar» falla con «Líneas sin cantidad o importe: 2, 4». Esas filas son sintéticas de sv6 (incremento por año 2026 y exceso de tiempo de descarga) identificadas sin tarifa: sv6 las deja con precio e importe NULL y motivo `modifier_identified_no_tariff` (valuation_builder.py, «el revisor decide si factura»), y sv4 no aprueba filas con importe NULL. DECISIÓN DEL HUMANO: una línea que pone la app sin tarifa debe quedar con importe 0, no null; y como en el alta a Sigrid null y 0 valen lo mismo (`es_linea_a_registrar` de comun ya excluye ambos), esa línea no debe bloquear la aprobación ni viajar a Sigrid. A RESOLVER EN LA SPEC: (1) si se pone 0 en precio e importe o solo en importe, y si se mantiene `modifier_identified_no_tariff` como aviso de revisión; (2) si alcanza también a la sintética de LER sin tarifa (F-036 R17, decisión del 2026-08-22: se emite sin precio para que el revisor ponga el importe a mano); (3) si sv4 debe además dejar de bloquear filas con importe NULL que vengan de la app (las ya valoradas en producción, sin revalorar) o basta con revalorar; (4) medir en producción (solo lectura) cuántas filas hay hoy con importe NULL por motivo y en cuántos documentos sin aprobar. Contorno mientras tanto: en la ficha, poner importe 0 en esas filas o borrarlas.
+
+### F-119 · Línea sin unidad en el albarán: se toma la de la línea de contrato similar o la del documento del contrato y, si no, UD por defecto
+
+estado **pendiente** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-119-unidad-por-defecto-desde-contrato`
+
+ORIGEN: el humano, 2026-11-06, a raíz del correo del administrativo de obra sobre los albaranes de Feymaco y Segura Sarria (0707): «hay que revisarlos porque no viene ud: m3, ml, etc porque en el albarán no viene». DECISIÓN DEL HUMANO: si la línea del albarán no trae unidad y no se puede deducir para el caso general, la valoración debe (1) tomar la unidad de la línea de contrato similar (la casada o la más parecida), o (2) la que diga el documento del contrato; y (3) si no se sabe, poner UD por defecto. Hoy sv6 marca `no_albaran_unit_assumed_same` / `unit_category_partially_unknown` y la línea va a revisión. A RESOLVER EN LA SPEC: qué es «deducir para casos generales» (familia, concepto, unidad impresa en cabecera), en qué fase se decide (IA3 en sv5 con el contrato, regla en sv6 o ambas), qué rastro deja cada origen de la unidad y si con unidad resuelta así la línea deja de ir a revisión; medir en producción (solo lectura) cuántas líneas llegan sin unidad y por proveedor. RELACIÓN: F-024 (pending) trata la unidad que SÍ está impresa y la IA no lee; esta trata la que no viene en el papel. Si la spec las une, se decide ahí.
 
 ### F-104 · sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos
 
