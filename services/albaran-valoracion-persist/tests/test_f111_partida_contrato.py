@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 
 import pytest
+from ruesma_comun.sigrid import ListaPartidasObra
 
 from application.services.partida_residuos import (
     MOTIVO_CONTRATO_SIN_ELECCION,
@@ -32,7 +33,6 @@ from application.services.partida_residuos import (
     ResultadoPartidaResiduos,
     partidas_del_contrato,
 )
-from ruesma_comun.sigrid import ListaPartidasObra
 from tests.f036_escenarios_residuos import (
     EscenarioResiduos,
     LineaResiduos,
@@ -295,7 +295,7 @@ _DOS_LINEAS = (LineaResiduos(merge_line_id=700), LineaResiduos(merge_line_id=701
 )
 def test_f111_r43_0669_la_ia_no_elige_cae_al_capitulo(primera):
     elector = _Elector(primera, {700: "31.02"})
-    asignacion, env = _asignar(
+    asignacion, _ = _asignar(
         FILAS_0669, _contrato("31.01", "102.08.01", "CI.03A.7"), elector=elector, obra="0669",
     )
     assert len(elector.llamadas) == 2
