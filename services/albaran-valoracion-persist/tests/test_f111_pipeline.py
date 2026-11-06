@@ -99,10 +99,16 @@ class _Ia4:
         return {"conciliaciones": []}
 
 
-def _envelope(*lineas, partidas=None, status="ok"):
+def _envelope(*lineas, partidas=None, status="ok", contrato_con_partida=False):
+    """(F-111 parte C) Por defecto el contrato va SIN partidas (paso 3, la parte B)."""
     env = construir_envelope(EscenarioResiduos(lineas=tuple(lineas) or (LineaResiduos(),)))
     for i, ctx in enumerate(env.context.lineas_albaran):
         ctx.codigo_partida_albaran = (partidas or {}).get(i)
+    if not contrato_con_partida:
+        # Copias: las líneas de contrato son objetos compartidos del módulo de escenarios.
+        env.context.lineas_contrato = [
+            c.model_copy(update={"codigo_partida": None}) for c in env.context.lineas_contrato
+        ]
     env.status = status
     return env
 
@@ -362,3 +368,17 @@ def test_f111_t10_el_worker_y_la_api_cablean_el_asignador(monkeypatch):
                   and getattr(n.func, "id", "") == "RunValuationPipeline"]
     (kw,) = [k for k in llamada.keywords if k.arg == "asignador_residuos"]
     assert ast.unparse(kw.value) == "construir_asignador_partida_residuos(settings)"
+
+
+def test_f111_r38_el_pipeline_toma_la_partida_del_contrato():
+    """(F-111 parte C) El contrato trae 32.01, del capítulo de residuos: paso 1."""
+    repo, puerto = _Repo(), _Puerto()
+    _pipeline(_envelope(contrato_con_partida=True), repo, puerto=puerto).run(
+        RunValuationRequest(document_id="doc-1")
+    )
+    _cab, lineas = _guardado(repo)
+    base = _base(lineas)
+    assert base.codigo_partida_final == "32.01"
+    assert "partida_residuos_contrato:32.01" in base.review_reasons
+    assert base.codigo_partida_albaran is None
+    assert puerto.pedidas == ["0686"]
