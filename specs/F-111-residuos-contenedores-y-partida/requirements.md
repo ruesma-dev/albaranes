@@ -112,7 +112,7 @@ Tolerancia de m³: 0,01 (la de hoy en `_elegir_contenedor`).
 Regla del humano (2026-11-05): «que mire primero en las líneas del contrato si tiene partida; si es de gestión de
 residuos que coja esa, y si no que busque». «Partidas del contrato» = los `codigo_partida` distintos de
 `envelope.context.lineas_contrato` que casan con una HOJA de la lista de la obra (`resolver_partida_obra`, motivo
-`exacta` o `normalizada`, como F-076), en el orden de la primera línea que los trae. Medición: `design.md` §13.
+`exacta` o `normalizada`, como F-076), en el orden de la primera línea que los trae. Medición y decisiones: `design.md` §13.
 
 - **R37.** El sistema debe calcular las partidas del contrato descartando las vacías, las `ALM`, las que no casan, las
   ambiguas, las que chocan con un no hoja y las de cod repetido en la obra (F-098 R12); dos lecturas que casan con la
@@ -127,23 +127,23 @@ residuos que coja esa, y si no que busque». «Partidas del contrato» = los `co
 - **R40.** CUANDO el contrato no aporta ninguna partida (sin líneas, sin `codigo_partida` o ninguna válida por R37), el
   sistema debe aplicar la parte B sin cambios (paso 3, R21–R27). Tests: 0687 ⇒ `19.01`; 0459 ⇒ IA entre las del
   capítulo; obra sin capítulo y contrato sin partidas ⇒ `partida_residuos_sin_capitulo`.
-- **R41.** El paso se decide UNA vez por documento (las líneas de contrato son las del sobre) y todas las líneas
-  buscadas del documento usan el mismo conjunto; con IA, sigue siendo UNA llamada por documento (R34).
+- **R41.** El paso se decide UNA vez por documento (las líneas de contrato son las del sobre); como mucho DOS llamadas
+  a la IA por documento: una con el conjunto del paso 1 o 2 y otra, solo con las líneas que caen por R43, del paso 3.
 - **R42.** CUANDO se asigna en el paso 1 o 2, el sistema debe dejar el motivo `partida_residuos_contrato:<cod>` (paso
   1) o `partida_residuos_contrato_hoja:<cod>` (paso 2), sin revisión (D4 de F-111), con la misma copia del sobre, la
   misma devolución de la lectura vacía (R23) y la misma herencia de las sintéticas (R24). El paso 3 sigue con
   `partida_residuos:<cod>`.
-- **R43.** SI en el paso 1 o 2 la IA no elige, elige fuera del conjunto o falla, ENTONCES la línea debe ir a revisión
-  con `partida_residuos_sin_candidata` / `partida_residuos_ia_fallo` y los códigos de ESE conjunto en el motivo, sin
-  pasar al paso siguiente y sin almacén (D2=a, D5 de F-111).
+- **R43.** SI en el paso 1 o 2 la IA no elige, elige fuera del conjunto o falla (humano, 2026-11-06), ENTONCES esa línea
+  debe caer al paso 3 (capítulo, R21–R27), dejando sin revisión `partida_residuos_contrato_sin_eleccion:<cods>` (los
+  del conjunto, hasta 5); solo va a revisión si también falla el paso 3, con los motivos de la parte B.
 - **R44.** SI no hay lista de la obra, ENTONCES el sistema no debe usar ninguna partida del contrato sin validar: R27
   (`partida_residuos_sin_lista`) sin cambios.
 - **R45.** Las líneas con lectura, `ALM` y las de otra familia, y `PARTIDA_RESIDUOS_ENABLED=false`, deben valorarse
   como hoy (R28, R29): la parte C cuelga del mismo interruptor.
-- **R46.** Las dos constantes nuevas deben tener test que las congele (R35), y el log de `asignar` debe decir el paso
+- **R46.** Las tres constantes nuevas deben tener test que las congele (R35), y el log de `asignar` debe decir el paso
   (`contrato`, `contrato_hoja`, `capitulo`).
 - **R47.** `docs/ARCHITECTURE.md` (punto 27 y la excepción de residuos de F-051) debe recoger que la partida de
   residuos se toma primero de las líneas del contrato: es la única excepción a «sv6 no copia la partida del
   contrato», y solo para líneas de residuos sin lectura.
-- **R48.** DONDE se aplique D-C1 (a), el prompt `partida_residuos_es` de sv5 debe describir las candidatas como
+- **R48.** (D-C1 = a) El prompt `partida_residuos_es` de sv5 debe describir las candidatas como
   «partidas hoja de la obra» (del contrato o del capítulo de residuos) sin perder ninguna regla de R32; test de texto.

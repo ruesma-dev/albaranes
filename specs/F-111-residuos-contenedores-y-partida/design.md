@@ -198,12 +198,17 @@ editado. F-111 se rebasa sobre `dev` con F-106 antes de empezar.
 - `asignar`, tras obtener la lista: `contrato = partidas_del_contrato(...)`; `capitulo = candidatas_residuos(lista)`;
   `paso1 = [c for c in contrato if c.codigo in {k.codigo for k in capitulo}]`. Conjunto y prefijo:
   `paso1` ⇒ (`paso1`, `partida_residuos_contrato:`); si no, `contrato` ⇒ (`contrato`, `partida_residuos_contrato_hoja:`);
-  si no, (`capitulo`, `partida_residuos:`). Con el conjunto elegido, la lógica de hoy sin cambios: 0 ⇒
-  `sin_capitulo` (solo posible en el paso 3), 1 ⇒ esa sin IA, ≥ 2 ⇒ `_elegir_con_ia` con ESE conjunto (R38–R43).
-- `ResultadoPartidaResiduos` no cambia (el motivo ya lleva el prefijo); `anotar` no cambia: los motivos de asignación
-  no van a cabecera ni a revisión, y la cabecera de revisión sigue partiendo por «:» (R42, R43).
-- Constantes nuevas `PREFIJO_PARTIDA_RESIDUOS_CONTRATO = "partida_residuos_contrato:"` y
-  `PREFIJO_PARTIDA_RESIDUOS_CONTRATO_HOJA = "partida_residuos_contrato_hoja:"` (R46); el log añade `paso=`.
+  si no, (`capitulo`, `partida_residuos:`). Con el conjunto elegido: 0 ⇒ `sin_capitulo` (solo en el paso 3), 1 ⇒
+  esa sin IA, ≥ 2 ⇒ `_elegir_con_ia` con ESE conjunto (R38–R40). La lógica de hoy se extrae a un
+  `_resolver(lineas, conjunto, prefijo)` que devuelve asignadas y no asignadas, para llamarlo dos veces.
+- (R43, humano 2026-11-06) Paso 1/2 con IA: las líneas que la IA no asigna (null, fuera del conjunto, fallo) se
+  vuelven a resolver con `_resolver(esas, capitulo, partida_residuos:)` (segunda llamada como mucho, R41), y su
+  resultado lleva `intento = partida_residuos_contrato_sin_eleccion:<cods>`. Paso 1/2 con 1 sola partida no falla.
+- `ResultadoPartidaResiduos` gana `intento: str | None = None`; `anotar` lo añade a la línea (nunca a cabecera ni a
+  revisión) antes del motivo final; el resto de `anotar` no cambia (la cabecera de revisión sigue partiendo por «:»).
+- Constantes nuevas `PREFIJO_PARTIDA_RESIDUOS_CONTRATO = "partida_residuos_contrato:"`,
+  `PREFIJO_PARTIDA_RESIDUOS_CONTRATO_HOJA = "partida_residuos_contrato_hoja:"` y
+  `MOTIVO_CONTRATO_SIN_ELECCION = "partida_residuos_contrato_sin_eleccion"` (R46); el log añade `paso=`.
 - `alm_codigo_partida` deja de descartarse (`del`): se guarda para `partidas_del_contrato` (un `ALM` del contrato es
   `no_aplica`, no una hoja). La docstring del módulo explica los tres pasos.
 
@@ -211,20 +216,20 @@ editado. F-111 se rebasa sobre `dev` con F-106 antes de empezar.
 composición, settings (mismo `PARTIDA_RESIDUOS_ENABLED`, R45), matcher, builder, comun (todo lo necesario ya existe:
 `resolver_partida_obra`, `cod_repetido`, `candidatas_residuos`; sin subir versión), sv3, sv4, sv9, DDL.
 
-**sv5 (D-C1, abierta).** El prompt `partida_residuos_es` dice que las candidatas son «las partidas hoja del capítulo de
-gestión de residuos»; en el paso 2 no lo son. (a) **Recomendada**: cambiar solo esa frase a «partidas hoja de la obra
-(del contrato del proveedor o del capítulo de gestión de residuos)», sin tocar reglas ni esquema (R48; redespliegue
-de sv5). (b) No tocar sv5: hoy no hay ningún caso medido de paso 2 con ≥ 2 partidas (0694/0697 tienen una). Si (b),
-R48 y T18 se quitan.
+**sv5 (D-C1 = a, humano 2026-11-06).** El prompt `partida_residuos_es` decía que las candidatas son «las partidas
+hoja del capítulo de gestión de residuos»; en el paso 2 no lo son. Se cambia solo esa frase a «partidas hoja de la
+obra (del contrato del proveedor o del capítulo de gestión de residuos)», sin tocar reglas ni esquema (R48, T18).
+Hay que redesplegar sv5 además de sv6.
 
-**Interpretaciones a validar** (`progress/current.md`): (i) R43: la IA que no elige en el paso 1/2 manda a revisión, no
-cae al paso siguiente (lectura literal de D2=a); (ii) R37: «partidas del contrato» son las de TODAS las líneas del
-contrato del sobre, no solo la casada (D1=b lo pide para `CI.03A.7`); (iii) los motivos de revisión del paso 1/2 son
-los mismos de la parte B (sv4 no los distingue; el código del conjunto en el motivo sí).
+**Decisiones del humano (2026-11-06: «dc1 a, interpretaciones, a que busque en el capitulo por semantica (IA), ok lo
+demas»).** (i) CAMBIA: la IA que no elige en el paso 1/2 NO manda a revisión: la línea cae al paso 3 (R43), con el
+rastro `partida_residuos_contrato_sin_eleccion`. (ii) Aceptada: «partidas del contrato» son las de TODAS las líneas
+del contrato del sobre, casadas con hojas de la obra. (iii) Aceptada: motivos de asignación nuevos sin revisión;
+los de revisión, los de la parte B. La excepción a F-051 (R47), aceptada.
 
 **Riesgos.** C-1: un contrato con muchas partidas ajenas a residuos (proveedor multiproducto) lleva al paso 2 con IA
-entre partidas que no son de residuos; la IA puede devolver `null` (revisión). C-2: la parte C confía en el
+entre partidas que no son de residuos; la IA puede devolver `null` (cae al capítulo, R43). C-2: la parte C confía en el
 `codigo_partida` de `lineas_contrato`, que rellena sv5 de `cl.codigo_partida`
 (`sqlalchemy_valuation_context_repository.py:215,375`): sin cambio, pero si llega vacío, paso 3. C-3: es una
 excepción explícita a F-051 («sv6 no copia la partida del contrato»), acotada a residuos sin lectura (R47).
-Despliegue (lo lanza el humano): sv6; sv5 solo si D-C1 = (a). Rigor **critico**: RED, cobertura y mutación de lo nuevo.
+Despliegue (lo lanza el humano): sv5 y sv6 (sin comun nuevo). Rigor **critico**: RED, cobertura y mutación de lo nuevo.

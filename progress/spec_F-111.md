@@ -80,3 +80,18 @@ capítulo, p. ej. `CI.03A.7`), D2=a (con varias, la IA elige SOLO entre esas), D
 - **Abierto para el humano:** D-C1 (frase del prompt de sv5: (a) cambiarla, redespliegue de sv5; (b) no tocar sv5) e
   interpretaciones (i)–(iii) de `design.md` §13, copiadas en `progress/current.md`.
 - No se ha lanzado ninguna suite ni escrito en producción (spec documental).
+
+## 7. Parte C · decisiones del humano y enmienda (2026-11-06)
+
+Textual: «dc1 a, interpretaciones, a que busque en el capitulo por semantica (IA), ok lo demas». Spec aceptada con:
+
+- **D-C1 = (a):** se cambia la frase de candidatas del prompt `partida_residuos_es` de sv5 (R48, T18). Despliegue:
+  **sv5 y sv6** (comun sin cambios).
+- **(i) CAMBIA:** si en el paso 1 o 2 la IA no elige, elige fuera del conjunto o falla, la línea NO va a revisión: cae
+  al paso 3 (capítulo de gestión de residuos; con varias candidatas, IA por semántica como hoy) y deja, sin revisión,
+  `partida_residuos_contrato_sin_eleccion:<cods>`. Solo va a revisión si también falla el paso 3. Como mucho dos
+  llamadas a la IA por documento. Enmendados R41, R43, R46, `design.md` §13 (`_resolver` extraído, campo `intento`
+  en `ResultadoPartidaResiduos`, `anotar` lo escribe en la línea), T15, T17, T20 y T13.
+- **(ii) y (iii) aceptadas** tal cual; la excepción a F-051 (R47, ARCHITECTURE), aceptada.
+- F-111 queda `in_progress` lista para el implementer (T15–T21; T13 manual al final). F-117 no se toca.
+
