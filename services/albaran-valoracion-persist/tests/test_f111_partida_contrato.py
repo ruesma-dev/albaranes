@@ -480,4 +480,27 @@ def test_f111_r46_el_log_dice_el_paso(caplog, filas, contrato, paso):
     with caplog.at_level(logging.INFO, logger="application.services.partida_residuos"):
         _asignar(filas, _contrato(*contrato))
     mensajes = [r.getMessage() for r in caplog.records]
-    assert any(f"paso={paso} " in m and "asignadas=1 a_revision=0" in m for m in mensajes)
+    assert any(
+        f"paso={paso} " in m and "asignadas=1 a_revision=0 caidas_al_capitulo=0" in m for m in mensajes
+    )
+
+
+def test_f111_r46_el_log_cuenta_las_caidas_al_capitulo(caplog):
+    elector = _Elector({700: "31.01", 701: None}, {701: "31.02"})
+    with caplog.at_level(logging.INFO, logger="application.services.partida_residuos"):
+        _asignar(FILAS_0669, _contrato("31.01", "102.08.01"), elector=elector, lineas=_DOS_LINEAS, obra="0669")
+    mensajes = [r.getMessage() for r in caplog.records]
+    assert any(
+        "paso=contrato candidatas=2 asignadas=2 a_revision=0 caidas_al_capitulo=1" in m for m in mensajes
+    )
+
+
+def test_f111_r37_lineas_de_contrato_none_tupla_vacia():
+    assert partidas_del_contrato(None, _lista(FILAS_0686), "ALM") == ()
+
+
+def test_f111_r37_asignar_pasa_el_alm_un_alm_del_contrato_no_es_hoja():
+    """Aunque la obra tuviera una hoja ``ALM``, un ``ALM`` del contrato es almacén: paso 3."""
+    filas = FILAS_0687 + [(70, 0, "ALM", "ALMACEN")]
+    asignacion, _ = _asignar(filas, _contrato("ALM"), obra="0687")
+    assert asignacion.por_linea[700].motivo == f"{PREFIJO_PARTIDA_RESIDUOS}19.01"

@@ -141,23 +141,20 @@ def partidas_del_contrato(
 ) -> tuple[PartidaObra, ...]:
     """(R37) Las hojas de la obra que traen las líneas de contrato del sobre.
 
-    Por cada ``codigo_partida`` legible, :func:`resolver_partida_obra`: vale si
+    Por cada ``codigo_partida``, :func:`resolver_partida_obra`: vale si
     casa exacta o normalizada con UNA hoja y su cod no está repetido en la obra
     (F-098 R12). Fuera las vacías, las ``alm``, las que no casan, las ambiguas y
     las que chocan con un no hoja. Sin duplicados (dos lecturas de la misma hoja
     cuentan una vez), en el orden de la primera línea que la trae. Nada de
     parecidos ni prefijos.
     """
+    # Una lectura vacía es ``no_aplica`` en :func:`resolver_partida_obra`; el
+    # dict deduplica y conserva el orden de la primera aparición.
     vistas: dict[str, PartidaObra] = {}
     for linea in lineas_contrato or ():
-        lectura = getattr(linea, "codigo_partida", None)
-        if normalizar_partida(lectura) is None:
-            continue
-        resolucion = resolver_partida_obra(lista, lectura, alm)
+        resolucion = resolver_partida_obra(lista, getattr(linea, "codigo_partida", None), alm)
         codigo = resolucion.codigo
-        if resolucion.motivo not in _RESOLUCIONES_HOJA or codigo in vistas:
-            continue
-        if lista.cod_repetido(codigo):
+        if resolucion.motivo not in _RESOLUCIONES_HOJA or lista.cod_repetido(codigo):
             continue
         vistas[codigo] = next(h for h in lista.hojas if h.codigo == codigo)
     return tuple(vistas.values())
