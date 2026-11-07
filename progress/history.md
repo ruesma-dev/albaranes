@@ -895,3 +895,15 @@ separado, nadie recorriendo el camino entero—:
 - Decisiones del humano: sin X4; aprobar con todo en almacén; F7 en vez de F6. Reviews APROBADAS en todas las fases;
   mutación a mano en cada pasada (fase 3 bis: 44, 57, 15, 38 y 19 mutantes, 0 supervivientes).
 - Desplegado: sv6 `r20261011-0025`, sv4 `r20261013-1836`. Aplazado a F-068 (F7 y Edge, O8, O9).
+
+## F-111 · Residuos: contenedores de 3/6/9 m³ y partida de gestión de residuos en vez de almacén (done, 2026-11-07)
+- Parte A: sin tamaño en el contrato, el contenedor más pequeño de 3, 6 o 9 m³ que cabe; por encima de 9, ceil(m³/6) de 6.
+- Parte B: línea de residuos sin partida ⇒ capítulo de gestión de residuos de la obra (una candidata sin IA; varias, IA en
+  sv5 `POST /v1/albaranes/partida-residuos`); nunca almacén. Interruptor `PARTIDA_RESIDUOS_ENABLED`. comun 0.13.0.
+- Parte C (2026-11-06): antes del capítulo, las partidas del contrato (1: del capítulo; 2: cualquier hoja de la obra, D1=b);
+  si la IA no elige, cae al capítulo con `partida_residuos_contrato_sin_eleccion` (sin revisión). Excepción a F-051
+  escrita en ARCHITECTURE. Prompt de sv5: solo la frase de candidatas (D-C1=a).
+- Reviews APPROVED (A/B y C); mutación sin supervivientes (3 equivalentes aceptados en A/B). Desplegado sv5 y sv6
+  `r20261103-1633` (A/B) y `r20261107-1023` (C).
+- T13: 0686 1350 B revalorado ⇒ `partida_residuos_contrato:32.01`, `residuos_contenedores=1 (m3=8 / contenedor=9 m3)`.
+  El humano lo da por bueno y cierra; quedan 6 documentos por revalorar como seguimiento (listados en `current.md`).
