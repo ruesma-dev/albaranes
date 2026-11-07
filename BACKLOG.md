@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **115 features**, 78 abiertas (0 en curso, 6 con la spec lista, 12 bloqueadas y 60 en backlog) y 37 terminadas.
+Resumen: **115 features**, 77 abiertas (0 en curso, 6 con la spec lista, 11 bloqueadas y 60 en backlog) y 38 terminadas.
 
 ## En curso
 
@@ -25,7 +25,6 @@ _Ninguna feature en curso._
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
 | F-110 | El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS) | 2 | critico | `feature/F-110-descuento-linea-sigrid` |
-| F-111 | Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén | 2 | critico | `feature/F-111-residuos-contenedores-y-partida` |
 | F-104 | sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos | 3 | critico | `feature/F-104-codigos-contrato-v83` |
 | F-098 | Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64» | 5 | critico | `feature/F-098-partidas-por-capitulo` |
 | F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 6 | critico | `feature/F-086-opus-ia3` |
@@ -136,6 +135,7 @@ _Ninguna feature en curso._
 | F-069 | Lista de equivalencias usuario de la app ↔ usuario Y EMPLEADO de Sigrid para el alta (sv9): usu y empide de quien aprueba | 2 | critico |
 | F-084 | El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None») | 2 | critico |
 | F-108 | Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha | 2 | estandar |
+| F-111 | Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén | 2 | critico |
 | F-012 | Campaña de mutación en paralelo | 3 | estandar |
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
@@ -151,12 +151,6 @@ _Ninguna feature en curso._
 estado **bloqueada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-110-descuento-linea-sigrid`
 
 ORIGEN: el humano, 2026-10-28 («si a F-110»): en las líneas con descuento (albaranes de CECOIS) Sigrid recibe el unitario con el descuento ya aplicado. DEBE recibir lo mismo que la línea de la plataforma: precio unitario SIN descuento, el % de descuento como campo de Sigrid (`dcapro.dto`), la cantidad y el importe con el descuento aplicado. CAUSA (leída por el líder): sv9 calcula `precio = round(abs(importe)/cantidad, 6)` (`validador_alta.py`, `_linea_peticion`) y el alta de sigrid-api (`sigrid/albaran` extendido) no admite descuento por línea (solo `cantidad` y `precio`). QUÉ SE PIDE: (1) sigrid-api acepta `dto?` por línea y lo escribe en `dcapro.dto` con `pre` bruto (cambio SUYO: albaranes no edita sigrid-api; petición enviada a su sesión el 2026-10-28 con el sí del humano); (2) sv9 manda `precio` = precio unitario final sin descuento, `dto` = % de la línea y comprueba cantidad × precio × (1 − dto/100) = importe (tolerancia como F-106 D5); (3) sv4 y el panel del alta muestran lo enviado. DEPENDE de F-106 (misma función de sv9 y misma regla de edición: cantidad/precio/dto mueven el importe) y del contrato nuevo de sigrid-api; azure-apps (albaranes y el consumo de sigrid-api) al día.
-
-### F-111 · Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén
-
-estado **bloqueada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-111-residuos-contenedores-y-partida`
-
-ORIGEN: el humano, 2026-10-29, por los albaranes de HERMANOS SAN JUAN (4839 B: 8 m³ de madera valorados como 2 contenedores de 6 = 278 € en vez de 1 = 139 €; 1350 B igual). Contrato CTSU24/0524 sin tamaño en sus líneas («CONTENEDOR LER 170201 MADERA»). Hoy IA3 (prompt de sv5) y sv6 (`residuos_container_calc.py`, F-036 R22) aplican «6 m³ por defecto» y ceil(m³/6). REGLAS DEL HUMANO (literales): (1) «en residuos salvo que se diga lo contrario en el contrato los contenedores son de 3, 6 o 9m3. debe elegir uno de esos. si en contrato no se especifica que use el precio general para todos»; se elige el MÁS PEQUEÑO en el que caben los m³ (≤3 → 3, ≤6 → 6, ≤9 → 9, 1 contenedor); «no se mezclan contenedores, si son de mas de 9 paquetes de 6» (más de 9 m³ ⇒ ceil(m³/6) contenedores de 6). Si el contrato da tamaños, manda el contrato. (2) «añade en el circuito de residuos que si no tienen partida no van a almacen sino que busque la partida en el capitulo de gestion de residuos. que la busque por descripcion»: una línea de residuos sin partida no va a almacén; se busca la partida entre las del capítulo de gestión de residuos de la obra (capítulos de F-098, `ruesma_comun.sigrid.partidas`) por la descripción. A RESOLVER EN LA SPEC: cómo se reconoce el capítulo de residuos en las obras reales (medir en solo lectura); quién elige la partida (IA por significado restringida al capítulo, como IA4, frente a texto); qué pasa sin capítulo o sin candidata (revisión, nunca almacén); efecto en revalorar, en sv4 y en el alta (sv9 manda lo aprobado); alcance medido en producción (hoy 2 líneas con 8 m³ → 2). Va DESPUÉS de F-106 (comparte sv6 y la fila de valoración).
 
 ### F-112 · Año del albarán mal leído: la IA lee la fecha con la del correo como referencia
 
@@ -1249,6 +1243,12 @@ SPEC (2026-10-20, specs/F-084-banco-valoracion/, PARADA 1 resuelta, design §11)
 estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-108-fecha-numero-editables`
 
 ORIGEN: el humano, 2026-10-28: «los campos de fecha, numero de albaran tiene que poder editarse con normalidad (fecha con un desplegable de calendario como adicional)». HOY (leído por el líder): en `document_detail.html` los dos son `input type=text` editables salvo con el documento no editable (aprobado / dado de alta); no se ve en el código nada que bloquee el teclado. A RESOLVER EN LA SPEC: el síntoma exacto (preguntado al humano: no deja escribir / se pierde al guardar / formato de la fecha) reproduciéndolo en solo lectura; cómo se guardan y validan (`fecha` en el PUT de la ficha, formato ISO frente a dd/mm/aaaa) y su efecto en sv9 (`fecha_albaran` AAAAMMDD, `fecha_no_plausible`); calendario adicional sin perder la escritura a mano (botón junto al campo de texto que abre el selector de fecha del navegador).
+
+### F-111 · Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén
+
+estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-111-residuos-contenedores-y-partida`
+
+ORIGEN: el humano, 2026-10-29, por los albaranes de HERMANOS SAN JUAN (4839 B: 8 m³ de madera valorados como 2 contenedores de 6 = 278 € en vez de 1 = 139 €; 1350 B igual). Contrato CTSU24/0524 sin tamaño en sus líneas («CONTENEDOR LER 170201 MADERA»). Hoy IA3 (prompt de sv5) y sv6 (`residuos_container_calc.py`, F-036 R22) aplican «6 m³ por defecto» y ceil(m³/6). REGLAS DEL HUMANO (literales): (1) «en residuos salvo que se diga lo contrario en el contrato los contenedores son de 3, 6 o 9m3. debe elegir uno de esos. si en contrato no se especifica que use el precio general para todos»; se elige el MÁS PEQUEÑO en el que caben los m³ (≤3 → 3, ≤6 → 6, ≤9 → 9, 1 contenedor); «no se mezclan contenedores, si son de mas de 9 paquetes de 6» (más de 9 m³ ⇒ ceil(m³/6) contenedores de 6). Si el contrato da tamaños, manda el contrato. (2) «añade en el circuito de residuos que si no tienen partida no van a almacen sino que busque la partida en el capitulo de gestion de residuos. que la busque por descripcion»: una línea de residuos sin partida no va a almacén; se busca la partida entre las del capítulo de gestión de residuos de la obra (capítulos de F-098, `ruesma_comun.sigrid.partidas`) por la descripción. A RESOLVER EN LA SPEC: cómo se reconoce el capítulo de residuos en las obras reales (medir en solo lectura); quién elige la partida (IA por significado restringida al capítulo, como IA4, frente a texto); qué pasa sin capítulo o sin candidata (revisión, nunca almacén); efecto en revalorar, en sv4 y en el alta (sv9 manda lo aprobado); alcance medido en producción (hoy 2 líneas con 8 m³ → 2). Va DESPUÉS de F-106 (comparte sv6 y la fila de valoración).
 
 ### F-012 · Campaña de mutación en paralelo
 
