@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **116 features**, 77 abiertas (0 en curso, 7 con la spec lista, 10 bloqueadas y 60 en backlog) y 39 terminadas.
+Resumen: **116 features**, 76 abiertas (0 en curso, 7 con la spec lista, 9 bloqueadas y 60 en backlog) y 40 terminadas.
 
 ## En curso
 
@@ -31,7 +31,6 @@ _Ninguna feature en curso._
 | F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 6 | critico | `feature/F-086-opus-ia3` |
 | F-100 | IA3 solo valora e IA4 casa TODAS las líneas valoradas: candidatas del contrato con el mismo precio unitario (±0,02 €) y la misma partida, y entre ellas por significado de la descripción | 7 | critico | `feature/F-100-ia3-valora-ia4-casa` |
 | F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 13 | critico | `feature/F-083-comparar-modelos` |
-| F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086) | 14 | critico | `feature/F-085-modelos-produccion` |
 | F-092 | Gestión de almacén: crear la gestión del almacén (acopios) de las obras | 21 | critico |  |
 | F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 34 | critico | `feature/F-076-normalizar-partidas` |
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 35 | estandar | `feature/F-077-guardar-y-aprobar` |
@@ -143,6 +142,7 @@ _Ninguna feature en curso._
 | F-103 | Alta en Sigrid sin heredar la facturación del albarán plantilla: el AC nuevo no queda vinculado a una factura ajena ni con fechas de facturación, entrega o límite copiadas | 4 | critico |
 | F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | 13 | critico |
 | F-075 | El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán | 13 | critico |
+| F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086) | 14 | critico |
 | F-064 | IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor | 31 | critico |
 
 ## Detalle
@@ -252,18 +252,6 @@ PRIMERO: inventario de modelos disponibles por proveedor que cumplan el mínimo,
 RELACIONADAS: F-047 (ciclo completo), F-064 y F-075 (líneas base de evals con LLM: IA1 141, IA2 2), comparar_proveedor (patrón de comparador).
 
 SPEC (2026-10-19, specs/F-083-comparar-modelos/, anexo de inventario y precios con fuente progress/spec_F-083.md): comparador nuevo evals/comparar_modelos.py, una fase por invocación y varios modelos, con la referencia de producción medida en la misma corrida (IA1 gemini-3.7-flash, IA2 gpt-5.4, IA3/IA4 claude-opus-4-8); IA2 e IA4 con preparación única por la referencia, IA3 con la IA4 del libro; coste por albarán con los tokens reales leídos por un call_logger medidor (sin tocar los clientes) y la tabla versionada evals/precios_modelos.json; estimación previa, --estimar sin claves, paradas sin gastar (modelo, tabla caducada, claves, tope por invocación y de la feature) y corte en caliente por tope; criterio: elegible (0 ERROR y fallos ≤ referencia), banda máx(2, 5 %), el más barato de la banda, «cambiar» solo con mejora o ahorro claros, provisional con 1 repetición. HALLAZGOS: gemini-3.7-flash está descontinuado y Google lo redirige a gemini-3.8-flash; la línea base de F-075 probablemente no midió los modelos de producción (defaults del runner, IA3/IA4 con gemini); el cliente de Claude fuerza la herramienta y claude-opus-5-5, claude-sonnet-5-5 y claude-fable-5-1 lo rechazan con 400. «Luna» = gama Luna de OpenAI (gpt-6-luna, gpt-5.6-luna; no existe gpt-6.1-luna). PREGUNTAS P1–P6 (design §9): P1 qué Luna y si entra gpt-6.1-sol, P2 primera tanda (11 modelos), P3 tope (25 por invocación, 200 la feature; tanda 1 ≈ 150 USD), P4 repeticiones (1 y 3 en finalistas), P5 parámetro forzar_herramienta en comun (recomendado) o dejar fuera los Claude 5.5, P6 umbrales del criterio. FUERA: cambiar el modelo de producción (feature siguiente), barrer esfuerzo/pensamiento, infra/.
-
-### F-085 · Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086)
-
-estado **bloqueada** · prioridad 14 · rigor `critico` · SDD sí · rama `feature/F-085-modelos-produccion`
-
-ORIGEN: decisión del humano, 2026-10-20, tras la prueba rápida de modelos (IA1: Argon 52 fallos frente a 56 del Gemini actual en 15 casos).
-
-CAMBIO: sv2 IA1 = gemini-4-argon (hoy gemini-3.7-flash, que Google sirve como 3.8); IA2 ENCENDIDA (hoy WORKER_CON_FASE2=false) con openai gpt-6.1-sol (hoy gpt-5.4); sv5 IA3 = claude-opus-5-5 (hoy claude-opus-4-8; necesita no forzar la herramienta, T11 de F-083, y que sv5 lo pida en producción), IA4 = openai gpt-6.1-sol (hoy Claude; sv5 hoy solo tiene Claude habilitado: ENABLE_OPENAI, clave de OpenAI como secreto, IA3_PROVIDER/IA4_PROVIDER). infra/create_capps.ps1 al día; azure-apps/albaranes.md si cambia lo que se consume.
-
-CONDICIÓN: medir antes coste y precisión con el comparador de F-083 (cada fase contra el modelo actual) y, para IA3/IA4, con el banco arreglado por F-084. El despliegue y los cambios de configuración en Azure los lanza el humano. Precio: Argon dobla el 2026-12-01 (2/10 → 4/20).
-
-PARADA 1 resuelta por el humano (2026-10-20): P1–P5 según la recomendación de design §9: P1 = (a): fuera de F-085; F-083 T11 solo añadió `forzar_herramienta`; el arreglo de `_parse_response` va a F-086 (corregido por O3 de progress/review_F-083.md, 2026-10-21); P2 = (a) se quita WORKER_CON_FASE2; P3 = el paso 2 (Opus 5.5 en IA3: R15–R19, R27, T6, T7, T12) va a F-086 (dada de alta por el líder); P4 = criterio de IA1 de design §6; P5 = IA_SEGUNDA_FASE=openai explícita en create_capps.ps1.
 
 ### F-055 · IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2)
 
@@ -1346,6 +1334,18 @@ ORIGEN (correo de administración de obra, obra 0686, 2026-10-15): un albarán d
 SPEC v1 (2026-10-15, solo sv4: importe leído junto al valorado) RECHAZADA en la PARADA 1. Respuestas literales del humano: P1 «como ya hay importe, no hay que valorar con contrato, manda el albarán y pisa»; P2 «que lea el pie y sirva para revisar»; P3 aceptada (líneas sin importe no suman, total parcial); sin contrato «si trae importes no hace valorar ni contrato, pasa directo».
 
 SPEC v2 (2026-10-15, specs/F-075-importe-leido/, informe progress/spec_F-075.md §v2): hallazgo clave, con contrato lo leído YA manda línea a línea en sv6 (F-019, jul 2026); el contrato aporta vínculo, partida y conversión, y añade sintéticas. Propuesta: (1) comun: importe_albaran (suma de precio_neto, parcial) y pie_cuadra; (2) sin contrato y con importes: sv3 publica q-valoracion con contrato nulo y sv6 construye una valoración directa no_contract desde las líneas (sin IA, sin sintéticas, derivada nueva_no_match), «valorada» si todas traen importe, así que se aprueba y sv9 la da de alta sin vincular SIN código nuevo (tests de contrato); sv4 deja revalorar sin contrato si trae importes; (3) con contrato, como hoy más motivo valorado_distinto_de_albaran; (4) pie: IA1 lee base, tipo, cuota y total, sv2 conserva el pie de fase 1, sv3 DDL de 4 columnas y PieGuardService (pie_no_cuadra a revisión, no bloquea); (5) sv4: una columna «Importe» (albarán si trae, si no valorado) con origen y marca ≠, tarjetas, Obras, Proveedores y ficha con pie; (6) evals observan el pie («no medido» sin ground truth). PREGUNTAS v2-P1 a v2-P8 (P1 seguir valorando con contrato o saltarlo, P2 aprobación humana, P3 sintéticas, P4 pie sin base, P5 varias páginas y tolerancia, P6 backfill, P7 una columna, P8 partir en dos: F-075 paso directo sin prompts, ya; F-0XX pie detrás de F-064). FUERA: albaranes sin importes y sin contrato, quitar sintéticas, sv5, aprobación automática, backfill por script, F-064, F-071, F-073 y F-066 X12. AJUSTE (humano, 2026-10-18, tras el bloqueo del implementer): opción A, sv5 añade precio_neto_albaran y descuento_albaran al sobre no_contract (R5 bis), despliegue comun → sv3 → sv5 → sv6 → sv4; M1, solo se publica sin contrato si el seleccionado es nulo.
+
+### F-085 · Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086)
+
+estado **terminada** · prioridad 14 · rigor `critico` · SDD sí · rama `feature/F-085-modelos-produccion`
+
+ORIGEN: decisión del humano, 2026-10-20, tras la prueba rápida de modelos (IA1: Argon 52 fallos frente a 56 del Gemini actual en 15 casos).
+
+CAMBIO: sv2 IA1 = gemini-4-argon (hoy gemini-3.7-flash, que Google sirve como 3.8); IA2 ENCENDIDA (hoy WORKER_CON_FASE2=false) con openai gpt-6.1-sol (hoy gpt-5.4); sv5 IA3 = claude-opus-5-5 (hoy claude-opus-4-8; necesita no forzar la herramienta, T11 de F-083, y que sv5 lo pida en producción), IA4 = openai gpt-6.1-sol (hoy Claude; sv5 hoy solo tiene Claude habilitado: ENABLE_OPENAI, clave de OpenAI como secreto, IA3_PROVIDER/IA4_PROVIDER). infra/create_capps.ps1 al día; azure-apps/albaranes.md si cambia lo que se consume.
+
+CONDICIÓN: medir antes coste y precisión con el comparador de F-083 (cada fase contra el modelo actual) y, para IA3/IA4, con el banco arreglado por F-084. El despliegue y los cambios de configuración en Azure los lanza el humano. Precio: Argon dobla el 2026-12-01 (2/10 → 4/20).
+
+PARADA 1 resuelta por el humano (2026-10-20): P1–P5 según la recomendación de design §9: P1 = (a): fuera de F-085; F-083 T11 solo añadió `forzar_herramienta`; el arreglo de `_parse_response` va a F-086 (corregido por O3 de progress/review_F-083.md, 2026-10-21); P2 = (a) se quita WORKER_CON_FASE2; P3 = el paso 2 (Opus 5.5 en IA3: R15–R19, R27, T6, T7, T12) va a F-086 (dada de alta por el líder); P4 = criterio de IA1 de design §6; P5 = IA_SEGUNDA_FASE=openai explícita en create_capps.ps1.
 
 ### F-064 · IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor
 

@@ -5,6 +5,10 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-085 · Modelos de producción por fase (cerrada 2026-11-08, sin T11)
+
+Rigor `critico`, sv2 y sv5. IA1 `gemini-4-argon`; IA2, IA3 e IA4 `gpt-6.1-sol`, con `infra/create_capps.ps1` al día y sv2 con las credenciales de sigrid-api. Review APPROVED (pasada 2, `progress/review_F-085.md`). Comprobado en producción el 2026-11-08 (solo lectura): variables de sv2 y sv5 y log de sv5 `r20261107-1023` con esos modelos, sin Traceback. La medición de pago (T11) pasa a F-083 por decisión del humano; por tanto el veredicto de design §6 sigue sin darse. Opus 5.5 en IA3: F-086.
+
 ## F-064 · IA1 e IA2 ignoran al cliente y la IA2 confirma el proveedor (cerrada 2026-11-08)
 
 Solo sv2 y evals, rigor `critico`. Los prompts dicen que el proveedor es el emisor y que las empresas del cliente (`CIFS_PROPIOS`, Construcciones Ruesma) se ignoran; la IA2 confirma el proveedor. Review APPROVED (`progress/review_F-064.md`, O1). T9: comparador sin CIF del cliente (0/0). T10: IA1 152 (≤ 154), IA2 2 (≤ 4). T12: vigilancia en producción desde el 2026-10-18, medida el 2026-11-08: 170 merges nuevos, 0 con `proveedor_cif_propio:`. Queda abierta, sin bloquear, la propuesta de añadir el albarán real de F-063 al banco. Detalle en `progress/impl_F-064.md`.
