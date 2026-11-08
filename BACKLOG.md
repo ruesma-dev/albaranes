@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **115 features**, 77 abiertas (0 en curso, 6 con la spec lista, 11 bloqueadas y 60 en backlog) y 38 terminadas.
+Resumen: **116 features**, 78 abiertas (0 en curso, 7 con la spec lista, 11 bloqueadas y 60 en backlog) y 38 terminadas.
 
 ## En curso
 
@@ -14,6 +14,7 @@ _Ninguna feature en curso._
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
 | F-112 | Año del albarán mal leído: la IA lee la fecha con la del correo como referencia | 2 | estandar | `feature/F-112-anio-fecha-albaran` |
+| F-117 | Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8) | 2 | critico | `feature/F-117-partida-equivalente-en-obra` |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 43 | critico |  |
 | F-003 | Tanda 2 — Albaranes valorados, match estricto y coherencia (G3+G4+G5) | 59 | estandar | `feature/F-003-valorados-match-estricto` |
 | F-004 | Tanda 3 — Hormigón fino y veto de mortero | 62 | estandar | `feature/F-004-hormigon-fino` |
@@ -157,6 +158,12 @@ ORIGEN: el humano, 2026-10-28 («si a F-110»): en las líneas con descuento (al
 estado **spec lista** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-112-anio-fecha-albaran`
 
 ORIGEN: el humano, 2026-10-29, por los albaranes de HERMANOS SAN JUAN: 5176 B leído con fecha 17-10-2022 y 5629 B con 16-10-2024 (llegaron el 28-10-2026); los tres del 14-10 (1909 B, 1350 B, 2910 B) con 2020 y 2023. Día y mes parecen bien; el año sale imposible (marca `fecha_albaran_fuera_de_rango` en sv3; sv9 ya no da de alta con `fecha_no_plausible`). PROPUESTA del líder, aceptada por el humano para spec: dar a la IA de lectura (sv2, IA1/IA2) la fecha de recepción del correo como referencia para leer el año; la fecha la sigue leyendo la IA, sin corrección determinista. A RESOLVER EN LA SPEC: dónde entra la fecha del correo en el prompt (IA1 Gemini, IA2 OpenAI o ambas) y qué hacer si el albarán imprime de verdad otra fecha antigua; medir en producción (solo lectura) cuántos documentos tienen la fecha a más de 1 año de su correo y de qué proveedores; banco de evals si existe para la cabecera. FUERA: los números de albarán mal leídos (4889/4839, 5029/5629), que se corrigen a mano. Va DESPUÉS de F-106; F-108 (fecha editable con calendario) facilita la corrección a mano.
+
+### F-117 · Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8)
+
+estado **spec lista** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-117-partida-equivalente-en-obra`
+
+ORIGEN: el humano, 2026-11-05: «Que la valoración proponga sola la equivalente en la obra cuando la partida del albarán no exista». Caso: obra 0719, contrato CTSB26/0373, línea «grua pk 50 - montar muro y hormigonar» 9 UD × 60 € con la partida leída CI.03.08; la obra no la tiene (numera CI.03A.n MAQUINARIA AJENA, CI.03P.n PROPIA); sv6 la dejó con partida_fuera_de_lista, se aprobó y sigrid-api rechazó el alta (partida_no_encontrada ⇒ no_admitido). La equivalente es CI.03A.8 (CAMION GRUA). ALCANCE (spec): regla determinista en comun (equivalentes_partida: letra pegada al número solo en la hoja; sufijo de ≥3 segmentos, según D2) aplicada en la normalización de F-076 en sv6; única ⇒ se valora con ella, motivo partida_equivalente:<leída>><cod> y revisión no bloqueante; varias ⇒ revisión con las candidatas; ninguna ⇒ como hoy. Nunca almacén ni partida inventada. Excepción acotada a H1 de F-049 (D1). Medición y decisiones D1–D9 en progress/spec_F-117.md. Fuera: que sv4 impida aprobar con partida_fuera_de_lista; la lectura que es un capítulo (CD.02 de 0692).
 
 ### F-118 · Incremento sin tarifa: la valoración pone importe 0, no null, y el albarán se puede aprobar
 
