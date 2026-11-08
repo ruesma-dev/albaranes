@@ -5,6 +5,14 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-098 · Selector de partidas por capítulo y partida con su código completo (cerrada 2026-11-08)
+
+Rigor `critico`, comun, sv4, y tests en sv6 y sv9. Chips por capítulo; la partida se guarda con su cod y se enseña completa. Review APPROVED (pasada 2). T18 en producción solo mirando (28-10). T20: reelegir la misma partida no envía nada, porque el valor pintado no cambia; las 2 líneas de la 0686 (3ac58fca) se corrigieron con «Valorar ahora» y quedaron con final `21.02.21` (comprobado en BBDD). No probado en producción: «Dividir» y un alta real con esas líneas.
+
+## F-076 · La partida se normaliza contra las de la obra (cerrada 2026-11-08)
+
+Rigor `critico`, sv6, sv4 y comun. sv6 fija el código exacto de Sigrid cuando la equivalencia es segura. Review APPROVED (pasada 2). T19 el 2026-11-08: 11 documentos revalorados y 3 líneas de `355449d9` corregidas a mano a `CI.4.18`; `medir_f076_partidas` da 0 «normalizable sin normalizar» en pendientes (10 en aprobados, que sv9 ignora) y 11 fuera de lista. No se cotejaron una a una las 6 sin candidata de `progress/spec_F-076.md` §2.2.
+
 ## F-085 · Modelos de producción por fase (cerrada 2026-11-08, sin T11)
 
 Rigor `critico`, sv2 y sv5. IA1 `gemini-4-argon`; IA2, IA3 e IA4 `gpt-6.1-sol`, con `infra/create_capps.ps1` al día y sv2 con las credenciales de sigrid-api. Review APPROVED (pasada 2, `progress/review_F-085.md`). Comprobado en producción el 2026-11-08 (solo lectura): variables de sv2 y sv5 y log de sv5 `r20261107-1023` con esos modelos, sin Traceback. La medición de pago (T11) pasa a F-083 por decisión del humano; por tanto el veredicto de design §6 sigue sin darse. Opus 5.5 en IA3: F-086.
