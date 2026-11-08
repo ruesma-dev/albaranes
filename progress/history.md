@@ -5,6 +5,10 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-064 · IA1 e IA2 ignoran al cliente y la IA2 confirma el proveedor (cerrada 2026-11-08)
+
+Solo sv2 y evals, rigor `critico`. Los prompts dicen que el proveedor es el emisor y que las empresas del cliente (`CIFS_PROPIOS`, Construcciones Ruesma) se ignoran; la IA2 confirma el proveedor. Review APPROVED (`progress/review_F-064.md`, O1). T9: comparador sin CIF del cliente (0/0). T10: IA1 152 (≤ 154), IA2 2 (≤ 4). T12: vigilancia en producción desde el 2026-10-18, medida el 2026-11-08: 170 merges nuevos, 0 con `proveedor_cif_propio:`. Queda abierta, sin bloquear, la propuesta de añadir el albarán real de F-063 al banco. Detalle en `progress/impl_F-064.md`.
+
 ## F-116 · Guardado automático de la ficha al salir de cada campo, sin bloquear (cerrada 2026-11-02)
 
 Solo sv4. Cabecera (fecha, número, forma de pago, notas) por un `PATCH /api/documents/{id}/cabecera` parcial; cada fila editable se guarda al salir de una celda con el PATCH de siempre sin `?bloquear=1` (recálculo de F-106, «✋», sin bloquear). Los botones Guardar / Guardar todas / Guardar y aprobar siguen bloqueando, ahora también las filas autoguardadas, y esperan a una Cola en serie que envuelve `fetch`. Fallos sin `alert`, aviso al salir con escrituras en curso, una entrada de deshacer por autoguardado. Review APPROVED (pasada 1, `progress/review_F-116.md`; O1–O3 sin bloqueo). M1 en Chrome (líder, `progress/impl_F-116.md` §8); desplegado el 2026-11-02, sv4 `r20261102-1328`; M2 en producción en solo lectura (líder). Pendiente menor: con la fecha en rojo el `title` sigue diciendo «Guardado automáticamente».
