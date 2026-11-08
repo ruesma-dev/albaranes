@@ -9,7 +9,8 @@
 - **F-118** (incremento sin tarifa ⇒ importe 0 y aprobable) y **F-119** (unidad desde el contrato o UD por defecto): `pending`, dadas de alta el 2026-11-06; falta spec.
 - **Traiber 0707** (1261029152341 y 1261029123045): pregunta abierta al humano sobre el precio (HA-25 a 96,20 frente al HA-30 a 102,20 de la partida 02.02.04, y si los 11 €/m³ «INCREMENTO SUMINISTRO» son la revisión anual de 2026). Contorno dado: importe 0 en las filas 2 y 4.
 - **sigrid-api**: el humano aprobó el 2026-11-06 que la naturaleza de las líneas sin vincular salga de la ficha del producto (`pro.natide`; la App Setting queda como forzado opcional). Cuando avisen del despliegue, actualizar las menciones de F-053 (specs y progress).
-- **F-110**: el humano pone `ALTA_SIGRID_ENVIAR_DTO`, luego T22 del líder. **F-098**: cierre manual (T18 Chrome, T20, T21).
+- **F-110**: T21 HECHA (2026-11-08): sv9 y sv4 en `r20261108-1033`; `ALTA_SIGRID_ENVIAR_DTO=true` en las dos. **OJO: `infra/00_capps_vars.ps1` sigue versionado en `"false"` (lo exige `test_f110_r20`): relanzar `set_alta_sigrid.ps1` apagaría el dto; al cerrar F-110, fichero a `"true"` y ese test actualizado juntos.** Espera T22 del líder tras la primera alta con dto (0 de 146 a 08-11).
+- **Limpieza de bloqueadas, comprobaciones en solo lectura del 2026-11-08:** F-064 T12 VERDE (170 merges desde el despliegue, 0 con `proveedor_cif_propio:`). F-104 M3 sigue a la espera (0 altas con `retencion_del_contrato`). F-085: log de sv5 `IA3=openai/gpt-6.1-sol IA4=openai/gpt-6.1-sol`, sin Traceback. F-076 T19 aún NO verde: `medir_f076_partidas` da 3 pendientes «normalizable sin normalizar» y los 11 documentos de T19 siguen sin aprobar. F-098: siguen las 2 líneas `CD.21.02.21` de 3ac58fca; su commit 8fc47ef (T18 hecha) está solo en la rama. Orden acordado por medir: F-076 T19 antes de desplegar F-117; F-117/F-118/F-119 antes de T11 de F-100 o después de T21; IA3/IA4 de F-083 tras F-100 y desde `dev`, no desde su worktree. A revisar por el humano: alta `incierto` bb25c874 (`tiempo_agotado`, 23-10). **F-098**: cierre manual (T18 Chrome, T20, T21).
 - **Del humano**: corregir la partida de 10802b4f (obra 0719) a `CI.03A.8` y «Solicitar alta»; corregir 4839 B en Sigrid; push de `azure-apps`.
 
 **F-116 · CERRADA (`done`, 2026-11-02).** Resumen en `history.md`.
@@ -427,16 +428,7 @@ VERDE si «normalizable sin normalizar» da **0** en pendientes y las 6 sin cand
 
 **F-078 · CERRADA (`done`, 2026-10-20).** Desplegada en sv6 (`r20261019-0949`) y sv4 (`r20261019-0955`); MANUAL T12–T14 en verde el 2026-10-18. Resumen en `history.md`.
 
-**F-064 · `blocked` (2026-10-18): review O1 APPROVED, T9 y T10 del humano en VERDE; solo queda la MANUAL T12.**
-**T12 en marcha:** sv2 desplegado por el humano el 2026-10-18 (`r20261018-1420`, revisión única tras `fix_revisiones`); la
-vigilancia de `proveedor_cif_propio:` cuenta desde `2026-10-18T12:22:00Z` hasta el 2026-10-25 (la consulta la hace el líder, solo lectura).
-Rama `feature/F-064-proveedor-en-prompts`, worktree `../albaranes-F-064` (*junction* `services\albaranes-front\.venv`:
-quitarla con `cmd /c rmdir` ANTES de `git worktree remove`). T9 (comparador, `progress/comparar_proveedor_F-064.md`):
-C1/C2/C3 OK, emisor base 8 → rama 9, CIF cliente 0/0; AVISO: el banco no reproduce el incidente (propuesta al humano:
-añadir el albarán real de F-063, `progress/impl_F-064.md` §9). T10 (`progress/evals_F-064.md`, fuera de git): IA1 152
-(≤ 154), IA2 2 (≤ 4). Siguiente: fusionar en `dev` (ya lleva `dev` fusionado, 2026-10-18), `init.sh` en el árbol principal y **T12: desplegar SOLO sv2 y
-vigilar `proveedor_cif_propio:` en merges nuevos una semana** (comandos en `progress/impl_F-064.md` §6). Con T12 en
-verde, pasa a `done`.
+**F-064 · CERRADA (`done`, 2026-11-08).** T12 en verde: 170 merges nuevos desde el despliegue de sv2, 0 con `proveedor_cif_propio:`. Resumen en `history.md`. Sin hacer (decisión abierta, no bloquea): añadir el albarán real de F-063 al banco del comparador. Worktree `../albaranes-F-064` sin retirar (*junction* `serviceslbaranes-front\.venv`: quitarla con `cmd /c rmdir` antes de `git worktree remove`).
 
 **F-072 · CERRADA (`done`, 2026-10-16).** MANUAL T16 en verde. Resumen en `history.md`.
 
