@@ -114,6 +114,17 @@ Copia completa de cada traza en el scratchpad de la sesión (`.../scratchpad/red
 - **T21**: `bash harness/init.sh` de cierre tras T20.
 - Antes de `git worktree remove`: quitar la *junction* `.venv` de sv4 (`cmd /c rmdir`). `azure-apps` `ddbe825`: sin push.
 
+## 5 bis. T18 hecha (líder, 2026-10-28) y T20 (humano, despliegue)
+
+T20 parcial: sv6 `r20261028-1558` y sv4 `r20261028-1607` desplegados por el humano el 28-10 (con `set_partidas_sv6.ps1`);
+faltan las 2 líneas de la 0686 con `CD.21.02.21`. T18 en **producción, solo mirando, sin guardar** (decisión «b» del
+humano, 27-10; la base local no tiene 0686 ni 0692): ficha `ec291d76` (0686): chips «Todas/ANT./CD/CI/CP»; CD ⇒ 100
+partidas, todas CD; `cd.99.01` ⇒ 78, todas `CD.99.01…`, entre ellas `CD.99.01.64`; elegirla pinta `CD.99.01.64` con
+`data-partida-cod` = `99.01.64`, sin ninguna petición de red; al recargar, la línea vuelve a «Almacén» (nada guardado).
+0692: `/api/sigrid/partidas?obra=0692` da capítulos CD, CI, CI.F2 y CP; `CD2.01` y `CI.01.01` con `codigo_completo`
+tal cual y `CI.01.01` en el capítulo `CI.F2`; fichas guardadas pintan `CD2.07` y `CI.04.18`. **No probado** (no se
+guarda en producción): el PATCH con `99.01.64`, la recarga con ✓ y «Dividir».
+
 ## 6. Review pasada 1 (REJECTED, `progress/review_F-098.md`): cambios hechos
 
 Cambios 1–6 de su §7 y, por decisión del líder, (a) y (b) de su §8. Con los tests viejos los 5 mutantes de su §4
