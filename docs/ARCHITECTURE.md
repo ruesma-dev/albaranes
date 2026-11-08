@@ -310,7 +310,11 @@ anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
       marcan `review_required` con `partida_ausente_familia_destinada`, que
       **no bloquea** la aprobación. Interruptor de vuelta atrás:
       `ALMACEN_SIN_PARTIDA_ENABLED=false`. **Excepción: residuos** (F-111,
-      regla 27): una línea de residuos sin partida no va a almacén.
+      regla 27): una línea de residuos sin partida no va a almacén, y su
+      partida se toma **primero de las líneas del contrato** (parte C): es la
+      **única excepción** a «sv6 no copia la partida del contrato», y solo
+      para líneas de residuos sin lectura; las partidas del contrato se
+      validan contra la lista de la obra (nunca se usan sin validar).
     - **sv4**: «Almacén (sin partida)» es la primera opción fija del combo de
       partida; elegirla, vaciar la partida o el botón «Almacén a todas las
       líneas» (que pisa también las que tienen partida, con confirmación y
@@ -981,14 +985,27 @@ anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
     - **Partida** (sv6 `partida_residuos.py`, tras la normalización de F-076 y
       antes de la valoración directa, IA4 y el build): una línea de familia
       efectiva `residuos` **sin partida leída** (vacía; `ALM` es una lectura)
-      **no va a almacén**: se le busca partida entre las hojas del capítulo de
-      gestión de residuos de su obra (`ruesma_comun.sigrid.candidatas_residuos`:
+      **no va a almacén**: se le busca partida en tres pasos, decididos una vez
+      por documento (parte C, regla del humano del 2026-11-05: «que mire primero
+      en las líneas del contrato si tiene partida; si es de gestión de residuos
+      que coja esa, y si no que busque»). Las **partidas del contrato** son los
+      `codigo_partida` de TODAS las líneas de contrato del sobre que casan con
+      UNA hoja de la obra (`resolver_partida_obra` exacta o normalizada, sin
+      cod repetido; nada de parecidos). **Paso 1**: las del contrato que son del
+      capítulo de gestión de residuos (`ruesma_comun.sigrid.candidatas_residuos`:
       hojas con un ANTECESOR «GESTIÓN … RESIDUO…», sin las de ajuste; reconoce,
-      no elige). Con **una** candidata, esa, sin IA; con **dos o más**, la IA de
-      sv5 elige por significado en UNA llamada por documento (`POST
-      /v1/albaranes/partida-residuos`, proveedor y modelo de IA4; solo vale un
-      código de candidata, `null` si duda). Rastro `partida_residuos:<cod>` sin
-      revisión y `codigo_partida_albaran` vuelve a la lectura (vacía). Sin
+      no elige) ⇒ rastro `partida_residuos_contrato:<cod>`. **Paso 2**: si
+      ninguna lo es, todas las del contrato (p. ej. `CI.03A.7`, MAQUINARIA
+      AJENA › CONTENEDORES) ⇒ `partida_residuos_contrato_hoja:<cod>`. **Paso
+      3**: si el contrato no aporta ninguna, las hojas del capítulo ⇒
+      `partida_residuos:<cod>`. En cada paso, con **una**, esa, sin IA; con
+      **dos o más**, la IA de sv5 elige por significado SOLO entre esas, en UNA
+      llamada por documento (`POST /v1/albaranes/partida-residuos`, proveedor y
+      modelo de IA4; solo vale un código del conjunto, `null` si duda). Si en el
+      paso 1 o 2 la IA no elige (o falla), la línea **cae al paso 3** con el
+      rastro sin revisión `partida_residuos_contrato_sin_eleccion:<cods>`: como
+      mucho dos llamadas a la IA por documento. Los rastros de asignación van
+      sin revisión y `codigo_partida_albaran` vuelve a la lectura (vacía). Sin
       capítulo, sin candidata, con la IA caída o sin lista de la obra: a
       revisión con `partida_residuos_sin_capitulo` / `_sin_candidata` /
       `_ia_fallo` / `_sin_lista` y **nunca** `almacen_sin_partida` (la partida

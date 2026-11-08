@@ -5,6 +5,22 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-098 · Selector de partidas por capítulo y partida con su código completo (cerrada 2026-11-08)
+
+Rigor `critico`, comun, sv4, y tests en sv6 y sv9. Chips por capítulo; la partida se guarda con su cod y se enseña completa. Review APPROVED (pasada 2). T18 en producción solo mirando (28-10). T20: reelegir la misma partida no envía nada, porque el valor pintado no cambia; las 2 líneas de la 0686 (3ac58fca) se corrigieron con «Valorar ahora» y quedaron con final `21.02.21` (comprobado en BBDD). No probado en producción: «Dividir» y un alta real con esas líneas.
+
+## F-076 · La partida se normaliza contra las de la obra (cerrada 2026-11-08)
+
+Rigor `critico`, sv6, sv4 y comun. sv6 fija el código exacto de Sigrid cuando la equivalencia es segura. Review APPROVED (pasada 2). T19 el 2026-11-08: 11 documentos revalorados y 3 líneas de `355449d9` corregidas a mano a `CI.4.18`; `medir_f076_partidas` da 0 «normalizable sin normalizar» en pendientes (10 en aprobados, que sv9 ignora) y 11 fuera de lista. No se cotejaron una a una las 6 sin candidata de `progress/spec_F-076.md` §2.2.
+
+## F-085 · Modelos de producción por fase (cerrada 2026-11-08, sin T11)
+
+Rigor `critico`, sv2 y sv5. IA1 `gemini-4-argon`; IA2, IA3 e IA4 `gpt-6.1-sol`, con `infra/create_capps.ps1` al día y sv2 con las credenciales de sigrid-api. Review APPROVED (pasada 2, `progress/review_F-085.md`). Comprobado en producción el 2026-11-08 (solo lectura): variables de sv2 y sv5 y log de sv5 `r20261107-1023` con esos modelos, sin Traceback. La medición de pago (T11) pasa a F-083 por decisión del humano; por tanto el veredicto de design §6 sigue sin darse. Opus 5.5 en IA3: F-086.
+
+## F-064 · IA1 e IA2 ignoran al cliente y la IA2 confirma el proveedor (cerrada 2026-11-08)
+
+Solo sv2 y evals, rigor `critico`. Los prompts dicen que el proveedor es el emisor y que las empresas del cliente (`CIFS_PROPIOS`, Construcciones Ruesma) se ignoran; la IA2 confirma el proveedor. Review APPROVED (`progress/review_F-064.md`, O1). T9: comparador sin CIF del cliente (0/0). T10: IA1 152 (≤ 154), IA2 2 (≤ 4). T12: vigilancia en producción desde el 2026-10-18, medida el 2026-11-08: 170 merges nuevos, 0 con `proveedor_cif_propio:`. Queda abierta, sin bloquear, la propuesta de añadir el albarán real de F-063 al banco. Detalle en `progress/impl_F-064.md`.
+
 ## F-116 · Guardado automático de la ficha al salir de cada campo, sin bloquear (cerrada 2026-11-02)
 
 Solo sv4. Cabecera (fecha, número, forma de pago, notas) por un `PATCH /api/documents/{id}/cabecera` parcial; cada fila editable se guarda al salir de una celda con el PATCH de siempre sin `?bloquear=1` (recálculo de F-106, «✋», sin bloquear). Los botones Guardar / Guardar todas / Guardar y aprobar siguen bloqueando, ahora también las filas autoguardadas, y esperan a una Cola en serie que envuelve `fetch`. Fallos sin `alert`, aviso al salir con escrituras en curso, una entrada de deshacer por autoguardado. Review APPROVED (pasada 1, `progress/review_F-116.md`; O1–O3 sin bloqueo). M1 en Chrome (líder, `progress/impl_F-116.md` §8); desplegado el 2026-11-02, sv4 `r20261102-1328`; M2 en producción en solo lectura (líder). Pendiente menor: con la fecha en rojo el `title` sigue diciendo «Guardado automáticamente».
@@ -895,3 +911,15 @@ separado, nadie recorriendo el camino entero—:
 - Decisiones del humano: sin X4; aprobar con todo en almacén; F7 en vez de F6. Reviews APROBADAS en todas las fases;
   mutación a mano en cada pasada (fase 3 bis: 44, 57, 15, 38 y 19 mutantes, 0 supervivientes).
 - Desplegado: sv6 `r20261011-0025`, sv4 `r20261013-1836`. Aplazado a F-068 (F7 y Edge, O8, O9).
+
+## F-111 · Residuos: contenedores de 3/6/9 m³ y partida de gestión de residuos en vez de almacén (done, 2026-11-07)
+- Parte A: sin tamaño en el contrato, el contenedor más pequeño de 3, 6 o 9 m³ que cabe; por encima de 9, ceil(m³/6) de 6.
+- Parte B: línea de residuos sin partida ⇒ capítulo de gestión de residuos de la obra (una candidata sin IA; varias, IA en
+  sv5 `POST /v1/albaranes/partida-residuos`); nunca almacén. Interruptor `PARTIDA_RESIDUOS_ENABLED`. comun 0.13.0.
+- Parte C (2026-11-06): antes del capítulo, las partidas del contrato (1: del capítulo; 2: cualquier hoja de la obra, D1=b);
+  si la IA no elige, cae al capítulo con `partida_residuos_contrato_sin_eleccion` (sin revisión). Excepción a F-051
+  escrita en ARCHITECTURE. Prompt de sv5: solo la frase de candidatas (D-C1=a).
+- Reviews APPROVED (A/B y C); mutación sin supervivientes (3 equivalentes aceptados en A/B). Desplegado sv5 y sv6
+  `r20261103-1633` (A/B) y `r20261107-1023` (C).
+- T13: 0686 1350 B revalorado ⇒ `partida_residuos_contrato:32.01`, `residuos_contenedores=1 (m3=8 / contenedor=9 m3)`.
+  El humano lo da por bueno y cierra; quedan 6 documentos por revalorar como seguimiento (listados en `current.md`).

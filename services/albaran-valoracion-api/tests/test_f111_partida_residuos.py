@@ -200,6 +200,22 @@ def test_f111_r32_el_prompt_dice_que_elige_por_significado_y_no_inventa():
     assert "nunca inventes codigos" in texto
 
 
+def test_f111_r48_las_candidatas_son_hojas_de_la_obra_del_contrato_o_del_capitulo():
+    """(F-111 parte C, D-C1 = a) En el paso 2 las candidatas no son del capítulo."""
+    spec = YamlPromptRepository(PROMPTS_YAML).get("partida_residuos_es")
+    texto = " ".join(f"{spec.system} {spec.task} {spec.schema_hint}".split()).lower()
+    assert (
+        "partidas hoja de la obra (del contrato del proveedor o del capitulo de gestion de residuos)"
+        in texto
+    )
+    assert "partidas hoja del capitulo de gestion de residuos de la obra" not in texto
+    # Ninguna regla de R32 se pierde.
+    assert "por significado" in texto and "solo entre las candidatas" in texto
+    assert "codigo = null si ninguna encaja" in texto and "si dos encajan igual" in texto
+    assert "nunca inventes codigos" in texto
+    assert spec.schema == "documento_partida_residuos"
+
+
 def test_f111_r32_sin_lineas_no_llama_a_la_ia():
     cliente = _Cliente(_doc())
     res = _servicio(cliente).elegir(lineas=[], candidatas=CANDIDATAS)

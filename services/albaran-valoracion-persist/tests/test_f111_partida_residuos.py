@@ -90,12 +90,21 @@ class _Elector:
 
 
 def _envelope(*lineas: LineaResiduos, partidas=None, clasificacion=None):
-    """Sobre de residuos; ``partidas`` = lectura por línea (por defecto, vacía)."""
+    """Sobre de residuos; ``partidas`` = lectura por línea (por defecto, vacía).
+
+    (F-111 parte C) Las líneas de contrato van SIN partida: así el contrato no
+    aporta ninguna (R40) y estos tests prueban el paso 3, la parte B tal cual.
+    Los pasos 1 y 2 se prueban en ``test_f111_partida_contrato.py``.
+    """
     env = construir_envelope(
         EscenarioResiduos(lineas=tuple(lineas) or (LineaResiduos(),), clasificacion=clasificacion)
     )
     for i, ctx in enumerate(env.context.lineas_albaran):
         ctx.codigo_partida_albaran = (partidas or {}).get(i)
+    # Copias: las líneas de contrato son objetos compartidos del módulo de escenarios.
+    env.context.lineas_contrato = [
+        c.model_copy(update={"codigo_partida": None}) for c in env.context.lineas_contrato
+    ]
     return env
 
 

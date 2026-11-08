@@ -121,7 +121,7 @@ sin tocar: si alguno cambia, es un error de F-117.
 
 Ninguno. La lista sale de la misma consulta y caché de F-076 (`SQL_PARTIDAS_POR_OBRA`, `NO_TOLERA`). Sin DDL.
 
-## 9. Decisiones abiertas (PARADA 1)
+## 9. Decisiones (PARADA 1 cerrada por el humano el 2026-11-09: «todo la a», D1–D9 = (a))
 
 - **D1 · Levantar H1 de F-049 para esto.** H1 (2026-10-02): «se verifica y se normaliza, nunca se elige; ni sufijo, ni
   prefijo, ni distancia». La petición la contradice. (a) **Recomendada**: excepción acotada a las dos reglas de D2, en

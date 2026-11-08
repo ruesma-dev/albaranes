@@ -2,7 +2,7 @@
 
 Rama `feature/F-117-partida-equivalente-en-obra` (worktree `../albaranes-F-117`). Rigor **critico**: cada tarea con código empieza en RED (traza en el informe). Un commit por tarea (`F-117 Tn: ...`). Suites con `PYTHONPATH=<worktree>\services\albaranes-comun` y `ARNES_SIN_CACHE=1`; nunca dos suites a la vez.
 
-- [ ] T0: PARADA 1 — el humano decide D1–D9 (`design.md` §9); si D2 ≠ (a), quitar R4, R5 y R25; si D3 ≠ (a), R15 pasa a «sin revisión»  |  Verificación: decisión anotada en `progress/current.md`
+- [x] T0: PARADA 1 (2026-11-09, humano: «todo la a») — el humano decide D1–D9 (`design.md` §9); si D2 ≠ (a), quitar R4, R5 y R25; si D3 ≠ (a), R15 pasa a «sin revisión»  |  Verificación: decisión anotada en `progress/current.md`
 - [ ] T1: RED comun: `services/albaranes-comun/tests/test_f117_equivalentes_partida.py` con R1–R12 (`test_f117_rN_...`; casos de §2: `CI.03.08`, `01.03A.02`, `04.01.07`, `01.07`, `CD.02`, 0459 con A y P)  |  Verificación: `pytest services/albaranes-comun/tests/test_f117_equivalentes_partida.py` falla por `equivalentes_partida` inexistente
 - [ ] T2: comun: `equivalentes_partida`, `RE_SEGMENTO_CON_LETRA`, `MIN_SEGMENTOS_SUFIJO`, docstring de H1, export en `sigrid/__init__.py`, versión 0.14.0  |  Verificación: `pytest services/albaranes-comun/tests` en verde (F-049/F-076/F-098/F-111 sin tocar)
 - [ ] T3: RED sv6: `services/albaran-valoracion-persist/tests/test_f117_partida_equivalente.py` con R13–R23 (fakes de `PartidasObraPort`)  |  Verificación: `pytest services/albaran-valoracion-persist/tests/test_f117_partida_equivalente.py` falla por lo esperado

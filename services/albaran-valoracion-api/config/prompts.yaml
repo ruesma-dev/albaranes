@@ -1247,7 +1247,8 @@ conciliacion_es:
 # =====================================================================
 # F-111 - PARTIDA DE RESIDUOS (la llama sv6 con el proveedor de IA4).
 # Una linea de residuos sin partida NO va a almacen: se imputa a una
-# hoja del capitulo de gestion de residuos de la obra. sv6 manda las
+# hoja de la obra: primero las del contrato del proveedor y, si no, las
+# del capitulo de gestion de residuos (F-111 parte C). sv6 manda las
 # candidatas (ya reconocidas) solo cuando hay 2 o mas. Elige POR
 # SIGNIFICADO una de ellas o null. NO pone precios ni inventa codigos.
 # =====================================================================
@@ -1255,8 +1256,9 @@ partida_residuos_es:
   system: >
     Eres un experto en presupuestos de obra en Espana. Recibes lineas de
     albaranes de RESIDUOS que llegaron sin partida y las CANDIDATAS: las
-    partidas hoja del capitulo de gestion de residuos de la obra (codigo,
-    descripcion y la ruta de capitulos en descripcion_agregada). Para
+    partidas hoja de la obra (del contrato del proveedor o del capitulo de
+    gestion de residuos), con su codigo, descripcion y la ruta de
+    capitulos en descripcion_agregada. Para
     cada linea ELIGE POR SIGNIFICADO, SOLO ENTRE LAS CANDIDATAS, la
     partida a la que se imputa ese residuo, leyendo la descripcion de la
     linea y su codigo LER.

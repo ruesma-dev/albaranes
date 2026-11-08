@@ -1,140 +1,139 @@
 <!-- progress/review_F-111.md -->
-Revisión completa (pasada 1) · `dev...178a29c` (base de rama `8d5b702`)
+Revisión incremental desde 16023b0 (pasada 2, parte C) · `0b51d6b..e7c1f23` (código desde `0b51d6b^`)
 
 # F-111 · review
 
+**Partes A y B:** APPROVED (pasada 1, `dev...178a29c`). El informe íntegro está en
+`progress/review_F-111_partes_AB.md`: se movió ahí para no pasar del tope de 140 líneas. Lo ya aprobado no se ha
+vuelto a leer. La suite entera pasó otra vez y no hay regresiones.
+
+## Parte C · primero la partida del contrato (T15–T21)
+
 **Veredicto: APPROVED**
 
-Fuera de esta revisión por encargo del líder: **T13** (MANUAL, después de desplegar y revalorar, solo lectura). Que siga
-`[ ]` en `tasks.md` es lo esperado y no bloquea esta review. Sí bloquea el `done`, igual que las condiciones C1 y C2
-de abajo.
+### Nivel de rigor
 
-## Nivel de rigor
+`critico`, declarado en `harness/features.json`. Exige RED con salida real, puerta de cobertura y mutación con cero
+supervivientes. RM5 solo se aplica si hay equivalentes declarados que sigan en el código (aquí no hay).
 
-`critico`, declarado en `harness/features.json`. Exige fase RED con salida real, puerta de cobertura y campaña de
-mutación completa. Además, **cero supervivientes salvo justificación escrita aceptada por el humano**, RM5 (reproducir
-un equivalente) y las MANUAL listadas.
+### Verificación ejecutada por el reviewer
 
-## Verificación ejecutada por el reviewer
+- `bash harness/init.sh` en el worktree con `PYTHONPATH=<worktree>\services\albaranes-comun` y `ARNES_SIN_CACHE=1`:
+  **exit 0, «ENTORNO LISTO»**. Todo passed:
+  - raíz 1919, sv1 236, sv2 496, sv3 1608 y sv4 2562;
+  - **sv5 149**, **sv6 667 (+1 skipped)**, sv9 1186 y comun 1424.
 
-- `bash harness/init.sh` en el worktree, con `PYTHONPATH=<worktree>\services\albaranes-comun` y `ARNES_SIN_CACHE=1`:
-  **EXIT 0, «ENTORNO LISTO»**. Todo passed: raíz 1919, sv1 236, sv2 496, sv3 1608, sv4 2562, sv5 148, sv6 627
-  (+1 skipped), sv9 1186 y comun 1424. Puertas:
-  - `PUERTA COBERTURA [OK] 99,7 %` (397/398).
-  - `PUERTA TAMAÑO [OK]`.
-  - `RUTAS SENSIBLES [evals]` en **AVISO** (7 rutas; ver C4 ter).
-  - `git status` limpio después.
-- **Recálculo independiente de la mutación** (`alcance_de_feature("F-111")` + `generar_mutantes`, cálculo puro, script
-  en el scratchpad): **17 ficheros, 1016 líneas, 113 mutantes**, lo mismo que el informe, fichero a fichero. Los 3
-  supervivientes existen como mutantes reales, con el mismo operador y el mismo texto:
-  - `partida_residuos_service.py:124` y `:126`, `indent=2→3`;
-  - `partida_residuos.py:271`, `split(":", 1)[0]→split(":", 2)[0]`.
-- **Campaña no reejecutada: 1300,6 s (21,7 min) según el informe**, por encima del umbral de 60 s. Me quedo en el
-  recálculo puro y RM1–RM6.
-- Repaso de los 113 mutantes en busca de equivalentes que salgan como muertos (RM3): ninguno.
-  - Los candidatos dudosos cambian el comportamiento observable y tienen un test que lo fija: `ensure_ascii=True`
-    (tildes), el `+` del log (caplog), `deep=False` (el sobre original intacto), `max(2, …)` (`intentos=1`), `[:201]`
-    (cuerpo de 200 caracteres) y `_DECIMALES_M3=3` (6,004 m³).
-  - `isinstance` negado en `partida_residuos_service.py:75` deja de convertir un modelo ajeno, que entonces falla.
-- **RM5, muestra de UNO**: `split(":", 1)[0]` frente a `split(":", 2)[0]`. Ejecutado con los 4 formatos de motivo
-  reales (sin `:`, con lista, con `(+N)` y con códigos con puntos): **iguales en todos**. Es equivalente por definición:
-  el elemento `[0]` es el prefijo anterior al primer separador para cualquier `maxsplit ≥ 1`.
-- Lectura del diff completo de código (sv6, sv5 y comun), de los prompts y de los tests viejos retocados. También el
-  commit `ab78985` de `azure-apps` (§15 de `albaranes.md`).
+  Puertas: COBERTURA [OK] 100,0 % (57/57), TAMAÑO [OK], RUTAS SENSIBLES en AVISO (C4 ter). `git status` limpio.
+- **Recálculo independiente de la mutación** (`alcance_de_feature("F-111", base="16023b0")` + `generar_mutantes`,
+  cálculo puro, script en el scratchpad): un fichero (`partida_residuos.py`), **167 líneas, 13 mutantes**. Coincide
+  con el informe. La campaña no se reejecutó: 612,3 s según el informe, por encima del umbral de 60 s.
+- **RM4, la tercera vía**: copié sv6 al scratchpad y reapliqué 3 de los 13 mutantes reales. Contra
+  `test_f111_partida_contrato.py`, los tres mueren y el original pasa (39 passed):
+  - `:248` `caidas = 0→1`: 3 failed. Es el superviviente de la pasada 1, y ahora sí lo caza un test.
+  - `:249` `and→or`: 4 failed.
+  - `:382` `is not None→is None`: 2 failed.
+- **RM3**: repasé los 13 en busca de un equivalente marcado como muerto. No hay ninguno: los 13 cambian algo
+  observable (el resultado, el número de llamadas o el log que miran los tests). El `-` del log a `+` cambia
+  `a_revision=0` a `=2`.
+- **Diff leído entero** (código, prompt, ARCHITECTURE, tests nuevos y retocados) y `b69192a..2e8ea2e` (qué quitó T20).
 
-## Checkpoints
+### Los cuatro puntos del encargo
 
-**C1** [x] init.sh exit 0 · [x] ficheros del arnés presentes.
-**C2** [x] una sola `in_progress` (F-111) · [x] rama `feature/F-111-residuos-contenedores-y-partida` · [x]
-`current.md` con la sesión activa · [x] las `done` tienen su resumen (lo valida init.sh).
+1. **La excepción a F-051 está acotada.**
+   - `_objetivo` no cambia: solo entran las líneas de familia `residuos` sin lectura. `ALM` cuenta como lectura y las
+     de otra familia no entran. Lo cubre R45.
+   - La partida del contrato solo llega a través de `partidas_del_contrato`. Esa función pasa por
+     `resolver_partida_obra` y solo acepta `exacta` o `normalizada` sin `cod_repetido`, que son por construcción hojas
+     de `lista.hojas`: `casar_partida` usa `lista.codigos` y `_indice_normalizado` sale de las hojas. Por eso el
+     `next(...)` no puede lanzar `StopIteration`.
+   - Sin lista, `MOTIVO_SIN_LISTA` sale antes de leer el contrato (R44). Ningún otro fichero de producción de sv6
+     cambia: ni matcher, ni builder, ni pipeline.
+2. **El prompt de sv5 solo cambia la frase de candidatas.** El `system` cambia únicamente la frase de candidatas. Las
+   reglas, `task`, `schema_hint` y el esquema quedan igual. El otro cambio está en el comentario YAML de cabecera, que
+   no llega al modelo. El test R48 comprueba que la frase nueva está, que la vieja ya no y que se mantienen las reglas
+   de R32.
+3. **Los tests retocados no relajan ninguna aserción.**
+   - En los dos `_envelope` de sv6 (`test_f111_partida_residuos.py` y `test_f111_pipeline.py`) solo se vacía el
+     `codigo_partida` del contrato, con `model_copy`, para que sigan probando el paso 3 (R40). No se borra ni se
+     cambia ningún `assert`.
+   - `test_f111_partida_contrato.py` tras la RED: `env`→`_`, el log se endurece (`caidas_al_capitulo=0`) y 3 tests más.
+4. **El informe de mutación es real.**
+   - Se generó con la herramienta, y los totales coinciden con mi recálculo.
+   - RM1: midió `2e8ea2e`. Entre `2e8ea2e` y `e7c1f23` solo cambian `progress/` y `tasks.md`, nada del alcance.
+   - RM2: 13 × 47,1 = 612,3 s, cuadra; media 47,1 s frente a base 45,0 s. Sin «⚠ CAMPAÑA NO VÁLIDA»; sin veredicto 0.
 
+### Checkpoints
+
+**C1** [x] init.sh exit 0 · [x] ficheros del arnés. **C2** [x] única `in_progress` · [x] rama `feature/F-111-…` · [x] `current.md`.
 **C3**
-- [x] Hexagonal: `EligePartidaPort` en dominio (Protocol, sin infraestructura); el cliente httpx en
-  `infrastructure/clients`; el asignador y el cálculo en `application`, sin I/O; el cableado en `composition`.
-- [x] Primera línea con la ruta en los 12 `.py` nuevos.
-- [x] Sin `print`, `TODO` ni secretos. La clave de sigrid-api vive solo en la clave en memoria de `_PUERTOS_COMPARTIDOS`
-  y nunca va al log.
-- [x] Sin dependencias nuevas: httpx y tenacity ya estaban.
-- [x] Reglas de dominio:
-  - el valorado sale del sobre (merge), no de las raw;
-  - sin DDL ni lectores nuevos;
-  - la unidad no cambia: solo cambia la cantidad de contenedores, con el precio de la casada;
-  - las sintéticas LER heredan la partida asignada (R24);
-  - regla 27 nueva en `ARCHITECTURE.md` y excepción de residuos en la regla 16.
+- [x] Hexagonal: la lógica nueva va en `application`, es pura y no tiene I/O. Usa solo puertos ya existentes y
+  funciones de comun. Comun no cambia.
+- [x] Primera línea con la ruta. Sin `print`, `TODO` ni secretos. Sin dependencias nuevas.
+- [x] Dominio: partida del contrato siempre validada contra la obra; rastros sin revisión (D4); intento en la línea y
+  nunca en cabecera; `codigo_partida_albaran` vuelve a la lectura vacía. Todo con test.
+- [x] R47: `ARCHITECTURE.md` recoge los tres pasos, la caída al capítulo y la excepción a F-051 (punto 16).
 
-**C3 bis** N/A: no toca `docs/referencia/`.
-
+**C3 bis** N/A: la parte C no toca `docs/referencia/`.
 **C4**
-- [x] Cada requisito tiene test (tabla abajo) y todos pasan.
-- [x] Unit tests sin red ni BBDD: `httpx.MockTransport`, elector y puertos falsos, stub de FastAPI.
-- [x] MANUAL listada: T13 en `tasks.md`, en `current.md` y en el informe §6, con el método en `spec_F-111.md` §2.
-  Ver O1.
+- [x] Cada requisito de la parte C tiene test (tabla abajo) y todos pasan.
+- [x] Sin red ni BBDD: elector y puertos falsos, y listas sintéticas.
+- [x] MANUAL listada: T13 sigue `[ ]` en `tasks.md`, ampliada con las líneas de la parte C.
 
 **C4 bis**
-- [x] `rigor` declarado (`critico`).
-- [x] Fase RED con salida real de T1 y T3–T10, más el cableado de T10 (§3 del informe).
-- [x] Cobertura 99,7 %.
-- [x] `mutacion_F-111.md` generado por la herramienta, con los totales recalculados.
-- [x] Muertos: campaña de más de 60 s, así que recálculo + RM1–RM6 (dicho arriba).
-- [x] Coste por mutante = 1300,6 × 4 ÷ 113 = 46 s, muy por encima de 1 s.
-- [x] Sin «⚠ CAMPAÑA NO VÁLIDA»; «Sin veredicto» = 0.
-- [x] RM1: SHA medido `cf249a2`. Desde entonces (`cf249a2..178a29c`) solo cambian `progress/` y `tasks.md`, nada del
-  alcance.
-- [x] RM2: media 11,5 s × 4 workers = 46 s por mutante, frente a líneas base de 27,8 s (sv6), 37 s (sv5) y 114 s
-  (comun). Coherente: la mayoría de los mutantes son de sv6 y mueren con `-x`. 113 × 11,5 = 1300 s, igual que el
-  total.
-- [x] RM5: reproducido 1 de 3 (arriba).
-- [x] RM6: las dos guardas quitadas no eran defensa. `tramos and` sobra porque `str.split` nunca devuelve una lista
-  vacía (comprobado: `"".split(" › ") == ['']`). `_alm` era un atributo sin lectores: `ALM` no está vacía y
-  `normalizar_partida` ya la excluye de la búsqueda (R28, con su test).
-- N/A campaña manual: la automática dio 113.
-- [x] Los 3 supervivientes tienen su análisis completo, ninguno `PENDIENTE`. En `critico` falta la **aceptación
-  escrita del humano** de los 3 equivalentes: es la condición C1 de abajo.
-- [x] «Evidencias» con los cuatro números y los workers (4).
-- [x] Ningún N/A sin motivo.
+- [x] `critico` · [x] RED real de T15 (`ImportError`), T17 (22 failed) y T18 (1 failed), §C.4 · [x] cobertura 100 %.
+- [x] `mutacion_F-111_C.md` de la herramienta y recalculado · [x] >60 s: recálculo + RM1–RM6 + RM4 · [x] 47 s/mutante.
+- [x] RM1 · [x] RM2.
+- N/A RM5: no queda ningún equivalente en el código. Los 2 de la ronda manual eran código redundante y se
+  eliminaron.
+- [x] RM6. Las dos comprobaciones que quitó T20 no eran defensa:
+  - el filtro de vacías: `casar_partida` devuelve `sin_partida` con `None` o vacío y `resolver_partida_obra` lo pasa
+    a `no_aplica` (`partidas.py:583`, `:669`);
+  - `codigo in vistas`: el dict ya deduplica, conserva la primera inserción y guarda la misma hoja.
+- N/A campaña manual sustitutiva: la automática dio 13 y la tabla manual es un complemento (ver O-C2).
+- [x] Ningún superviviente `PENDIENTE` · [x] «Evidencias» con los cuatro números.
 
-**C4 ter** [x] con motivo escrito (exigencia `aviso`). La puerta señala 7 rutas sensibles tocadas (prompts YAML,
-schemas e IA de sv5, red de sv6) y no hay `progress/evals_F-111.md`. No bloquea (`aviso`). Motivos:
-- (1) **D8 = (a)**, decidida por el humano en la PARADA 1: sin caso nuevo en el banco. El número de contenedores es
-  determinista en sv6 y tiene test unitario; el prompt se prueba por texto (R12–R16, R32).
-- (2) Los fixtures de `evals/fixtures/` siguen vacíos: la pasada daría NO_EVALUABLE.
-- (3) La pasada `--con-llm` cuesta dinero y la decide el humano.
+**C4 ter** [x] con motivo escrito (exigencia `aviso`). La puerta señala `prompts.yaml` de sv5 y `partida_residuos.py`
+sin `progress/evals_F-111.md`. No bloquea:
+- el cambio del prompt es una frase descriptiva, sin reglas nuevas, y tiene test de texto;
+- la pasada `--con-llm` cuesta dinero y la decide el humano;
+- se mantiene el D8 = (a) de la PARADA 1.
 
-**C5** [x] T0–T12 y T14 `[x]`, con su commit `F-111 Tn:`. T13 es MANUAL y queda fuera de esta review. · [x] sin
-temporales sin trackear en el worktree. · [x] `features.json` en `in_progress`, que es el estado real.
+**C5** [x] T15–T21 `[x]`, con commits `F-111 Tn:` · [x] sin temporales sin trackear · [x] `features.json` sigue en
+`in_progress`, que es el estado real (T13 está pendiente).
 
-## Cobertura requisito → test
+### Cobertura requisito → test (sv6 `test_f111_partida_contrato.py` salvo que se indique)
 
 | Req. | Test(s) |
 |---|---|
-| R1–R9, R11 | sv6 `test_f111_tamano.py`: bordes de 3/6/9 (0,5…9,01), paquetes de 6 >9, [6,8] y [8], fuentes de R8, R9 en el builder, 4839 B = 1 × 139, hormigón sin cambios |
-| R10 | `test_f111_tamano.py` (r10) + `test_f036_r22_contenedores_prioridades.py` (el de 7 m³ reescrito a 1 × 9, declarado) |
-| R12–R14, R16 | sv5 `test_f111_prompt_residuos.py`, sobre el YAML real |
-| R15 | `test_f036_r22_prompt_residuos_orden.py` y `test_f036_r16_prompt_residuos_sinteticas.py`, sin tocar y en verde |
-| R17–R19 | comun `test_f111_candidatas_residuos.py` (0686, 0694, 0711 «RESIDUAL», ajustes y `None`) |
-| R20–R30, R35 | sv6 `test_f111_partida_residuos.py` y `test_f111_pipeline.py` |
-| R31–R33 | sv5 `test_f111_partida_residuos.py` (fuera de candidatas ⇒ null; sin proveedor ⇒ 503) |
-| R33–R34 | sv6 `test_f111_cliente.py` (una llamada, reintentos 5xx, 4xx sin reintento) |
-| R36 | lectura: `docs/ARCHITECTURE.md` regla 27 y regla 16 |
+| R37 | `r37_*` (8): descartes, orden, normalizada, no hoja, ambigua, cod repetido, `alm=None`, contrato `None`, `ALM` vía `asignar` |
+| R38 | `r38_0686_*` (sin IA), `r38_0669_*` (la IA recibe solo `31.01` y `102.08.01`); pipeline `test_f111_r38_el_pipeline_toma_la_partida_del_contrato` |
+| R39 | `r39_0694_*`, `r39_varias_*`, `r39_sin_capitulo_*` |
+| R40 | `r40_0687`, `r40_0459`, `r40_sin_capitulo_*`; además la parte B entera (`test_f111_partida_residuos.py`, contrato sin partidas) |
+| R41 | `r41_solo_las_que_caen_*`, `r41_con_todas_elegidas_una_sola_llamada`, más el número de llamadas en `r43_*` |
+| R42 | `r42_anotar_contrato_sin_revision_y_lectura_de_vuelta`, y los prefijos en `r38`/`r39` |
+| R43 | `r43_*` (9): 5 variantes de «no elige», capítulo de una, el capítulo también falla, IA caída, obra sin capítulo, sin elector, 5 códigos, `anotar` |
+| R44, R45 | `r44_*`, `r45_con_lectura_y_apagado_no_se_toca` |
+| R46 | `r46_constantes_congeladas`, `r46_el_log_dice_el_paso` (×3), `r46_el_log_cuenta_las_caidas_al_capitulo` |
+| R47 | lectura de `docs/ARCHITECTURE.md` (puntos 16 y 27) |
+| R48 | sv5 `test_f111_r48_las_candidatas_son_hojas_de_la_obra_del_contrato_o_del_capitulo` |
 
-## Condiciones para el `done` (no son cambios al código)
+### Condiciones para el `done` (no son cambios al código)
 
-1. **C1 · el humano acepta por escrito los 3 equivalentes** de `mutacion_F-111.md` (rigor `critico`). Los dos
-   `indent` son cosméticos para la IA, y el `split` está demostrado arriba.
-2. **C2 · T13** (MANUAL, después de desplegar en el orden comun 0.13.0 ⇒ sv5 ⇒ sv6, y de revalorar).
+1. La C1 de A/B (el humano acepta por escrito los 3 equivalentes) ya consta como aceptada en `7493a10`.
+2. **T13** (MANUAL, después de desplegar **sv5 y sv6** y de revalorar). Hay que comprobar las 8 líneas de `design.md`
+   §13 y contar cuántas `partida_residuos_contrato_sin_eleccion` salen.
 
-## Observaciones (no bloquean)
+### Observaciones (no bloquean)
 
-- **O1 · El comando exacto de T13 no está versionado.** `tasks.md` y `spec_F-111.md` §2 remiten a `run.ps1`,
-  `comun_ro.py`, `m1_residuos.py` y `m2_capitulos.py`, que solo existen en el scratchpad de esta sesión (`f111/`).
-  Recomendación: antes de desplegar, el líder copia en `current.md` el comando de PowerShell listo para pegar, o deja
-  los scripts fuera del repo en una ruta estable. Si no, T13 no se puede repetir en otra sesión.
-- **O2 · Riesgo R-1 del design, vigente.** Si IA3 sigue rellenando `contenedor_m3 = 6` con un contrato sin tamaño, sv6
-  lo toma como «tamaño del contrato» (R8) y 8 m³ vuelve a salir como 2 × 6. Hay mitigación en el prompt (R13), y T13
-  debe buscar en concreto `contenedor=6` con 8 m³.
-- **O3 · Importación privada.** `partida_residuos.py` importa `_familia_de` de `valuation_builder`. El design pedía
-  «reutilizable»; una función pública (o en `familia`) sería más limpia. Cosmético.
-- **O4 · Coste de los fallos.** El cliente reintenta 3 veces también el 500 genérico de sv5 (posible fallo
-  determinista del LLM): hasta 3 llamadas de pago por documento. Aceptable al volumen medido (~4 documentos).
-- **Automejora (propuesta, no aplicada):** `CHECKPOINTS.md` C4 exige que las MANUAL apunten a scripts versionados o a un
-  comando autocontenido; un scratchpad de sesión no se puede repetir (O1).
+- **O-C1 · R42 «misma herencia de las sintéticas (R24)».** Ningún test de la parte C cubre las sintéticas LER con una
+  partida del contrato. No hace falta para aprobar: el código que copia la partida al sobre (`nuevas` → `copia`) es
+  común a los tres pasos, y el test R24 de la parte B lo ejercita.
+- **O-C2 · El anexo de mutantes a mano no se puede reproducir.** Está en `mutantes_c.py`, en el scratchpad de la
+  sesión, y las filas no traen el texto exacto original → mutado. No cuenta como evidencia (la automática basta),
+  pero conviene versionarlo o escribir ese texto.
+- **O-C3 · Coste.** En el peor caso, el paso 1 con 2 o más partidas en el capítulo y la IA en `null` hace dos llamadas
+  de pago con conjuntos que se solapan. Es lo que dice R43 y está acotado a dos.
+- **Automejora (propuesta, no aplicada).** `harness/rigor.json` tamano.review: el tope de 140 es por fichero. Una
+  feature que se reabre por partes lo agota con la primera review. Propuesta: que `harness/tamano.py` acepte un
+  `review_F-XXX_<parte>.md` aparte, o documentar en `CHECKPOINTS.md` el patrón de mover la review anterior a un
+  fichero hermano, como se ha hecho aquí.
