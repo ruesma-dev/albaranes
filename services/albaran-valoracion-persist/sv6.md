@@ -701,6 +701,7 @@ Esto se ve en `/health` con el flag `schema_ready`:
 | `PARTIDAS_OBRA_MAX_OBRAS`        | `64`                   | F-076: obras en memoria (sale la menos usada).                               |
 | `PARTIDAS_OBRA_FALLO_TTL_S`      | `300`                  | F-076: cuánto se recuerda un fallo de sigrid-api antes de reconsultar.        |
 | `PARTIDA_RESIDUOS_ENABLED`       | `true`                 | F-111: residuos sin partida ⇒ partida del capítulo de gestión de residuos (nunca almacén); `false` = como antes. |
+| `PARTIDA_EQUIVALENTE_ENABLED`    | `true`                 | F-117: partida fuera de la obra con UNA equivalente (letra o sufijo) ⇒ esa hoja, a revisión con `partida_equivalente:`; `false` = como antes. |
 | `API_HOST`                       | `127.0.0.1`            |                                                                              |
 | `API_PORT`                       | `8003`                 | (sv2: 8000, sv3: 8001, sv5: 8002, sv6: 8003)                                 |
 | `LOG_LEVEL`                      | `INFO`                 |                                                                              |

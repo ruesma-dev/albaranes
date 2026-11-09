@@ -164,6 +164,7 @@ def construir_normalizador_partidas(settings: Settings) -> NormalizadorPartidas:
         partidas=puerto,
         alm_codigo_partida=settings.alm_codigo_partida,
         activo=settings.partidas_obra_normalizar_enabled,
+        equivalente=settings.partida_equivalente_enabled,  # F-117 R19
     )
 
 

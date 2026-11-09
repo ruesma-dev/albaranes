@@ -185,11 +185,13 @@ def test_f111_r35_el_patron_esta_congelado():
 
 
 def test_f111_t5_version_0130():
-    assert ruesma_comun.__version__ == "0.13.0"
+    # F-117 sube a 0.14.0 (su test exige la exacta): desde 0.13.0, nunca menos,
+    # como hizo F-110 con el de F-115. Paquete y pyproject, iguales.
+    assert tuple(int(x) for x in ruesma_comun.__version__.split(".")) >= (0, 13, 0)
     pyproject = (Path(ruesma_comun.__file__).resolve().parents[1] / "pyproject.toml").read_text(
         encoding="utf-8"
     )
-    assert 'version = "0.13.0"' in pyproject
+    assert f'version = "{ruesma_comun.__version__}"' in pyproject
 
 
 def test_f111_t12_ruta_que_no_acaba_en_la_hoja_no_pierde_antecesores():

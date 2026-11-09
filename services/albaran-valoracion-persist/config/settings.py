@@ -103,6 +103,15 @@ class Settings(BaseSettings):
     partidas_obra_ttl_s: float = Field(21600.0, alias="PARTIDAS_OBRA_TTL_S")
     partidas_obra_max_obras: int = Field(64, alias="PARTIDAS_OBRA_MAX_OBRAS")
     partidas_obra_fallo_ttl_s: float = Field(300.0, alias="PARTIDAS_OBRA_FALLO_TTL_S")
+    # (F-117) Con la normalización de F-076 encendida, una partida leída que
+    # no está en la obra se cambia por su ÚNICA equivalente (regla de la
+    # letra, CI.03.08 => CI.03A.8, o del sufijo, 04.01.07 => 02.04.01.07) y
+    # la línea va a revisión con partida_equivalente:<leída>><cod>.
+    # PARTIDA_EQUIVALENTE_ENABLED=false es la vuelta atrás sin imagen.
+    partida_equivalente_enabled: bool = Field(
+        True,
+        alias="PARTIDA_EQUIVALENTE_ENABLED",
+    )
 
     # ----------------------------------------------------------------- #
     # F-111 · una línea de residuos sin partida no va a almacén: se le

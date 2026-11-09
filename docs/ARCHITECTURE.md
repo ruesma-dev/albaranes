@@ -806,7 +806,26 @@ anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
       si la clave es la de un código NO hoja (`03.02` capítulo), compuesta, sin
       candidata o con más de una ⇒ no se toca y la línea va a revisión
       (`partida_fuera_de_lista` / `partida_ambigua_en_obra`, no bloquea aprobar).
-      Nunca por parecido, sufijo ni distancia (H1 de F-049).
+      Nunca por parecido, sufijo ni distancia (H1 de F-049), salvo la excepción
+      de F-117 (siguiente punto).
+    - **Partida equivalente en la obra** (F-117, nov 2026; spec
+      `specs/F-117-partida-equivalente-en-obra/`, medición en
+      `progress/spec_F-117.md`). Excepción a H1 aprobada por el humano el
+      2026-11-05: para una lectura `fuera_de_lista` (no compuesta, no capítulo),
+      `ruesma_comun.sigrid.equivalentes_partida` PROPONE las hojas equivalentes
+      por dos reglas cerradas, sobre los segmentos de `normalizar_partida` del cod
+      y del código completo de cada hoja: **letra** (la lectura no tiene ningún
+      segmento con letra, la hoja sí, y cambiando `03A` por `3` coinciden:
+      `CI.03.08` ⇒ `CI.03A.8`; nunca al revés, `01.03A.02` no va a `01.03.02`) y
+      **sufijo** (lectura de 3 o más segmentos y la hoja termina en ellos:
+      `04.01.07` ⇒ `02.04.01.07`; `01.07` no). Ni prefijo, ni distancia, ni
+      descripción. sv6 la aplica SOLO si es única: valora con ese cod y la línea
+      va a revisión no bloqueante con `partida_equivalente:<leída>><cod>` (en vez
+      de `partida_fuera_de_lista`); con dos o más (0459: `CI.03A.n` y `CI.03P.n`)
+      no toca nada, deja `partida_fuera_de_lista` y añade
+      `partida_equivalente_ambigua:<c1>,<c2>…` (a lo sumo 5, `,+N`).
+      `PARTIDA_EQUIVALENTE_ENABLED=false` (sv6) lo apaga sin redesplegar; necesita
+      la lista de F-076 (`PARTIDAS_OBRA_NORMALIZAR_ENABLED`).
     - **Rastro** (regla 6): `codigo_partida_albaran` de la valoración conserva la
       leída; `codigo_partida_final` es la de la lista; motivo
       `partida_normalizada:<leída>><lista>` sin revisión.

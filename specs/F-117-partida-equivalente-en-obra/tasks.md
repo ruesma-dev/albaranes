@@ -1,0 +1,15 @@
+# F-117 · Tareas
+
+Rama `feature/F-117-partida-equivalente-en-obra` (worktree `../albaranes-F-117`). Rigor **critico**: cada tarea con código empieza en RED (traza en el informe). Un commit por tarea (`F-117 Tn: ...`). Suites con `PYTHONPATH=<worktree>\services\albaranes-comun` y `ARNES_SIN_CACHE=1`; nunca dos suites a la vez.
+
+- [x] T0: PARADA 1 (2026-11-09, humano: «todo la a») — el humano decide D1–D9 (`design.md` §9); si D2 ≠ (a), quitar R4, R5 y R25; si D3 ≠ (a), R15 pasa a «sin revisión»  |  Verificación: decisión anotada en `progress/current.md`
+- [x] T1: RED comun: `services/albaranes-comun/tests/test_f117_equivalentes_partida.py` con R1–R12 (`test_f117_rN_...`; casos de §2: `CI.03.08`, `01.03A.02`, `04.01.07`, `01.07`, `CD.02`, 0459 con A y P)  |  Verificación: `pytest services/albaranes-comun/tests/test_f117_equivalentes_partida.py` falla por `equivalentes_partida` inexistente
+- [x] T2: comun: `equivalentes_partida`, `RE_SEGMENTO_CON_LETRA`, `MIN_SEGMENTOS_SUFIJO`, docstring de H1, export en `sigrid/__init__.py`, versión 0.14.0  |  Verificación: `pytest services/albaranes-comun/tests` en verde (F-049/F-076/F-098/F-111 sin tocar)
+- [x] T3: RED sv6: `services/albaran-valoracion-persist/tests/test_f117_partida_equivalente.py` con R13–R23 (fakes de `PartidasObraPort`)  |  Verificación: `pytest services/albaran-valoracion-persist/tests/test_f117_partida_equivalente.py` falla por lo esperado
+- [x] T4: sv6: `normalizador_partidas.py` (§4), `config/settings.py` (`PARTIDA_EQUIVALENTE_ENABLED`), `composition.py`  |  Verificación: `pytest services/albaran-valoracion-persist/tests/test_f117_partida_equivalente.py services/albaran-valoracion-persist/tests -k "f076 or f098 or f111"` en verde
+- [x] T5: sv6: `tests/test_f117_pipeline.py` con R24–R26 (pipeline con repositorio, IA y lista falsos; rama normal y directa)  |  Verificación: `pytest services/albaran-valoracion-persist/tests/test_f117_pipeline.py` en verde (RED antes de T4 si se escribe primero)
+- [x] T6: docs: `docs/ARCHITECTURE.md` regla 23 y `azure-apps/albaranes.md` §11 (commit aparte en `azure-apps`, sin push) (R27)  |  Verificación: `grep -n "partida_equivalente" docs/ARCHITECTURE.md` y lo mismo en `azure-apps/albaranes.md`
+- [x] T7: cobertura de las líneas cambiadas y mutación de `equivalentes_partida` y de `normalizador_partidas.py`; informe `progress/mutacion_F-117.md`  |  Verificación: umbrales de `harness/rigor.json` (nivel critico); supervivientes analizados
+- [ ] T8: MANUAL (humano): desplegar comun 0.14.0 con sv6 (`.\deploy.ps1 -Only sv6` → `.\check_deploy.ps1`) y revalorar desde sv4 lo que decida por D7  |  Verificación: MANUAL (humano)
+- [ ] T9: MANUAL (líder, solo lectura): `.\scripts\medicion_F-117\run.ps1 m1_fuera_de_lista.py` y `... m2_estrategias.py` desde la raíz; esperado: lo revalorado con E1d/SUF = 1 sale con `partida_equivalente:` y sin `partida_fuera_de_lista`; listar falsos positivos si los hay (R-1)  |  Verificación: MANUAL (líder)
+- [x] T10: (2026-11-09: exit 0 sobre `f37c85a`, cobertura 57/57, verificado por el reviewer) Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
