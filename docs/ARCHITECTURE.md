@@ -1033,6 +1033,31 @@ anteriores) y `normalizar_adjuntos` lo corrige antes de cualquier IA.
       `PARTIDA_RESIDUOS_ENABLED=false` (sv6) apaga la parte de la partida; la del
       tamaño no tiene interruptor. Lo ya valorado cambia solo al revalorar.
 
+28. **La recepción del correo es la referencia del AÑO; la fecha la lee la IA y
+    nadie la corrige** (F-112, nov 2026; decisión del humano: «la fecha la lee
+    la IA», y «ia2 revisara tambien la fecha [...] el problema vendra cuando
+    estemos en un cambio de año»). Spec: `specs/F-112-anio-fecha-albaran/`.
+    - **La referencia**: el día de `ContextoCorreo.recibido_utc` (el
+      `receivedDateTime` de Graph que sv1 deja en el blob del correo desde
+      F-048) pasado a **Europe/Madrid** (un correo de las 23:30 UTC del 31-12 es
+      del 01-01). La calcula el worker de sv2 UNA vez
+      (`application/services/fecha_recepcion.py`, `fecha_recepcion_de`) y la da
+      igual a las dos fases. Sin correo o sin `recibido_utc` válido, sin
+      referencia (nota fija), nunca «hoy». Al prompt solo llega la fecha ISO.
+    - **IA1** la lee en `{fecha_recepcion}`, tras la regla de `fecha` del task de
+      `albaran_factura_es`; **IA2** la revisa SIEMPRE en su sección «Fecha del
+      albarán (revisión obligatoria)» (`{revision_fecha}` en los cuatro
+      `albaran_revision_fase2_*`), con razonamiento `anio_fecha_recepcion` si
+      corrige el año. Las dos con la misma **Regla del año** (una constante): la
+      fecha es igual o algo anterior a la recepción; día y mes del papel
+      posteriores a los de la recepción ⇒ año anterior (28-12 con correo del
+      03-01); un año legible y plausible del papel manda; el año nunca sale de
+      una norma impresa (R.D. 553/2020).
+    - **Nadie corrige la fecha en código**: sv2 pasa la `cabecera.fecha` de la
+      IA tal cual. Las redes siguen como estaban: sv3
+      `fecha_albaran_fuera_de_rango` y sv9 `fecha_no_plausible`; la corrección
+      a mano es de sv4 (F-108). Lo mide `python -m evals.comparar_fecha`.
+
 ## Acceso a datos y sistemas externos
 
 - **PostgreSQL `albaranes`** (Azure Flexible Server compartido

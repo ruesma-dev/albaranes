@@ -556,6 +556,17 @@ con peticiones que pueden tardar minutos, el destino natural es:
 8. **`SHA-256` del fichero recibido viaja en `meta.source_sha256`.** Permite que sv3 verifique
    que el fichero que persiste es el mismo que se extrajo y correlacionar con el SHA que ya
    envió sv1.
+9. **La fecha de recepción del correo es la referencia del año (F-112).** El task
+   de fase 1 lleva `{fecha_recepcion}` tras la regla de `fecha`, y los cuatro prompts
+   de fase 2, `{revision_fecha}` en su sección «Fecha del albarán (revisión
+   obligatoria)». Los rellena `application/services/fecha_recepcion.py`: el día de
+   `recibido_utc` en Europe/Madrid (`tzdata` en el manifiesto), el bloque con la
+   Regla del año o una nota fija sin correo. `{fecha_recepcion}` se sustituye antes
+   que `{contexto_correo}` y `{revision_fecha}` en la pasada única de fase 2: lo que
+   escriba el correo no se expande. Sin marcador no se añade nada (la variante `base`
+   del comparador). Los logs de las dos fases llevan `fecha_recepcion=AAAA-MM-DD` o
+   `=NO`. sv2 no toca la `cabecera.fecha` que devuelve la IA; la API HTTP (sin
+   correo) va sin referencia. Ruta sensible: tocar ese fichero pide la pasada de evals.
 
 ---
 

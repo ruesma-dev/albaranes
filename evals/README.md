@@ -244,3 +244,44 @@ Si el modelo que dice la respuesta no es el pedido (Google sirve
 `gemini-3.8-flash` a quien pide `gemini-3.7-flash`), el informe lo avisa junto
 al modelo. Las cifras de IA3 y E2E no son comparables con las del runner: aquí
 IA4 sale del libro.
+
+## Comparar la fecha (F-112)
+
+`python -m evals.comparar_fecha` mide si la fecha de recepción del correo como
+referencia del año (`{fecha_recepcion}` en IA1, `{revision_fecha}` en IA2) arregla
+el año mal leído sin romper lo que funciona. Compara la variante **base** (los
+YAML de `--base`, por defecto `dev`) con la **rama**, IA1 y luego IA2, sin correo,
+sin lista de obras y sin Sigrid. **Cuesta dinero y solo lo lanza el humano.**
+
+```bash
+# Antes: las imágenes del juego D (no llama a ninguna IA; deterministas)
+python -m evals.sinteticos_fecha
+
+# Comprobaciones sin gastar (claves, albaranes, JSON de casos, git show de la base)
+python -m evals.comparar_fecha --solo-validar
+
+# La corrida de verdad: A, B a 20, C y D, dos repeticiones
+python -m evals.comparar_fecha --variante ambas --repeticiones 2 [--juegos A,B,C,D]
+```
+
+- **Juegos**: **A**, los documentos de producción de `evals/casos_fecha.json`
+  (versionado; `caso_id`, `tipologia`, `clase` `anio`/`dudoso`/`antigua`,
+  `fecha_esperada` y `recibido`, sin datos del proveedor) con su recepción real;
+  **B**, 20 casos del banco con fecha esperada (semilla fija) y referencia =
+  esperada + 7 días; **C**, los del banco anteriores a 2025, referencia +730
+  días; **D**, los sintéticos de cambio de año de `evals/casos_fecha_sinteticos.json`
+  (lo escribe `evals.sinteticos_fecha`; imágenes `SIN-00N.jpg` en
+  `evals/inputs/albaranes/`). En A y D la referencia sale de `fecha_recepcion_de`
+  de sv2 (día en Europe/Madrid).
+- **Categorías** por fecha: `exacta`, `referencia` (copió la recepción),
+  `solo_anio` (el fallo), `otra`, `nula`, `error`; mayoría de las repeticiones
+  (empate ⇒ `inestable`). Aparte, el **efecto de IA2** por ejecución: `corrige`,
+  `estropea`, `cambia`, `igual`.
+- **Veredicto** (C1–C7 de la spec): VERDE solo con las dos variantes, los cuatro
+  juegos y todos los criterios; si no, NO APLICA o ROJO.
+- Paradas **antes de gastar** (código 2): falta una clave, ningún caso con
+  albarán, un JSON de casos que no valida (el mensaje no cita su contenido) o el
+  `git show` de la base falla.
+- Dónde queda: `progress/comparar_fecha_F-112.md`, **sin valores** (recuentos,
+  caso_id, tabla del efecto de IA2 y veredicto); `evals/salidas/comparar_fecha/<fecha-hora>/`,
+  con las fechas leídas (git lo ignora).
