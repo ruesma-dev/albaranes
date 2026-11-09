@@ -62,7 +62,12 @@ albaran_factura_es:
       aunque sea el único CIF que veas o esté en una casilla rotulada CIF:
       ignóralos y busca los del emisor. Si el único CIF del documento es de
       una empresa del cliente, proveedor_cif es null.
-    - fecha: la del albarán.
+    - fecha: la del albarán (emisión o servicio), no la de un pedido, contrato o
+      autorización. El día y el mes se leen SIEMPRE del papel. El AÑO se
+      contrasta con la fecha de recepción del correo de abajo.
+
+      {fecha_recepcion}
+
     - numero_albaran: identificador del documento (no pedido/cliente).
     - forma_pago: 'contado', 'transferencia', '30 días', etc.
     - obra_codigo: código de 4 números que empieza por 0. Puede estar
@@ -343,6 +348,18 @@ albaran_revision_fase2_es:
 
     {revision_rules}
 
+    ## Fecha del albarán (revisión obligatoria)
+
+    Esta revisión NO es una regla más de la checklist: hazla SIEMPRE,
+    sea cual sea la familia del albarán.
+
+    {revision_fecha}
+
+    Ejemplo: recepción 2026-10-28; la fase 1 leyó la fecha 2020-10-17 y el
+    papel dice «17/10/26» con el 6 mal cerrado ⇒ fecha 2026-10-17, con un
+    razonamiento de campo "cabecera.fecha" y patron_aplicado
+    "anio_fecha_recepcion".
+
     ## GROUNDING CONTRA EL ERP SIGRID (cabecera)
 
     Validación determinista de proveedor (por CIF) y obra (por
@@ -562,6 +579,18 @@ albaran_revision_fase2_residuos:
 
     {revision_rules}
 
+    ## Fecha del albarán (revisión obligatoria)
+
+    Esta revisión NO es una regla más de la checklist: hazla SIEMPRE,
+    sea cual sea la familia del albarán.
+
+    {revision_fecha}
+
+    Ejemplo: recepción 2026-10-28; la fase 1 leyó la fecha 2020-10-17 y el
+    papel dice «17/10/26» con el 6 mal cerrado ⇒ fecha 2026-10-17, con un
+    razonamiento de campo "cabecera.fecha" y patron_aplicado
+    "anio_fecha_recepcion".
+
     ## GROUNDING CONTRA EL ERP SIGRID (cabecera)
 
     {sigrid_context}
@@ -746,6 +775,18 @@ albaran_revision_fase2_hormigon:
 
     {revision_rules}
 
+    ## Fecha del albarán (revisión obligatoria)
+
+    Esta revisión NO es una regla más de la checklist: hazla SIEMPRE,
+    sea cual sea la familia del albarán.
+
+    {revision_fecha}
+
+    Ejemplo: recepción 2026-10-28; la fase 1 leyó la fecha 2020-10-17 y el
+    papel dice «17/10/26» con el 6 mal cerrado ⇒ fecha 2026-10-17, con un
+    razonamiento de campo "cabecera.fecha" y patron_aplicado
+    "anio_fecha_recepcion".
+
     ## GROUNDING CONTRA EL ERP SIGRID (cabecera)
 
     {sigrid_context}
@@ -883,6 +924,18 @@ albaran_revision_fase2_mortero:
     ## CHECKLIST DE REGLAS DE REVISION
 
     {revision_rules}
+
+    ## Fecha del albarán (revisión obligatoria)
+
+    Esta revisión NO es una regla más de la checklist: hazla SIEMPRE,
+    sea cual sea la familia del albarán.
+
+    {revision_fecha}
+
+    Ejemplo: recepción 2026-10-28; la fase 1 leyó la fecha 2020-10-17 y el
+    papel dice «17/10/26» con el 6 mal cerrado ⇒ fecha 2026-10-17, con un
+    razonamiento de campo "cabecera.fecha" y patron_aplicado
+    "anio_fecha_recepcion".
 
     ## GROUNDING CONTRA EL ERP SIGRID (cabecera)
 

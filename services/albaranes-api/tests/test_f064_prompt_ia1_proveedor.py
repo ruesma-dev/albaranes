@@ -91,7 +91,7 @@ FRASES_QUE_SALEN = (
 )
 #: Viñetas de la cabecera que siguen, en su orden, tras las del proveedor.
 VINETAS_SIGUIENTES = (
-    "- fecha: la del albarán.",
+    "- fecha: la del albarán",
     "- numero_albaran: identificador del documento (no pedido/cliente).",
     "- forma_pago: 'contado', 'transferencia', '30 días', etc.",
     "- obra_codigo: código de 4 números que empieza por 0.",
@@ -111,7 +111,7 @@ def _parte_proveedor() -> str:
     """De «## Reglas para la cabecera» a la viñeta de ``fecha`` (plano)."""
     task = _plano(_task_crudo())
     inicio = task.index("## Reglas para la cabecera")
-    fin = task.index("- fecha: la del albarán.", inicio)
+    fin = task.index("- fecha: la del albarán", inicio)
     return task[inicio:fin]
 
 
@@ -232,7 +232,7 @@ def test_f064_r6_extract_phase_1_entrega_el_bloque_real_al_modelo() -> None:
 def test_f064_r6_el_bloque_queda_en_la_parte_del_proveedor_del_prompt_real() -> None:
     instructions = _plano(_instructions_fase_1())
     inicio = instructions.index("## Reglas para la cabecera")
-    fin = instructions.index("- fecha: la del albarán.", inicio)
+    fin = instructions.index("- fecha: la del albarán", inicio)
 
     assert inicio < instructions.index(CABECERA_BLOQUE) < fin
 
