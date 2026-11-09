@@ -740,7 +740,10 @@ def test_f065_r27v4_en_la_ventana_dividir_lo_mismo(tmp_path):
 # =================================================================== #
 _GUARDAR = ["parseNumEs", "numerosIguales", "partidaParaEnviar", "_camposCambiados", "importeDeFila",
             "codigoParaEnviar", "marcarPartida", "partidasMalas", "filasConCambios", "motivoDeRespuesta",
-            "enviarFila", "consolidarFila", "wireConciliaEdit"]
+            "enviarFila", "consolidarFila", "wireConciliaEdit",
+            # F-116 R22, R23: los «Guardar» esperan antes a la Cola y «Guardar
+            # todas» elige con filasParaGuardar.
+            "_estadoCola", "encolar", "filasParaGuardar"]
 
 # Una fila editable de verdad: combo de partida + wireConciliaEdit (Enter =
 # «Guardar», botón «Guardar» con su PATCH). Las partidas llegan cuando el test
@@ -993,7 +996,11 @@ def test_f065_r27v5_guardar_y_aprobar_marca_la_partida_mala(tmp_path):
     # las filas, y con una partida mala no envía nada (ni PATCH ni PUT).
     casos = _ejecutar_dom(tmp_path, _COMBO_V4 + _GUARDAR + [
         "marcarFilaNoGuardada", "limpiarFilasNoGuardadas", "guardarFilasPendientes", "avisoSumaVigente",
-        "guardarCabecera"], _fila_guardar() + """
+        "filasParaGuardar",  # F-116 R22
+        "guardarCabecera",
+        # F-108 R18: la guarda de la fecha (sin #fecha, no para nada).
+        "parseFechaEs", "avisoFechaNoValida", "marcarFechaNoValida", "fechaEscritaValida"],
+        _fila_guardar() + """
         var approveBtn = null;
         var saveBtn = null;
         let guardados = 0;

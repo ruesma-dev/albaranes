@@ -21,6 +21,15 @@ motivo de cabecera ``partidas_obra_no_disponibles`` sin revisión (R11). Con
 ``PARTIDAS_OBRA_NORMALIZAR_ENABLED=false`` no se consulta ni se cambia nada
 (R12). La partida vacía y la de almacén (``ALM_CODIGO_PARTIDA``) no se tocan
 (R13, F-051).
+
+(F-117) Con ``equivalente`` encendido (``PARTIDA_EQUIVALENTE_ENABLED``, defecto
+``true`` en ``settings``; ``False`` en el constructor para quien no lo pida), una
+lectura ``fuera_de_lista`` busca su equivalente con
+``ruesma_comun.sigrid.equivalentes_partida`` (letra o sufijo): con UNA, se valora
+con su cod y ``anotar`` deja ``partida_equivalente:<leída>><cod>`` a revisión
+(no bloqueante) en vez de ``partida_fuera_de_lista``; con dos o más, el sobre no
+cambia, va ``partida_fuera_de_lista`` como siempre y, además,
+``partida_equivalente_ambigua:<c1>,<c2>…`` (a lo sumo 5 cods, ``,+N`` si hay más).
 """
 from __future__ import annotations
 
@@ -32,6 +41,7 @@ from domain.models.valuation_records import LineValuationRecord, ValuationHeader
 from domain.ports.partidas_obra_port import PartidasObraPort
 from ruesma_comun.sigrid import (
     ResolucionPartida,
+    equivalentes_partida,
     normalizar_partida,
     resolver_partida_obra,
 )
@@ -46,6 +56,13 @@ PREFIJO_PARTIDA_NORMALIZADA = "partida_normalizada:"
 #: (R10) Motivos de línea y de cabecera que mandan la línea a revisión.
 MOTIVO_PARTIDA_FUERA_DE_LISTA = "partida_fuera_de_lista"
 MOTIVO_PARTIDA_AMBIGUA = "partida_ambigua_en_obra"
+#: (F-117 R14) Rastro de una partida equivalente aplicada (a revisión):
+#: ``partida_equivalente:<leída>><cod>``.
+PREFIJO_PARTIDA_EQUIVALENTE = "partida_equivalente:"
+#: (F-117 R16) Dos o más equivalentes: ``partida_equivalente_ambigua:<c1>,<c2>…``.
+PREFIJO_EQUIVALENTE_AMBIGUA = "partida_equivalente_ambigua:"
+#: (F-117 R16) Cods que se escriben en el motivo de ambigüedad.
+MAX_CODS_AMBIGUA = 5
 #: El motivo de cabecera que el builder pone cuando alguna línea va a revisión.
 _MOTIVO_CABECERA_REVISION = "at_least_one_line_requires_review"
 
@@ -66,6 +83,8 @@ class NormalizacionSobre:
     por_linea: dict[int, ResolucionPartida] = field(default_factory=dict)
     #: Motivos de cabecera (p. ej. ``partidas_obra_no_disponibles``).
     motivos_cabecera: tuple[str, ...] = ()
+    #: (F-117) ``merge_line_id`` ⇒ cods equivalentes (solo las líneas con alguno).
+    equivalencias: dict[int, tuple[str, ...]] = field(default_factory=dict)
 
 
 class NormalizadorPartidas:
@@ -77,10 +96,12 @@ class NormalizadorPartidas:
         partidas: PartidasObraPort | None,
         alm_codigo_partida: str,
         activo: bool,
+        equivalente: bool = False,
     ) -> None:
         self._partidas = partidas
         self._alm = (alm_codigo_partida or "").strip().upper()
         self._activo = bool(activo)
+        self._equivalente = bool(equivalente)
 
     # ------------------------------------------------------------------ #
     def _es_lectura(self, partida: str | None) -> bool:
@@ -122,6 +143,7 @@ class NormalizadorPartidas:
             )
 
         por_linea: dict[int, ResolucionPartida] = {}
+        equivalencias: dict[int, tuple[str, ...]] = {}
         nuevas: dict[int, str | None] = {}  # posición ⇒ código de la lista
         for posicion, linea in enumerate(envelope.context.lineas_albaran):
             if not self._es_lectura(linea.codigo_partida_albaran):
@@ -130,20 +152,30 @@ class NormalizadorPartidas:
             por_linea[linea.merge_line_id] = resolucion
             if resolucion.cambia:
                 nuevas[posicion] = resolucion.codigo
+            elif self._equivalente and resolucion.motivo == "fuera_de_lista":
+                # (F-117 R13, R16) Solo con UNA equivalente cambia la partida.
+                cods = equivalentes_partida(lista, linea.codigo_partida_albaran, self._alm)
+                if cods:
+                    equivalencias[linea.merge_line_id] = cods
+                if len(cods) == 1:
+                    nuevas[posicion] = cods[0]
 
+        unicas = sum(1 for cods in equivalencias.values() if len(cods) == 1)
         logger.info(
-            "[partidas-obra] document_id=%s obra=%s lecturas=%s cambiadas=%s motivos=%s",
+            "[partidas-obra] document_id=%s obra=%s lecturas=%s cambiadas=%s motivos=%s "
+            "equivalentes=%s ambiguas=%s",
             documento, lista.obra, len(por_linea), len(nuevas),
             sorted({r.motivo for r in por_linea.values()}),
+            unicas, len(equivalencias) - unicas,
         )
         if not nuevas:
-            return NormalizacionSobre(envelope=envelope, por_linea=por_linea)
+            return NormalizacionSobre(envelope=envelope, por_linea=por_linea, equivalencias=equivalencias)
         # Copia PROFUNDA: IA4 y el builder trabajan sobre ella sin tocar el
         # sobre de sv5, que nunca se muta.
         copia = envelope.model_copy(deep=True)
         for posicion, codigo in nuevas.items():
             copia.context.lineas_albaran[posicion].codigo_partida_albaran = codigo
-        return NormalizacionSobre(envelope=copia, por_linea=por_linea)
+        return NormalizacionSobre(envelope=copia, por_linea=por_linea, equivalencias=equivalencias)
 
     @staticmethod
     def _sin_lista(
@@ -179,17 +211,29 @@ class NormalizadorPartidas:
           línea a revisión»).
         - Los motivos de cabecera de ``n`` (``partidas_obra_no_disponibles``) se
           añaden sin revisión.
+        - (F-117 R14, R15) Una equivalente ⇒ ``codigo_partida_albaran`` vuelve a
+          la leída y ``partida_equivalente:<leída>><cod>`` en lugar de
+          ``partida_fuera_de_lista``, a revisión en la línea y en la cabecera.
+        - (F-117 R16) Dos o más ⇒ lo de ``fuera_de_lista`` y, en la línea,
+          ``partida_equivalente_ambigua:<c1>,…`` (a lo sumo 5 cods y ``,+N``).
         """
         for record in lines:
             if record.line_kind != "from_albaran" or record.merge_line_id not in n.por_linea:
                 continue
             resolucion = n.por_linea[record.merge_line_id]
+            cods = n.equivalencias.get(record.merge_line_id, ())
             if resolucion.cambia:  # solo exacta/normalizada cambian el texto
                 record.codigo_partida_albaran = resolucion.leida
             if resolucion.motivo == "normalizada":
                 leida = (resolucion.leida or "").strip()
                 _anadir(record, f"{PREFIJO_PARTIDA_NORMALIZADA}{leida}>{resolucion.codigo}")
             motivo = _MOTIVO_A_REVISION.get(resolucion.motivo)
+            if len(cods) == 1:
+                record.codigo_partida_albaran = resolucion.leida
+                leida = (resolucion.leida or "").strip()
+                motivo = f"{PREFIJO_PARTIDA_EQUIVALENTE}{leida}>{cods[0]}"
+            elif cods:
+                _anadir(record, PREFIJO_EQUIVALENTE_AMBIGUA + _lista_ambigua(cods))
             if motivo is not None:
                 _anadir(record, motivo)
                 record.review_required = True
@@ -198,6 +242,14 @@ class NormalizadorPartidas:
                 header.review_required = True
         for motivo in n.motivos_cabecera:
             _anadir(header, motivo)
+
+
+def _lista_ambigua(cods: tuple[str, ...]) -> str:
+    """(F-117 R16) A lo sumo :data:`MAX_CODS_AMBIGUA` cods y ``,+N`` si hay más."""
+    texto = ",".join(cods[:MAX_CODS_AMBIGUA])
+    if len(cods) > MAX_CODS_AMBIGUA:
+        texto += f",+{len(cods) - MAX_CODS_AMBIGUA}"
+    return texto
 
 
 def _anadir(destino: LineValuationRecord | ValuationHeaderRecord, motivo: str) -> None:

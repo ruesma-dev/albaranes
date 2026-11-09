@@ -9,25 +9,34 @@ Puro. Casa la respuesta por ``referencia_linea``, nunca por posición
 - ``lineas_distintas``: falta o sobra una línea.
 - ``partida_distinta``: la ``partida`` de la previa no es la pedida, también
   nula frente a no nula (sin partida = almacén).
+- ``dto_distinto`` (F-110 R11): una línea pedida con ``dto`` cuya línea de la
+  previa no trae ``dto``, no es un número legible o difiere del pedido en MÁS
+  de 0,005. Las pedidas sin ``dto`` no lo comparan aunque la previa lo traiga
+  (R12; sigrid-api lo copia del ``ctrpro`` en algunas vinculadas).
 - ``aviso_bloqueante``: un aviso de cabecera o de línea con ``codigo`` en
   ``ALTA_SIGRID_AVISOS_BLOQUEANTES``. Los demás se guardan y se enseñan.
 
 En ``idempotente`` el albarán YA está en Sigrid: solo se mira si lo que hay
 coincide con lo pedido; si no, ``registrado_distinto`` (H18), que deja el alta
-``registrado`` (se corrige anulando, R28), nunca ``revisar``.
+``registrado`` (se corrige anulando, R28), nunca ``revisar``. Ni la partida ni el
+``dto`` (sigrid-api lo devuelve nulo en ``idempotente``) se comparan ahí.
 
 Los importes se comparan en ``Decimal`` desde su texto para que el borde de la
 tolerancia no dependa del redondeo binario (10,05 − 10,00 es 0,05, no 0,0500…1).
 """
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable, Mapping
 from decimal import Decimal
 from typing import Any
 
-from domain.models.alta_models import Motivo, PeticionAlbaran, RespuestaAlta
+from domain.models.alta_models import LineaPeticion, Motivo, PeticionAlbaran, RespuestaAlta
 
 ESTADO_IDEMPOTENTE = "idempotente"
+
+#: (F-110 R11) Diferencia máxima entre el ``dto`` pedido y el de la previa.
+TOLERANCIA_DTO = Decimal("0.005")
 
 
 def _decimal(valor: Any) -> Decimal:
@@ -47,6 +56,33 @@ def _fuera_de_tolerancia(total: Any, importe: float, tolerancia_eur: float) -> b
 
 def _detalle_importe(importe: float, total: Any) -> str:
     return f"aprobado {importe}, Sigrid {total}"
+
+
+def _numero_es(valor: float) -> str:
+    """«7», «7,46»: sin ceros finales y con coma decimal."""
+    return f"{valor:.6f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def _dto_legible(valor: Any) -> float | None:
+    """El ``dto`` de la previa si es un número JSON finito (no booleano ni texto)."""
+    if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        return None
+    return float(valor) if math.isfinite(valor) else None
+
+
+def _dto_distinto(pedida: LineaPeticion, devuelta: Mapping[str, Any]) -> Motivo | None:
+    """(F-110 R11) ``dto_distinto`` si se pidió ``dto`` y la previa no lo
+    aplica (ausente, ilegible o a más de 0,005); ``None`` en otro caso."""
+    if pedida.dto is None:
+        return None
+    sigrid = _dto_legible(devuelta.get("dto"))
+    if sigrid is not None and abs(_decimal(sigrid) - _decimal(pedida.dto)) <= TOLERANCIA_DTO:
+        return None
+    texto = "—" if sigrid is None else _numero_es(sigrid)
+    return Motivo(
+        "dto_distinto", f"pedido {_numero_es(pedida.dto)}, Sigrid {texto}",
+        pedida.referencia_linea,
+    )
 
 
 def _avisos_bloqueantes(
@@ -102,6 +138,9 @@ def comparar(
                 f"pedida {pedida.partida}, Sigrid {devuelta.get('partida')}",
                 ref,
             ))
+        dto = _dto_distinto(pedida, devuelta)
+        if dto is not None:
+            motivos.append(dto)
         motivos.extend(_avisos_bloqueantes(devuelta.get("avisos") or (), avisos_bloqueantes, ref))
 
     if not idempotente:

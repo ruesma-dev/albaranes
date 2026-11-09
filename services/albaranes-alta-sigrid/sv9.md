@@ -86,12 +86,46 @@ Spec: `specs/F-104-codigos-contrato-v83/`. Contrato v8.3 §3.2–§3.3 (`871cc0c
   2026-10-27), tras verificar con la F-015 de sigrid-api desplegada que ya no llega (M2). Si llegase, va a `error`
   como cualquier código desconocido (H25). sv4 conserva su texto (altas antiguas).
 
+## Líneas que no cuadran (F-106)
+
+Spec: `specs/F-106-precio-al-cambiar-medicion/` (R17, R18; regla 22 de `docs/ARCHITECTURE.md`).
+
+- `SQL_LINEAS` lee también P (`precio_unitario_final`) y d (`descuento_albaran_aplicado`) de la fila. Si una
+  línea a registrar no cuadra (`ruesma_comun.importes.cuadra_linea`: `|Q × P × (1 − d) − I| > 0,02 €`), el alta
+  queda `no_admitido` con el motivo `linea_no_cuadra` (detalle «48 × 11,2 × (1 − 7 %) = 499,97 ≠ 104,16» y la
+  referencia de la línea), **sin llamar a sigrid-api**. sv4 ya no deja aprobarla; esto es la red de seguridad.
+- Si cuadran, la petición es la de siempre: cantidad y precio de `ruesma_comun.alta_sigrid.linea_a_sigrid`.
+- Las altas reales `registrado` ya grabadas con una línea que no cuadra o con precio enviado ≠ P × (1 − d) se listan
+  con `scripts/listar_altas_descuadradas_f106.py` (solo `SELECT`, conexión de solo lectura, CSV UTF-8 con BOM y
+  `;`; `PG_*` de la consola; lo lanza el humano, que decide qué hacer con las listadas).
+
+## Descuento por línea (F-110)
+
+Spec: `specs/F-110-descuento-linea-sigrid/` (regla 19 de `docs/ARCHITECTURE.md`). Contrato v8.4 de sigrid-api
+(F-018, desplegada el 2026-10-30): `lineas[].dto` en el **modo extendido** de `sigrid/albaran`.
+
+- Con `ALTA_SIGRID_ENVIAR_DTO` apagada (el defecto), la petición es la de F-106.
+- Encendida, las líneas con descuento aplicable llevan `dto` (`round(d, 2)`, tras `precio` en `a_dict`) y el precio
+  bruto de `linea_a_sigrid` (P si da el importe al céntimo; si no, el despejado). Las demás, como hoy y sin la clave.
+- Si una línea con `dto` no cuadra a Sigrid (`cuadra_linea(|Q|, precio, dto, |I|)`) o el precio no se despeja,
+  `linea_no_cuadra` con el detalle «a Sigrid: 100000 × 0,132712 × (1 − 7 %) = 12342,22 ≠ 12342,17» ⇒ `no_admitido`
+  sin llamar a sigrid-api. Se mira detrás del de F-106 y no se repite en la misma línea.
+- La previa da `dto_distinto` (⇒ `revisar`) si una línea pedida con `dto` vuelve sin `dto`, con uno ilegible o a más
+  de 0,005. Las pedidas sin `dto` no lo comparan (sigrid-api lo copia del `ctrpro` en vinculadas de la opción C).
+- `peticion_json` sin `dto` (altas de antes) se lee igual; un `incierto` reenvía la petición guardada, con o sin `dto`,
+  sea cual sea la guarda.
+- **El clásico y `albaran-directo` ignoran `dto` sin error** (grabarían la línea sin descuento): sv9 solo usa el
+  modo extendido (`lineas` + `referencia_externa`), y un test lo fija (`test_f110_peticion.py`).
+- El script de F-106 compara, en las líneas enviadas con `dto`, el precio con P y el `dto` con d (columnas
+  `dto_enviado` y `dto_difiere`).
+
 ## Llaves (design §7)
 
 | Variable | Defecto | Nota |
 |---|---|---|
 | `ALTA_SIGRID_DESDE_UTC` | vacía | vacía = feature apagada |
 | `ALTA_SIGRID_COMMIT` | `false` | solo el literal `true` = real; lo cambia el humano; nunca en local |
+| `ALTA_SIGRID_ENVIAR_DTO` | `false` | F-110: solo el literal `true` manda bruto y `dto`; mismo valor en sv4; la enciende el humano tras desplegar |
 | `ALTA_SIGRID_ESPERA_INCIERTO_MIN` | 15 | antes, un `en_curso`/`incierto` no se retoma |
 | `ALTA_SIGRID_TOLERANCIA_EUR` | 0,05 | por línea, al comparar la previa |
 | `ALTA_SIGRID_AVISOS_BLOQUEANTES` | `producto_sin_historico` | CSV |
@@ -106,6 +140,7 @@ nombres de sv3/sv6 (`.env.example`, sin valores).
 
 - Solo llama a `sql/read` (altas a mano, `dbo.usu`, `dbo.emp`, ¿sigue el `con.ide`?), `sigrid/albaran` (modo extendido) y `concepto-grafico`.
 - Nunca `sql/write`. Nunca `commit=true` en simulación.
+- Nunca el modo clásico ni `albaran-directo`: ignoran el `dto` (F-110).
 - La grabación no se reintenta sola; un `incierto` se retoma tras la Espera
   reenviando la misma petición (la idempotencia de F-009 devuelve `idempotente`).
 - Máximo una réplica (KEDA sobre `q-feedback`).

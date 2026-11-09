@@ -305,6 +305,18 @@ llama a IA y devuelve un envelope marcado para que sv6 lo persista como tal:
 
 ---
 
+### 5.3 `POST /v1/albaranes/partida-residuos` (F-111)
+
+Lo llama sv6 (mismo contenedor) cuando una línea de residuos llega sin partida y
+el capítulo de gestión de residuos de su obra tiene 2 o más hojas candidatas.
+Entrada `{document_id, lineas: [{line_ref, descripcion, codigo_ler}], candidatas:
+[{codigo, descripcion, descripcion_agregada}]}`; salida `{elecciones: [{line_ref,
+codigo | null, confianza_pct, razon_corta}]}`, una por línea y en el orden de
+entrada. Prompt `partida_residuos_es` (esquema `documento_partida_residuos`),
+proveedor y modelo de IA4 (`seleccionar_ia4`). La IA elige por significado solo
+entre las candidatas: un código que no es candidata se devuelve `null`. Sin
+proveedor ⇒ 503; otro fallo ⇒ 500 (sv6 manda la línea a revisión). No lee BBDD.
+
 ## 6. Schema de salida (`DocumentoValoracion` / `LineValuation` V3)
 
 Pydantic estricto (`extra='forbid'`). Campos por línea:

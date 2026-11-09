@@ -15,6 +15,10 @@ from application.services.normalizador_partidas import (
 )
 from dataclasses import dataclass
 
+from application.services.partida_residuos import (
+    AsignacionResiduos,
+    AsignadorPartidaResiduos,
+)
 from application.services.valoracion_directa import (
     ValoracionDirectaBuilder,
     anotar_valorado_distinto,
@@ -62,6 +66,10 @@ class RunValuationPipeline:
       2 bis. (F-076) Normalizar la partida leída de cada línea contra las
          de la obra (``NormalizadorPartidas``); desde aquí se valora con
          ese sobre. Nunca falla: sin lista, se valora como siempre.
+      2 ter. (F-111) Las líneas de residuos sin partida reciben la del
+         capítulo de gestión de residuos de la obra
+         (``AsignadorPartidaResiduos``), o van a revisión, nunca a
+         almacén. La obra se lee una sola vez para 2 bis y 2 ter.
       3. Si status == no_contract: (F-075) si alguna línea trae importe
          leído, persistir la valoración directa (``ValoracionDirectaBuilder``,
          sin IA ni contrato); si no, cabecera vacía con
@@ -80,6 +88,7 @@ class RunValuationPipeline:
         conciliacion_client: Any = None,
         normalizador: NormalizadorPartidas | None = None,
         valoracion_directa: ValoracionDirectaBuilder | None = None,
+        asignador_residuos: AsignadorPartidaResiduos | None = None,
     ) -> None:
         self._ia_client = ia_client
         self._repository = repository
@@ -89,9 +98,27 @@ class RunValuationPipeline:
         self._normalizador = normalizador
         # (F-075) Sin contrato y con importes leídos: manda el albarán.
         self._valoracion_directa = valoracion_directa or ValoracionDirectaBuilder()
+        # (F-111) None = como antes de F-111 en la parte B (R29).
+        self._asignador_residuos = asignador_residuos
+
+    def _obra(self, document_id: str, memo: dict[str, Any]) -> str | None:
+        """(F-111 R30) La obra del documento, leída UNA vez por valoración.
+
+        Si la lectura lanza, se recuerda el fallo y se relanza a cada llamante
+        (cada uno degrada a su manera) sin volver a la BBDD.
+        """
+        if "obra" not in memo:
+            try:
+                memo["obra"] = self._repository.obra_del_documento(document_id=document_id)
+            except Exception as exc:  # noqa: BLE001 - se relanza abajo
+                memo["obra"] = None
+                memo["error"] = exc
+        if "error" in memo:
+            raise memo["error"]
+        return memo["obra"]
 
     def _normalizar_partidas(
-        self, document_id: str, envelope: Any,
+        self, document_id: str, envelope: Any, memo: dict[str, Any] | None = None,
     ) -> NormalizacionSobre:
         """(F-076 R7, R11) El sobre con el que se valora; nunca lanza.
 
@@ -104,7 +131,7 @@ class RunValuationPipeline:
             return NormalizacionSobre(envelope=envelope)
         try:
             obra = (
-                self._repository.obra_del_documento(document_id=document_id)
+                self._obra(document_id, {} if memo is None else memo)
                 if self._normalizador.necesita_obra(envelope)
                 else None
             )
@@ -116,6 +143,30 @@ class RunValuationPipeline:
                 document_id, exc,
             )
             return NormalizadorPartidas.degradada(envelope)
+
+    def _asignar_partida_residuos(
+        self, document_id: str, envelope: Any, memo: dict[str, Any],
+    ) -> AsignacionResiduos:
+        """(F-111 R20, R27, R30) El sobre con las partidas de residuos; nunca lanza.
+
+        Cualquier excepción (BBDD, caché) ⇒ WARNING, el sobre tal cual y las
+        líneas buscadas a revisión con ``partida_residuos_sin_lista``.
+        """
+        if self._asignador_residuos is None:
+            return AsignacionResiduos(envelope=envelope)
+        try:
+            if not self._asignador_residuos.necesita_obra(envelope):
+                return AsignacionResiduos(envelope=envelope)
+            return self._asignador_residuos.asignar(
+                envelope=envelope, obra=self._obra(document_id, memo),
+            )
+        except Exception as exc:  # noqa: BLE001 - R27: nunca falla por la lista
+            logger.warning(
+                "[run-valuation] document_id=%s no se pudo asignar la partida "
+                "de residuos (%r); esas líneas van a revisión.",
+                document_id, exc,
+            )
+            return self._asignador_residuos.degradada(envelope)
 
     def run(self, request: RunValuationRequest) -> RunValuationResult:
         existing: ExistingValuationSummary | None = (
@@ -198,12 +249,17 @@ class RunValuationPipeline:
         # (F-076 R7, R14) Normalizar la partida ANTES de la rama
         # no_contract, de IA4 y de las reglas; desde aquí se valora (y se
         # persiste) el sobre normalizado.
-        normalizacion = self._normalizar_partidas(request.document_id, envelope)
+        memo_obra: dict[str, Any] = {}
+        normalizacion = self._normalizar_partidas(request.document_id, envelope, memo_obra)
         envelope = normalizacion.envelope
+        # (F-111 R20) Residuos sin partida: la del capítulo de gestión de
+        # residuos, ANTES de la valoración directa, de IA4 y del build.
+        residuos = self._asignar_partida_residuos(request.document_id, envelope, memo_obra)
+        envelope = residuos.envelope
 
         # (F-075 R5) Sin contrato y con importes leídos: valoración directa.
         if self._valoracion_directa.aplica(envelope):
-            return self._persistir_directa(request.document_id, envelope, normalizacion)
+            return self._persistir_directa(request.document_id, envelope, normalizacion, residuos)
 
         # Caso "no contrato seleccionado".
         if envelope.status == "no_contract":
@@ -259,6 +315,7 @@ class RunValuationPipeline:
         header, lines = self._builder.build(
             envelope=envelope,
             existing_document_already_valued=request.line_already_valued,
+            sin_almacen=residuos.sin_almacen,
         )
         # (F-078 R4) Cada fila se guarda con lo que la ficha va a enseñar
         # (concepto, unidad, precio, unidad del albarán y Q sin conversión).
@@ -268,6 +325,8 @@ class RunValuationPipeline:
         # y la partida leída de vuelta en ``codigo_partida_albaran``. Modifica
         # los registros en su sitio (no reasigna ``lines``).
         NormalizadorPartidas.anotar(header, lines, normalizacion)
+        # (F-111 R23, R25-R27) Rastro de la partida de residuos.
+        AsignadorPartidaResiduos.anotar(header, lines, residuos)
         # (F-075 R12) El valorado se aparta del importe leído del albarán:
         # a revisión, sin tocar importes ni sintéticas.
         anotar_valorado_distinto(header, envelope)
@@ -319,6 +378,7 @@ class RunValuationPipeline:
         document_id: str,
         envelope: Any,
         normalizacion: NormalizacionSobre,
+        residuos: AsignacionResiduos | None = None,
     ) -> RunValuationResult:
         """(F-075 R5–R7) Persiste la valoración directa: sin IA, sin contrato y
         sin sintéticas. Pasa por ``completar_registros`` (F-078) y por
@@ -326,6 +386,8 @@ class RunValuationPipeline:
         cabecera, directas = self._valoracion_directa.construir(envelope, document_id)
         directas = completar_registros(directas, envelope)
         NormalizadorPartidas.anotar(cabecera, directas, normalizacion)
+        if residuos is not None:
+            AsignadorPartidaResiduos.anotar(cabecera, directas, residuos)
         cabecera.raw_ia_envelope_json = envelope.model_dump_json()
         logger.info(
             "[run-valuation] document_id=%s sin contrato y con importes "

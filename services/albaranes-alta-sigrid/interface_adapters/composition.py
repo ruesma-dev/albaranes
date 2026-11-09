@@ -56,7 +56,7 @@ def construir_servicio(
         repo=SqlAltaRepository(SessionFactoryDesdeEngine(engine)),
         sigrid=sigrid or construir_desde_settings(settings),
         pdf=pdf or _pdf(settings),
-        config=ConfigAlta(mapeo=settings.mapeo_producto),
+        config=ConfigAlta(mapeo=settings.mapeo_producto, enviar_dto=settings.enviar_dto),
         usuario_respaldo=settings.usuario_respaldo,
         modo=ModoAlta(settings.modo),
         desde=settings.desde,

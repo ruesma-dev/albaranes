@@ -2,7 +2,7 @@
 # F-053: pone EN CALIENTE los ajustes del alta en Sigrid en sv4 Y sv9 con
 # LOS MISMOS valores (design §7), leidos de un solo sitio: el bloque F-053 de
 # 00_capps_vars.ps1 (ALTA_SIGRID_DESDE_UTC, _ESPERA_INCIERTO_MIN y
-# _PRODUCTO_POR_DEFECTO; en sv9 tambien _USUARIO_RESPALDO y, desde F-069,
+# _PRODUCTO_POR_DEFECTO y, desde F-110, _ENVIAR_DTO; en sv9 tambien _USUARIO_RESPALDO y, desde F-069,
 # _EQUIVALENCIAS_USUARIO; _EMPIDE ya no se pasa). NO lo ejecuta ningun agente.
 #
 #   . .\00_vars.ps1
@@ -45,7 +45,7 @@ function Leer($app, $nombre) {
         --query "properties.template.containers[0].env[?name=='$nombre'].value | [0]" -o tsv 2>$null
 }
 Write-Host "`nComprobacion (lo que quedo en cada app):" -ForegroundColor Yellow
-foreach ($nombre in @("ALTA_SIGRID_DESDE_UTC", "ALTA_SIGRID_ESPERA_INCIERTO_MIN", "ALTA_SIGRID_PRODUCTO_POR_DEFECTO")) {
+foreach ($nombre in @("ALTA_SIGRID_DESDE_UTC", "ALTA_SIGRID_ESPERA_INCIERTO_MIN", "ALTA_SIGRID_PRODUCTO_POR_DEFECTO", "ALTA_SIGRID_ENVIAR_DTO")) {
     $v9 = Leer $Sv9 $nombre; $v4 = Leer $Sv4 $nombre
     $marca = if ($v9 -eq $v4) { "OK " } else { "DISTINTOS" }
     Write-Host ("  {0,-34} sv9='{1}'  sv4='{2}'  {3}" -f $nombre, $v9, $v4, $marca)

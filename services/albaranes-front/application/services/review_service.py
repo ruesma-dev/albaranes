@@ -16,6 +16,7 @@ from ruesma_comun.alta_sigrid import (
 from ruesma_comun.sigrid import ListaPartidasObra
 
 from application.services.busqueda_contratos import (
+    cambio_de_cabecera,
     debe_relanzar_busqueda,
     hay_datos_para_buscar,
 )
@@ -76,6 +77,10 @@ class ResultadoGuardado:
     detail: DocumentDetailPayload
     busqueda: ContratoRefetchOutcome | None
     aprobacion: ResultadoAprobacion
+    # (F-115 R11) El contrato que el guardado quitó por no ser del proveedor
+    # y la obra guardados, y qué cambió (``proveedor`` u ``obra``).
+    contrato_retirado: str | None = None
+    cambio: str | None = None
 
 
 @dataclass(frozen=True)
@@ -264,7 +269,50 @@ class ReviewService:
             document_id=document_id, payload=payload, detail=detail,
             refetch_client=refetch_client,
         )
-        return ResultadoGuardado(detail=detail, busqueda=busqueda, aprobacion=aprobacion)
+        retirado = getattr(detail, "contrato_retirado", None)
+        return ResultadoGuardado(
+            detail=detail, busqueda=busqueda, aprobacion=aprobacion,
+            contrato_retirado=retirado,
+            cambio=(
+                cambio_de_cabecera(detail.proveedor_cif, detail.busqueda_contratos)
+                if retirado else None
+            ),
+        )
+
+    #: (F-116 R6) Etiquetas del deshacer, en el orden de la ficha.
+    ETIQUETAS_CABECERA = {
+        "fecha": "Fecha", "numero_albaran": "Número",
+        "forma_pago": "Forma de pago", "review_notes": "Notas",
+    }
+
+    def editar_cabecera(
+        self, *, document_id: str, campos: dict[str, str | None],
+    ) -> dict[str, str | None]:
+        """(F-116 R1, R6) Autoguardado de la cabecera: guarda solo ``campos``
+        (ver ``update_cabecera_campos``) y deja una entrada de deshacer
+        «Editar cabecera · {campos}» que devuelve la cabecera a como estaba.
+        Sin campos no escribe ni registra nada."""
+        if not campos:
+            return {}
+        snap = self._repository.snapshot_row(
+            table="albaran_documents_merge", row_id=document_id,
+        )
+        guardado = self._repository.update_cabecera_campos(
+            document_id=document_id, campos=campos,
+        )
+        nombres = ", ".join(
+            etiqueta for campo, etiqueta in self.ETIQUETAS_CABECERA.items() if campo in campos
+        )
+        self._repository.record_undo(
+            document_id=document_id,
+            action="cabecera",
+            description=(
+                f"Editar cabecera · {nombres} "
+                f"({self._repository.doc_label(document_id=document_id)})"
+            ),
+            restore=[snap],
+        )
+        return guardado
 
     def save_document_y_buscar_si_cambia(
         self,
@@ -448,6 +496,7 @@ class ReviewService:
         valuation_line_id: int,
         campos: dict | None = None,
         bloquear: bool = False,
+        cuadrar: str | None = None,
     ) -> bool:
         """Edición de una fila con SOLO los campos cambiados (F-065 R8) y,
         con ``bloquear``, «Guardar» = aplicar y bloquear (R13). Una entrada
@@ -455,7 +504,10 @@ class ReviewService:
 
         (F-098 R25, R26) Una partida no vacía se guarda como el cod de la
         lista de la obra si casa (``CD.99.01.64`` ⇒ ``99.01.64``); así el
-        repositorio decide Contrato/Nueva con el cod."""
+        repositorio decide Contrato/Nueva con el cod.
+
+        (F-106 R4, R9) ``cuadrar`` (``importe`` o ``precio``): los botones de
+        una fila que no cuadra. ``NoDespejable`` sube tal cual (422)."""
         partida = (campos or {}).get("codigo_partida")
         if isinstance(partida, str) and partida.strip():
             campos = {**campos, "codigo_partida": self._traducir(document_id, partida)}
@@ -467,6 +519,7 @@ class ReviewService:
             valuation_line_id=valuation_line_id,
             campos=campos,
             bloquear=bloquear,
+            cuadrar=cuadrar,
         )
         if ok:
             self._repository.record_undo(
@@ -474,6 +527,28 @@ class ReviewService:
                 action="linea_edit",
                 description=(
                     f"{'Guardar' if bloquear else 'Editar'} línea · {etiqueta} "
+                    f"({self._repository.doc_label(document_id=document_id)})"
+                ),
+                restore=[snap_line, snap_val],
+            )
+        return ok
+
+    def volver_a_calculado(self, *, document_id: str, valuation_line_id: int) -> bool:
+        """(F-106 R30) «Volver a lo calculado»: la fila vuelve a lo que calculó
+        sv6, sin edición y desbloqueada. Una entrada de deshacer que devuelve la
+        fila (con su edición) y el total a como estaban."""
+        etiqueta = self._undo_line_desc(valuation_line_id)
+        snap_line = self._undo_snap_line(valuation_line_id)
+        snap_val = self._undo_snap_valuation(document_id)
+        ok = self._repository.volver_a_calculado(
+            document_id=document_id, valuation_line_id=valuation_line_id,
+        )
+        if ok:
+            self._repository.record_undo(
+                document_id=document_id,
+                action="volver_a_calculado",
+                description=(
+                    f"Volver a lo calculado · {etiqueta} "
                     f"({self._repository.doc_label(document_id=document_id)})"
                 ),
                 restore=[snap_line, snap_val],

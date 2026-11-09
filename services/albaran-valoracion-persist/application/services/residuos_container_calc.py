@@ -13,12 +13,7 @@ prioridades 2 y 3 INTERCAMBIADO por decisión del humano del 2026-08-19
     1) contenedores EXPLICITOS del albaran
        (contexto_linea.contenedores) -> ese numero, tal cual.
     2) num_contenedores = ceil(volumen_m3 / m3_por_contenedor), con
-       el tamano elegido asi: si los m3 del albaran COINCIDEN con un
-       tamano del contrato, ESE (8 m3 con contenedores de 6 y 8 ->
-       el de 8, 1 ud); si no coinciden con ninguno -> 6 m3 (el
-       contenedor ESTANDAR: 7 m3 con contenedores de 6 y 8 -> 2 de
-       6); un unico tamano en contrato -> ese; y ante CUALQUIER
-       duda restante -> 6 m3 por defecto.
+       el tamano elegido por F-111 (ver abajo).
     3) resta unidades LLEVADAS - RETIRADAS
        (contenedores_entregados - contenedores_retirados) cuando
        AMBAS vienen y la resta es >= 1.
@@ -29,12 +24,29 @@ qué ser lo que se factura; el volumen es un dato impreso del documento.
 Un albarán con 12 m³ y "llevadas 2 / retiradas 1" se factura por los 12
 m³ —2 contenedores de 6—, no por el 1 de la resta.
 
-donde ``m3_por_contenedor_contrato`` se lee de la descripción de la línea
-de contrato casada (p.ej. "CONTENEDOR RCD 6 M3" → 6). Si no hay m³ en el
-albarán ni resta utilizable, se devuelve ``num_contenedores=None`` y la
-razón ``residuos_sin_volumen_m3`` para que la línea vaya a revisión
-(NUNCA se inventa un número de la nada; el 6 m3 por defecto solo se
-aplica cuando HAY volumen que repartir).
+TAMAÑO DEL CONTENEDOR (F-111, regla del humano del 2026-10-29). Las
+fuentes, por orden (R8): los m³ de las líneas de CONTENEDOR de la tabla
+del contrato > el ``contenedor_m3`` que IA3 leyó del contrato > los m³
+de la descripción de la línea casada > el estándar. Un tamaño único es
+una lista de uno.
+
+- El contrato da tamaños: el MÁS PEQUEÑO de ellos en el que caben los
+  m³ (1 contenedor). Si no caben en ninguno (D2): paquetes de 6 si el
+  contrato tiene el de 6; si no, paquetes del mayor.
+- El contrato no da tamaños: los contenedores son de 3, 6 o 9 m³ y se
+  elige el más pequeño en el que caben (≤3 → 3, ≤6 → 6, ≤9 → 9, un
+  contenedor); con más de 9 m³, ceil(m³ / 6) contenedores de 6, sin
+  mezclar tamaños. Motivo ``residuos_tamano_estandar=<t>m3``.
+
+El PRECIO es siempre el de la línea casada (el precio general del
+contrato): cambia la cantidad, no el precio. Si el tamaño elegido no es
+el que dice la descripción de la casada, la línea va a revisión con
+``residuos_tamano_distinto_de_casada=<elegido>/<casada>`` (R9) sin
+cambiar la casada ni su precio.
+
+Si no hay m³ en el albarán ni resta utilizable, se devuelve
+``num_contenedores=None`` y la razón ``residuos_sin_volumen_m3`` para
+que la línea vaya a revisión (NUNCA se inventa un número de la nada).
 
 Los NOMBRES de las ``reasons`` no cambiaron con el intercambio: hay
 código aguas arriba (``valuation_builder``) que los inspecciona por
@@ -53,9 +65,17 @@ from typing import Any, Optional
 # Deliberadamente permisiva; es un punto a afinar con descripciones reales.
 _M3_REGEX = re.compile(r"(\d+(?:[.,]\d+)?)\s*m\s*[3³c]", re.IGNORECASE)
 
-# Contenedor ESTANDAR (jul 2026): valor por defecto ante cualquier
-# duda sobre el tamano (regla de negocio Ruesma).
-_CONTENEDOR_ESTANDAR_M3 = 6.0
+# (F-111 R1, R2) Tamaños estándar cuando el contrato no da ninguno, y el
+# del paquete cuando los m³ no caben en el mayor.
+_TAMANOS_ESTANDAR = (3.0, 6.0, 9.0)
+_TAMANO_PAQUETE = 6.0
+# Tolerancia de m³ (la de siempre, 0,01): los m³ y los tamaños se comparan
+# redondeados a 2 decimales.
+_DECIMALES_M3 = 2
+#: (F-111 R3) Motivo sin revisión: ``residuos_tamano_estandar=<t>m3``.
+MOTIVO_TAMANO_ESTANDAR = "residuos_tamano_estandar"
+#: (F-111 R9) Motivo con revisión: ``residuos_tamano_distinto_de_casada=<e>/<c>``.
+MOTIVO_TAMANO_DISTINTO_DE_CASADA = "residuos_tamano_distinto_de_casada"
 # Volumen maximo PLAUSIBLE de un albaran de contenedores (jul 2026,
 # caso real: IA2 puso las 29 Tn como volumen y salieron contenedores
 # fantasma). Por encima se sigue calculando pero se marca revision:
@@ -69,6 +89,8 @@ class ResultadoContenedores:
     volumen_m3: Optional[float]
     contenedor_m3: Optional[float]
     reasons: list[str] = field(default_factory=list)
+    #: (F-111 R9) La línea debe ir a revisión por el tamaño elegido.
+    revision: bool = False
 
 
 def _parse_m3(texto: Optional[str]) -> Optional[float]:
@@ -94,19 +116,35 @@ def _tamano_contenedor(contrato_line: Any) -> Optional[float]:
     )
 
 
-def _elegir_contenedor(contrato_lines: Any, m3: float) -> Optional[float]:
-    """m³ por contenedor eligiendo de las líneas de contrato (determinista).
+def _caben(m3: float, tamano: float) -> bool:
+    """Los m³ caben en el contenedor (a 0,01 m³: 6,004 caben en el de 6)."""
+    return round(m3, _DECIMALES_M3) <= round(tamano, _DECIMALES_M3)
 
-    Regla de negocio (jul 2026): si hay un contenedor cuyo tamaño
-    COINCIDE con los m³ del albarán, usa ese; si no coincide ninguno y
-    el contrato tiene el de 6 m³, usa el 6 (estándar); un único tamaño
-    en contrato → ese; varios sin exacto y sin 6 → None (caerá al de
-    la línea casada / IA y, en última instancia, al 6 por defecto).
+
+def _elegir_tamano(tamanos: list[float], m3: float) -> tuple[int, float]:
+    """(F-111 R1, R2, R6, R7) ``(nº de contenedores, tamaño)`` para ``m3``.
+
+    ``tamanos`` vacía ⇒ los estándar 3/6/9: el más pequeño en el que caben,
+    1 contenedor; si no caben, paquetes de 6. Con tamaños (los del
+    contrato) ⇒ el más pequeño en el que caben, 1 contenedor; si no caben
+    en ninguno (D2), paquetes de 6 si está el de 6 y, si no, del mayor.
+    Nunca mezcla tamaños.
     """
-    if not contrato_lines:
-        return None
-    contenedores: list[float] = []
-    for l in contrato_lines:
+    lista = sorted(tamanos) if tamanos else list(_TAMANOS_ESTANDAR)
+    for tamano in lista:
+        if _caben(m3, tamano):
+            return 1, tamano
+    if not tamanos or any(round(t, _DECIMALES_M3) == _TAMANO_PAQUETE for t in lista):
+        paquete = _TAMANO_PAQUETE
+    else:
+        paquete = lista[-1]
+    return int(math.ceil(round(m3, _DECIMALES_M3) / paquete)), paquete
+
+
+def _tamanos_del_contrato(contrato_lines: Any) -> list[float]:
+    """(F-111 R8) Los m³ de TODAS las líneas «contenedor» de la tabla."""
+    tamanos: list[float] = []
+    for l in contrato_lines or ():
         desc = getattr(l, "descripcion", None) or getattr(
             l, "descripcion_linea", None
         )
@@ -114,20 +152,17 @@ def _elegir_contenedor(contrato_lines: Any, m3: float) -> Optional[float]:
             continue
         size = _parse_m3(desc)
         if size and size > 0:
-            contenedores.append(size)
-    if not contenedores:
+            tamanos.append(size)
+    return tamanos
+
+
+def _tamano_ia(valor_leido: Any) -> Optional[float]:
+    """El tamaño si es un número positivo (el de IA3 o el de la casada)."""
+    try:
+        valor = float(valor_leido)
+    except (TypeError, ValueError):
         return None
-    for size in contenedores:
-        if abs(size - m3) < 0.01:      # tamaño exacto -> ese
-            return size
-    unicos = set(contenedores)
-    if len(unicos) == 1:               # un solo tipo -> ese
-        return next(iter(unicos))
-    if any(                            # sin exacto -> 6 (estándar)
-        abs(s - _CONTENEDOR_ESTANDAR_M3) < 0.01 for s in unicos
-    ):
-        return _CONTENEDOR_ESTANDAR_M3
-    return None                        # varios, sin exacto ni 6
+    return valor if valor > 0 else None
 
 
 def calcular_contenedores_residuos(
@@ -194,22 +229,18 @@ def calcular_contenedores_residuos(
             reasons=["residuos_sin_volumen_m3"],
         )
 
-    # Prioridad: el tamaño que fijó la IA leyendo el contrato (regla
-    # exacto/por-defecto). Fallback: parseo de la descripción de la línea
-    # de contrato casada (por si la IA no lo emite).
-    # Prioridad del tamaño de contenedor:
-    #   1) escaneo DETERMINISTA de las líneas de contrato (regla exacto/
-    #      por-defecto) -> lo más fiable si están estructuradas;
-    #   2) el que fijó la IA leyendo el PDF (contenedor_m3_ia);
-    #   3) regex sobre la descripción de la línea de contrato casada.
-    tam = _elegir_contenedor(contrato_lines, m3)
-    if (tam is None or tam <= 0) and contenedor_m3_ia is not None:
-        try:
-            tam = float(contenedor_m3_ia)
-        except (TypeError, ValueError):
-            tam = None
-    if tam is None or tam <= 0:
-        tam = _tamano_contenedor(contrato_line)
+    # Tamaño del contenedor (F-111 R8): tabla del contrato > IA3 >
+    # descripción de la línea casada > estándar 3/6/9.
+    casada_m3 = _tamano_ia(_tamano_contenedor(contrato_line))
+    tamanos = _tamanos_del_contrato(contrato_lines)
+    if not tamanos:
+        ia = _tamano_ia(contenedor_m3_ia)
+        if ia is not None:
+            tamanos = [ia]
+        elif casada_m3 is not None:
+            tamanos = [casada_m3]
+    num, tam = _elegir_tamano(tamanos, m3)
+
     razon_defecto: list[str] = []
     if m3 > _VOLUMEN_MAX_PLAUSIBLE_M3:
         # Sanity (jul 2026): un albaran de contenedores rara vez
@@ -221,14 +252,15 @@ def calcular_contenedores_residuos(
             f"residuos_volumen_implausible={m3:g}m3"
             " (posible peso en Tn colado en volumen; revisar)"
         )
-    if tam is None or tam <= 0:
-        # Regla de negocio (jul 2026): ante CUALQUIER duda sobre el
-        # tamaño, el contenedor estándar de 6 m³. Con volumen sobre
-        # la mesa NUNCA se deja la línea sin número.
-        tam = _CONTENEDOR_ESTANDAR_M3
-        razon_defecto.append("residuos_tamano_defecto_6m3")
+    if not tamanos:
+        razon_defecto.append(f"{MOTIVO_TAMANO_ESTANDAR}={tam:g}m3")
+    revision = False
+    if casada_m3 is not None and round(casada_m3, _DECIMALES_M3) != round(tam, _DECIMALES_M3):
+        razon_defecto.append(
+            f"{MOTIVO_TAMANO_DISTINTO_DE_CASADA}={tam:g}/{casada_m3:g}"
+        )
+        revision = True
 
-    num = int(math.ceil(m3 / tam))
     return ResultadoContenedores(
         num_contenedores=num,
         volumen_m3=m3,
@@ -237,4 +269,5 @@ def calcular_contenedores_residuos(
             f"residuos_contenedores={num} "
             f"(m3={m3:g} / contenedor={tam:g} m3)"
         ],
+        revision=revision,
     )

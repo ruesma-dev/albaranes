@@ -1,0 +1,399 @@
+# application/services/partida_residuos.py
+"""(F-111 partes B y C) Una línea de residuos sin partida NO va a almacén.
+
+Regla del humano (2026-10-29): «si no tienen partida no van a almacén sino que
+busque la partida en el capítulo de gestión de residuos». Tras la
+normalización de F-076 y ANTES de la valoración directa, de IA4 y del build,
+:meth:`AsignadorPartidaResiduos.asignar` busca partida a cada línea de familia
+efectiva ``residuos`` que llega sin partida leída (vacía; la de almacén
+``ALM_CODIGO_PARTIDA`` es una lectura y no se toca), en TRES pasos decididos
+una vez por documento (parte C, humano 2026-11-05: «que mire primero en las
+líneas del contrato si tiene partida; si es de gestión de residuos que coja
+esa, y si no que busque»):
+
+1. Las partidas del contrato (:func:`partidas_del_contrato`: las de las líneas
+   de contrato del sobre que casan con UNA hoja de la obra) que son del
+   capítulo de gestión de residuos (:func:`ruesma_comun.sigrid.candidatas_residuos`)
+   ⇒ ``partida_residuos_contrato:<cod>`` (R38).
+2. Si ninguna lo es, todas las del contrato (D1=b)
+   ⇒ ``partida_residuos_contrato_hoja:<cod>`` (R39).
+3. Si el contrato no aporta ninguna, las hojas del capítulo
+   ⇒ ``partida_residuos:<cod>`` (R40, la parte B).
+
+En cada paso:
+
+- 1 partida ⇒ esa, sin IA (R21).
+- 2 o más ⇒ la IA de sv5 elige por significado SOLO entre esas, en UNA
+  llamada (``EligePartidaPort``); solo vale un código del conjunto (R22, R34).
+- (R41, R43) Si en el paso 1 o 2 la IA no elige, elige fuera o falla, esas
+  líneas caen al paso 3 (segunda llamada como mucho) con el rastro sin
+  revisión ``partida_residuos_contrato_sin_eleccion:<cods>``.
+- En el paso 3: 0 candidatas ⇒ ``partida_residuos_sin_capitulo`` (R25); la IA
+  no elige o elige algo que no es candidata ⇒ ``partida_residuos_sin_candidata``;
+  la IA falla ⇒ ``partida_residuos_ia_fallo`` (R26); sin lista de la obra ⇒
+  ``partida_residuos_sin_lista`` (R27, R44: nunca una partida del contrato sin
+  validar). Todas a revisión y NUNCA a almacén: sus ``merge_line_id`` van en
+  :attr:`AsignacionResiduos.sin_almacen`, que el builder pasa al
+  ``PartidaMatcher`` para saltarse la rama de F-051.
+
+La partida asignada entra en una COPIA del sobre (como F-076) y se valora como
+si se hubiera leído; :meth:`AsignadorPartidaResiduos.anotar` deja después el
+rastro del paso (sin revisión, D4) y devuelve a
+``codigo_partida_albaran`` la lectura (vacía): leída ≠ decisión.
+``PARTIDA_RESIDUOS_ENABLED=false`` apaga todo (R29). Sin I/O propio.
+"""
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from typing import Any
+
+from ruesma_comun.sigrid import (
+    ListaPartidasObra,
+    PartidaObra,
+    candidatas_residuos,
+    normalizar_partida,
+    resolver_partida_obra,
+)
+
+from application.services.almacen_politica import ACCION_ALMACEN_SIN_PARTIDA
+from application.services.valuation_builder import _familia_de
+from domain.models.valuation_envelope import ValuationEnvelope
+from domain.models.valuation_records import LineValuationRecord, ValuationHeaderRecord
+from domain.ports.elige_partida_port import EligePartidaPort
+from domain.ports.partidas_obra_port import PartidasObraPort
+
+logger = logging.getLogger(__name__)
+
+#: (R23) Rastro sin revisión de una partida asignada: ``partida_residuos:<cod>``.
+PREFIJO_PARTIDA_RESIDUOS = "partida_residuos:"
+#: (R42, parte C) Paso 1: la partida del contrato es del capítulo de residuos.
+PREFIJO_PARTIDA_RESIDUOS_CONTRATO = "partida_residuos_contrato:"
+#: (R42, parte C) Paso 2: la partida del contrato es otra hoja de la obra.
+PREFIJO_PARTIDA_RESIDUOS_CONTRATO_HOJA = "partida_residuos_contrato_hoja:"
+#: (R43, parte C) La IA no eligió entre las del contrato: la línea cayó al
+#: capítulo. Rastro sin revisión, con los códigos del conjunto.
+MOTIVO_CONTRATO_SIN_ELECCION = "partida_residuos_contrato_sin_eleccion"
+#: (R25) La obra no tiene capítulo de gestión de residuos.
+MOTIVO_SIN_CAPITULO = "partida_residuos_sin_capitulo"
+#: (R26) La IA no eligió ninguna candidata (o eligió algo que no lo es).
+MOTIVO_SIN_CANDIDATA = "partida_residuos_sin_candidata"
+#: (R26) La IA falló (sv5 caído, sin proveedor, sin el endpoint).
+MOTIVO_IA_FALLO = "partida_residuos_ia_fallo"
+#: (R27) No hay lista de partidas de la obra.
+MOTIVO_SIN_LISTA = "partida_residuos_sin_lista"
+#: Cuántos códigos de candidata se citan en el motivo (R26).
+MAX_CANDIDATAS_EN_MOTIVO = 5
+#: El motivo de cabecera que el builder pone cuando alguna línea va a revisión.
+_MOTIVO_CABECERA_REVISION = "at_least_one_line_requires_review"
+_FAMILIA_RESIDUOS = "residuos"
+#: (R46) El paso con el que se decidió el documento, para el log.
+_PASO_CONTRATO = "contrato"
+_PASO_CONTRATO_HOJA = "contrato_hoja"
+_PASO_CAPITULO = "capitulo"
+
+
+@dataclass(frozen=True)
+class ResultadoPartidaResiduos:
+    """Qué se decidió para UNA línea."""
+
+    #: Código asignado (de la lista de la obra) o ``None``.
+    codigo: str | None
+    #: ``partida_residuos:<cod>`` o el motivo de revisión.
+    motivo: str
+    #: La lectura con la que llegó (vacía), para devolverla al registro.
+    leida: str | None = None
+    #: (R43) ``partida_residuos_contrato_sin_eleccion:<cods>`` si la línea cayó
+    #: al capítulo porque la IA no eligió entre las del contrato.
+    intento: str | None = None
+
+    @property
+    def revision(self) -> bool:
+        return self.codigo is None
+
+
+@dataclass(frozen=True)
+class AsignacionResiduos:
+    """Resultado de :meth:`AsignadorPartidaResiduos.asignar`."""
+
+    #: El sobre con el que se valora (copia con las partidas asignadas, o el
+    #: original si no cambia nada).
+    envelope: ValuationEnvelope
+    #: ``merge_line_id`` ⇒ decisión, solo de las líneas buscadas.
+    por_linea: dict[int, ResultadoPartidaResiduos] = field(default_factory=dict)
+    #: Líneas buscadas SIN partida: el builder no las manda a almacén (D5).
+    sin_almacen: frozenset[int] = frozenset()
+
+
+def _motivo_con_candidatas(motivo: str, candidatas: tuple[PartidaObra, ...]) -> str:
+    codigos = [c.codigo for c in candidatas]
+    citados = ",".join(codigos[:MAX_CANDIDATAS_EN_MOTIVO])
+    resto = len(codigos) - MAX_CANDIDATAS_EN_MOTIVO
+    return f"{motivo}:{citados}" + (f"(+{resto})" if resto > 0 else "")
+
+
+#: Motivos de :func:`resolver_partida_obra` con los que una lectura es UNA hoja.
+_RESOLUCIONES_HOJA = frozenset({"exacta", "normalizada"})
+
+
+def partidas_del_contrato(
+    lineas_contrato: Any, lista: ListaPartidasObra, alm: str | None,
+) -> tuple[PartidaObra, ...]:
+    """(R37) Las hojas de la obra que traen las líneas de contrato del sobre.
+
+    Por cada ``codigo_partida``, :func:`resolver_partida_obra`: vale si
+    casa exacta o normalizada con UNA hoja y su cod no está repetido en la obra
+    (F-098 R12). Fuera las vacías, las ``alm``, las que no casan, las ambiguas y
+    las que chocan con un no hoja. Sin duplicados (dos lecturas de la misma hoja
+    cuentan una vez), en el orden de la primera línea que la trae. Nada de
+    parecidos ni prefijos.
+    """
+    # Una lectura vacía es ``no_aplica`` en :func:`resolver_partida_obra`; el
+    # dict deduplica y conserva el orden de la primera aparición.
+    vistas: dict[str, PartidaObra] = {}
+    for linea in lineas_contrato or ():
+        resolucion = resolver_partida_obra(lista, getattr(linea, "codigo_partida", None), alm)
+        codigo = resolucion.codigo
+        if resolucion.motivo not in _RESOLUCIONES_HOJA or lista.cod_repetido(codigo):
+            continue
+        vistas[codigo] = next(h for h in lista.hojas if h.codigo == codigo)
+    return tuple(vistas.values())
+
+
+class AsignadorPartidaResiduos:
+    """Partida (del contrato o del capítulo de residuos) para las líneas sin partida."""
+
+    def __init__(
+        self,
+        *,
+        partidas: PartidasObraPort | None,
+        elector: EligePartidaPort | None,
+        alm_codigo_partida: str,
+        activo: bool,
+    ) -> None:
+        self._partidas = partidas
+        self._elector = elector
+        # (R37) Un ``ALM`` en el contrato es ``no_aplica``, no una hoja. En el
+        # albarán, ``ALM`` es una lectura (no vacía) y no se busca (R28).
+        self._alm = alm_codigo_partida
+        self._activo = bool(activo)
+
+    # ------------------------------------------------------------------ #
+    def _objetivo(self, envelope: ValuationEnvelope) -> list[Any]:
+        """(R20) Las líneas de residuos sin partida leída (ni vacía ni ALM)."""
+        if not self._activo:
+            return []
+        clasificacion = getattr(envelope.context, "clasificacion", None)
+        return [
+            linea
+            for linea in envelope.context.lineas_albaran
+            if normalizar_partida(linea.codigo_partida_albaran) is None
+            and _familia_de(linea.contexto_linea, clasificacion) == _FAMILIA_RESIDUOS
+        ]
+
+    def necesita_obra(self, envelope: ValuationEnvelope) -> bool:
+        """Encendido y con alguna línea de residuos sin partida (R20, R30)."""
+        return bool(self._objetivo(envelope))
+
+    def degradada(self, envelope: ValuationEnvelope) -> AsignacionResiduos:
+        """(R27) Algo falló: el sobre tal cual y todas las buscadas sin lista."""
+        return self._sin_asignar(envelope, self._objetivo(envelope), MOTIVO_SIN_LISTA)
+
+    @staticmethod
+    def _sin_asignar(envelope: ValuationEnvelope, lineas: list[Any], motivo: str) -> AsignacionResiduos:
+        por_linea = {
+            l.merge_line_id: ResultadoPartidaResiduos(None, motivo, l.codigo_partida_albaran)
+            for l in lineas
+        }
+        return AsignacionResiduos(
+            envelope=envelope, por_linea=por_linea, sin_almacen=frozenset(por_linea),
+        )
+
+    # ------------------------------------------------------------------ #
+    def asignar(self, *, envelope: ValuationEnvelope, obra: str | None) -> AsignacionResiduos:
+        """(R20–R27, R38–R44) El sobre con el que se valora y la decisión por línea."""
+        lineas = self._objetivo(envelope)
+        if not lineas:
+            return AsignacionResiduos(envelope=envelope)
+        documento = envelope.meta.document_id
+        obra_limpia = (obra or "").strip() or None
+        lista = (
+            self._partidas.lista(obra_limpia)
+            if self._partidas is not None and obra_limpia is not None
+            else None
+        )
+        if lista is None:
+            logger.warning(
+                "[partida-residuos] document_id=%s obra=%s: sin lista de la obra; "
+                "%s líneas de residuos a revisión (%s).",
+                documento, obra_limpia, len(lineas), MOTIVO_SIN_LISTA,
+            )
+            return self._sin_asignar(envelope, lineas, MOTIVO_SIN_LISTA)
+
+        capitulo = candidatas_residuos(lista)
+        contrato = partidas_del_contrato(envelope.context.lineas_contrato, lista, self._alm)
+        del_capitulo = {c.codigo for c in capitulo}
+        paso1 = tuple(c for c in contrato if c.codigo in del_capitulo)
+        if paso1:  # (R38) del contrato y del capítulo
+            paso, conjunto, prefijo = _PASO_CONTRATO, paso1, PREFIJO_PARTIDA_RESIDUOS_CONTRATO
+        elif contrato:  # (R39, D1=b) del contrato, otra hoja de la obra
+            paso, conjunto, prefijo = (
+                _PASO_CONTRATO_HOJA, contrato, PREFIJO_PARTIDA_RESIDUOS_CONTRATO_HOJA,
+            )
+        else:  # (R40) el contrato no aporta ninguna: la parte B tal cual
+            paso, conjunto, prefijo = _PASO_CAPITULO, capitulo, PREFIJO_PARTIDA_RESIDUOS
+
+        por_linea, pendientes, motivo_no = self._resolver(documento, lineas, conjunto, prefijo)
+        intento: str | None = None
+        caidas = 0
+        if pendientes and paso != _PASO_CAPITULO:
+            # (R41, R43) La IA no eligió entre las del contrato: esas líneas, y
+            # solo esas, caen al capítulo (segunda llamada como mucho).
+            intento = _motivo_con_candidatas(MOTIVO_CONTRATO_SIN_ELECCION, conjunto)
+            caidas = len(pendientes)
+            del_cap, pendientes, motivo_no = self._resolver(
+                documento, pendientes, capitulo, PREFIJO_PARTIDA_RESIDUOS, intento,
+            )
+            por_linea.update(del_cap)
+        for linea in pendientes:
+            por_linea[linea.merge_line_id] = ResultadoPartidaResiduos(
+                None, motivo_no, linea.codigo_partida_albaran, intento,
+            )
+
+        posiciones = {id(l): i for i, l in enumerate(envelope.context.lineas_albaran)}
+        nuevas = {  # posición ⇒ código asignado
+            posiciones[id(l)]: por_linea[l.merge_line_id].codigo
+            for l in lineas
+            if por_linea[l.merge_line_id].codigo is not None
+        }
+        logger.info(
+            "[partida-residuos] document_id=%s obra=%s paso=%s candidatas=%s asignadas=%s "
+            "a_revision=%s caidas_al_capitulo=%s",
+            documento, lista.obra, paso, len(conjunto), len(nuevas), len(por_linea) - len(nuevas),
+            caidas,
+        )
+        sin_almacen = frozenset(k for k, v in por_linea.items() if v.codigo is None)
+        if not nuevas:
+            return AsignacionResiduos(envelope=envelope, por_linea=por_linea, sin_almacen=sin_almacen)
+        copia = envelope.model_copy(deep=True)
+        for posicion, codigo in nuevas.items():
+            copia.context.lineas_albaran[posicion].codigo_partida_albaran = codigo
+        return AsignacionResiduos(envelope=copia, por_linea=por_linea, sin_almacen=sin_almacen)
+
+    def _resolver(
+        self,
+        documento: str,
+        lineas: list[Any],
+        conjunto: tuple[PartidaObra, ...],
+        prefijo: str,
+        intento: str | None = None,
+    ) -> tuple[dict[int, ResultadoPartidaResiduos], list[Any], str]:
+        """(R21–R26, R38–R40) Elige entre ``conjunto`` para ``lineas``.
+
+        Devuelve las asignadas (``merge_line_id`` ⇒ resultado con
+        ``<prefijo><cod>``), las que quedan sin asignar y el motivo de revisión
+        que les tocaría: vacío ⇒ ``sin_capitulo``; una ⇒ esa, sin IA; dos o
+        más ⇒ la IA, y solo vale un código de ``conjunto``.
+        """
+        if not conjunto:
+            return {}, list(lineas), MOTIVO_SIN_CAPITULO
+        if len(conjunto) == 1:  # (R21) esa, sin IA
+            elegidas: dict[int, str | None] = {l.merge_line_id: conjunto[0].codigo for l in lineas}
+            motivo_no = MOTIVO_SIN_CANDIDATA
+        else:
+            elegidas, motivo_no = self._elegir_con_ia(documento, lineas, conjunto)
+        codigos = {c.codigo for c in conjunto}
+        asignadas: dict[int, ResultadoPartidaResiduos] = {}
+        pendientes: list[Any] = []
+        for linea in lineas:
+            codigo = elegidas.get(linea.merge_line_id)
+            if codigo in codigos:
+                asignadas[linea.merge_line_id] = ResultadoPartidaResiduos(
+                    codigo, f"{prefijo}{codigo}", linea.codigo_partida_albaran, intento,
+                )
+            else:
+                pendientes.append(linea)
+        return asignadas, pendientes, _motivo_con_candidatas(motivo_no, conjunto)
+
+    def _elegir_con_ia(
+        self, documento: str, lineas: list[Any], candidatas: tuple[PartidaObra, ...],
+    ) -> tuple[dict[int, str | None], str]:
+        """(R22, R26, R34) Una llamada a sv5 con todas las líneas del documento."""
+        if self._elector is None:
+            return {}, MOTIVO_IA_FALLO
+        try:
+            elegidas = self._elector.elegir(
+                document_id=documento,
+                lineas=[
+                    {
+                        "line_ref": l.merge_line_id,
+                        "descripcion": l.descripcion,
+                        "codigo_ler": getattr(l.contexto_linea, "codigo_ler", None),
+                    }
+                    for l in lineas
+                ],
+                candidatas=[
+                    {
+                        "codigo": c.codigo,
+                        "descripcion": c.descripcion,
+                        "descripcion_agregada": c.descripcion_agregada,
+                    }
+                    for c in candidatas
+                ],
+            )
+        except Exception as exc:  # noqa: BLE001 - R26: la IA caída no rompe la valoración
+            logger.warning(
+                "[partida-residuos] document_id=%s la IA no pudo elegir partida (%r); "
+                "a revisión (%s).",
+                documento, exc, MOTIVO_IA_FALLO,
+            )
+            return {}, MOTIVO_IA_FALLO
+        return dict(elegidas), MOTIVO_SIN_CANDIDATA
+
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def anotar(
+        header: ValuationHeaderRecord,
+        lines: list[LineValuationRecord],
+        asignacion: AsignacionResiduos,
+    ) -> None:
+        """(R23, R25–R27) Rastro de la asignación en los registros ya construidos.
+
+        Solo las líneas ``from_albaran`` cuyo ``merge_line_id`` está en
+        ``asignacion.por_linea``; los registros se modifican en su sitio (los
+        motivos, en una lista nueva) y sin duplicar si se anota dos veces.
+
+        - (R43) Si la línea cayó al capítulo, primero su ``intento``
+          (``partida_residuos_contrato_sin_eleccion:<cods>``), solo en la línea
+          y sin revisión.
+        - Asignada ⇒ su rastro (``partida_residuos:<cod>``,
+          ``partida_residuos_contrato:<cod>`` o
+          ``partida_residuos_contrato_hoja:<cod>``) sin revisión y
+          ``codigo_partida_albaran`` vuelve a la lectura (vacía).
+        - Sin asignar ⇒ el motivo en la línea y en la cabecera, más
+          ``review_required`` en las dos (como F-076); si la línea llegó como
+          ``almacen_sin_partida`` (valoración directa), pasa a ``no_action``.
+        """
+        for record in lines:
+            if record.line_kind != "from_albaran" or record.merge_line_id not in asignacion.por_linea:
+                continue
+            resultado = asignacion.por_linea[record.merge_line_id]
+            record.codigo_partida_albaran = resultado.leida
+            if resultado.intento is not None:  # (R43) en la línea, antes del motivo
+                _anadir(record, resultado.intento)
+            _anadir(record, resultado.motivo)
+            if resultado.revision:
+                # (R25, D5) Nunca almacén: la valoración directa (F-075), que
+                # no pasa por el matcher, la marcaría así.
+                if record.partida_action == ACCION_ALMACEN_SIN_PARTIDA:
+                    record.partida_action = "no_action"
+                record.review_required = True
+                _anadir(header, resultado.motivo.split(":", 1)[0])
+                _anadir(header, _MOTIVO_CABECERA_REVISION)
+                header.review_required = True
+
+
+def _anadir(destino: LineValuationRecord | ValuationHeaderRecord, motivo: str) -> None:
+    """Añade ``motivo`` sin duplicar, en una lista NUEVA."""
+    if motivo not in destino.review_reasons:
+        destino.review_reasons = [*destino.review_reasons, motivo]

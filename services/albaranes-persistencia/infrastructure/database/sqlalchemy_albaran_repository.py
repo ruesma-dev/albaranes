@@ -1818,6 +1818,59 @@ class SqlAlchemyAlbaranRepository(AlbaranRepository):
                 )
             session.commit()
 
+    def get_pertenencia_seleccion(
+        self,
+        *,
+        document_id: str,
+    ) -> tuple[str | None, list[tuple[str | None, str | None]]]:
+        """(F-115 R2) Código seleccionado y ``(cif_proveedor, codigo_obra)``
+        de sus filas: las del documento; si no hay, las de ese código en
+        cualquier documento (``LIMIT 20``), igual que el detalle de sv4."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            fila = session.execute(
+                text(
+                    "SELECT selected_contrato_codigo FROM albaran_documents_merge "
+                    "WHERE id = :doc_id"
+                ),
+                {"doc_id": document_id},
+            ).first()
+            codigo = fila[0] if fila else None
+            if not codigo:
+                return None, []
+            propias = session.execute(
+                text(
+                    "SELECT cif_proveedor, codigo_obra FROM albaran_contratos_merge "
+                    "WHERE document_id = :doc_id AND codigo_contrato = :codigo"
+                ),
+                {"doc_id": document_id, "codigo": codigo},
+            ).all()
+            if propias:
+                return codigo, [(c, o) for c, o in propias]
+            ajenas = session.execute(
+                text(
+                    "SELECT cif_proveedor, codigo_obra FROM albaran_contratos_merge "
+                    "WHERE codigo_contrato = :codigo LIMIT 20"
+                ),
+                {"codigo": codigo},
+            ).all()
+            return codigo, [(c, o) for c, o in ajenas]
+
+    def clear_selected_contrato(self, *, document_id: str) -> None:
+        """(F-115 R2) Quita la selección de contrato y su origen."""
+        self.initialize()
+        with self._session_factory.create_session() as session:
+            session.execute(
+                text(
+                    "UPDATE albaran_documents_merge "
+                    "SET selected_contrato_codigo = NULL, "
+                    "    selected_contrato_origen = NULL "
+                    "WHERE id = :doc_id"
+                ),
+                {"doc_id": document_id},
+            )
+            session.commit()
+
     def remove_review_note_prefix(
         self, *, document_id: str, prefijo: str
     ) -> None:
