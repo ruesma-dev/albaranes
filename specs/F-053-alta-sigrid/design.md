@@ -38,6 +38,11 @@ y `lineas[]` casadas por `referencia_linea` (también en `idempotente`); en 400,
 `SIGRID_ALBARAN_PREFIJOS_REFERENCIA=["ALB-"]`, `SIGRID_ALBARAN_EMPRESAS_OBRA=[1]`, `SIGRID_ALBARAN_PRODUCTOS_SIN_CONTRATO`
 (los valores del mapeo de §7) y `SIGRID_ALBARAN_NATURALEZA_POR_PRODUCTO` (`MA99`, `QA99`, `XA99`; H34).
 
+> **Nota (2026-11-09, contrato v8.5):** desde la enmienda 1 de la F-008 de sigrid-api la naturaleza sale de la
+> ficha del producto en la empresa de la obra y `SIGRID_ALBARAN_NATURALEZA_POR_PRODUCTO` ya no se lee (la
+> excepción es `SIGRID_ALBARAN_NATURALEZA_FORZADA`). En la empresa 1, `MA9999` pasa a `MA1501`; `QA99` y `XA99`
+> no cambian. Sin efecto en sv9 ni en sv4. Detalle: `azure-apps/albaranes.md` §10.
+
 **Códigos → estado del alta (R18; la tabla es un dato de `clasificador.py`) y lo que ve el revisor en sv4:**
 
 | `details.codigo` | Estado | Panel de sv4 |
