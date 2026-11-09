@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **116 features**, 74 abiertas (0 en curso, 6 con la spec lista, 8 bloqueadas y 60 en backlog) y 42 terminadas.
+Resumen: **116 features**, 73 abiertas (0 en curso, 6 con la spec lista, 7 bloqueadas y 60 en backlog) y 43 terminadas.
 
 ## En curso
 
@@ -25,7 +25,6 @@ _Ninguna feature en curso._
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
 | F-110 | El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS) | 2 | critico | `feature/F-110-descuento-linea-sigrid` |
-| F-117 | Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8) | 2 | critico | `feature/F-117-partida-equivalente-en-obra` |
 | F-104 | sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos | 3 | critico | `feature/F-104-codigos-contrato-v83` |
 | F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 6 | critico | `feature/F-086-opus-ia3` |
 | F-100 | IA3 solo valora e IA4 casa TODAS las líneas valoradas: candidatas del contrato con el mismo precio unitario (±0,02 €) y la misma partida, y entre ellas por significado de la descripción | 7 | critico | `feature/F-100-ia3-valora-ia4-casa` |
@@ -133,6 +132,7 @@ _Ninguna feature en curso._
 | F-084 | El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None») | 2 | critico |
 | F-108 | Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha | 2 | estandar |
 | F-111 | Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén | 2 | critico |
+| F-117 | Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8) | 2 | critico |
 | F-012 | Campaña de mutación en paralelo | 3 | estandar |
 | F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | estandar |
 | F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
@@ -158,12 +158,6 @@ ORIGEN: el humano, 2026-10-28 («si a F-110»): en las líneas con descuento (al
 estado **spec lista** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-112-anio-fecha-albaran`
 
 ORIGEN: el humano, 2026-10-29, por los albaranes de HERMANOS SAN JUAN: 5176 B leído con fecha 17-10-2022 y 5629 B con 16-10-2024 (llegaron el 28-10-2026); los tres del 14-10 (1909 B, 1350 B, 2910 B) con 2020 y 2023. Día y mes parecen bien; el año sale imposible (marca `fecha_albaran_fuera_de_rango` en sv3; sv9 ya no da de alta con `fecha_no_plausible`). PROPUESTA del líder, aceptada por el humano para spec: dar a la IA de lectura (sv2, IA1/IA2) la fecha de recepción del correo como referencia para leer el año; la fecha la sigue leyendo la IA, sin corrección determinista. A RESOLVER EN LA SPEC: dónde entra la fecha del correo en el prompt (IA1 Gemini, IA2 OpenAI o ambas) y qué hacer si el albarán imprime de verdad otra fecha antigua; medir en producción (solo lectura) cuántos documentos tienen la fecha a más de 1 año de su correo y de qué proveedores; banco de evals si existe para la cabecera. FUERA: los números de albarán mal leídos (4889/4839, 5029/5629), que se corrigen a mano. Va DESPUÉS de F-106; F-108 (fecha editable con calendario) facilita la corrección a mano.
-
-### F-117 · Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8)
-
-estado **bloqueada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-117-partida-equivalente-en-obra`
-
-ORIGEN: el humano, 2026-11-05: «Que la valoración proponga sola la equivalente en la obra cuando la partida del albarán no exista». Caso: obra 0719, contrato CTSB26/0373, línea «grua pk 50 - montar muro y hormigonar» 9 UD × 60 € con la partida leída CI.03.08; la obra no la tiene (numera CI.03A.n MAQUINARIA AJENA, CI.03P.n PROPIA); sv6 la dejó con partida_fuera_de_lista, se aprobó y sigrid-api rechazó el alta (partida_no_encontrada ⇒ no_admitido). La equivalente es CI.03A.8 (CAMION GRUA). ALCANCE (spec): regla determinista en comun (equivalentes_partida: letra pegada al número solo en la hoja; sufijo de ≥3 segmentos, según D2) aplicada en la normalización de F-076 en sv6; única ⇒ se valora con ella, motivo partida_equivalente:<leída>><cod> y revisión no bloqueante; varias ⇒ revisión con las candidatas; ninguna ⇒ como hoy. Nunca almacén ni partida inventada. Excepción acotada a H1 de F-049 (D1). Medición y decisiones D1–D9 en progress/spec_F-117.md. Fuera: que sv4 impida aprobar con partida_fuera_de_lista; la lectura que es un capítulo (CD.02 de 0692).
 
 ### F-118 · Incremento sin tarifa: la valoración pone importe 0, no null, y el albarán se puede aprobar
 
@@ -1218,6 +1212,12 @@ ORIGEN: el humano, 2026-10-28: «los campos de fecha, numero de albaran tiene qu
 estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-111-residuos-contenedores-y-partida`
 
 ORIGEN: el humano, 2026-10-29, por los albaranes de HERMANOS SAN JUAN (4839 B: 8 m³ de madera valorados como 2 contenedores de 6 = 278 € en vez de 1 = 139 €; 1350 B igual). Contrato CTSU24/0524 sin tamaño en sus líneas («CONTENEDOR LER 170201 MADERA»). Hoy IA3 (prompt de sv5) y sv6 (`residuos_container_calc.py`, F-036 R22) aplican «6 m³ por defecto» y ceil(m³/6). REGLAS DEL HUMANO (literales): (1) «en residuos salvo que se diga lo contrario en el contrato los contenedores son de 3, 6 o 9m3. debe elegir uno de esos. si en contrato no se especifica que use el precio general para todos»; se elige el MÁS PEQUEÑO en el que caben los m³ (≤3 → 3, ≤6 → 6, ≤9 → 9, 1 contenedor); «no se mezclan contenedores, si son de mas de 9 paquetes de 6» (más de 9 m³ ⇒ ceil(m³/6) contenedores de 6). Si el contrato da tamaños, manda el contrato. (2) «añade en el circuito de residuos que si no tienen partida no van a almacen sino que busque la partida en el capitulo de gestion de residuos. que la busque por descripcion»: una línea de residuos sin partida no va a almacén; se busca la partida entre las del capítulo de gestión de residuos de la obra (capítulos de F-098, `ruesma_comun.sigrid.partidas`) por la descripción. A RESOLVER EN LA SPEC: cómo se reconoce el capítulo de residuos en las obras reales (medir en solo lectura); quién elige la partida (IA por significado restringida al capítulo, como IA4, frente a texto); qué pasa sin capítulo o sin candidata (revisión, nunca almacén); efecto en revalorar, en sv4 y en el alta (sv9 manda lo aprobado); alcance medido en producción (hoy 2 líneas con 8 m³ → 2). Va DESPUÉS de F-106 (comparte sv6 y la fila de valoración).
+
+### F-117 · Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8)
+
+estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-117-partida-equivalente-en-obra`
+
+ORIGEN: el humano, 2026-11-05: «Que la valoración proponga sola la equivalente en la obra cuando la partida del albarán no exista». Caso: obra 0719, contrato CTSB26/0373, línea «grua pk 50 - montar muro y hormigonar» 9 UD × 60 € con la partida leída CI.03.08; la obra no la tiene (numera CI.03A.n MAQUINARIA AJENA, CI.03P.n PROPIA); sv6 la dejó con partida_fuera_de_lista, se aprobó y sigrid-api rechazó el alta (partida_no_encontrada ⇒ no_admitido). La equivalente es CI.03A.8 (CAMION GRUA). ALCANCE (spec): regla determinista en comun (equivalentes_partida: letra pegada al número solo en la hoja; sufijo de ≥3 segmentos, según D2) aplicada en la normalización de F-076 en sv6; única ⇒ se valora con ella, motivo partida_equivalente:<leída>><cod> y revisión no bloqueante; varias ⇒ revisión con las candidatas; ninguna ⇒ como hoy. Nunca almacén ni partida inventada. Excepción acotada a H1 de F-049 (D1). Medición y decisiones D1–D9 en progress/spec_F-117.md. Fuera: que sv4 impida aprobar con partida_fuera_de_lista; la lectura que es un capítulo (CD.02 de 0692).
 
 ### F-012 · Campaña de mutación en paralelo
 
