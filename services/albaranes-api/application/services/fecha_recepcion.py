@@ -23,7 +23,7 @@ Puro: sin I/O. ``ZoneInfo`` necesita ``tzdata`` en Windows y en el contenedor
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
@@ -88,7 +88,7 @@ def fecha_recepcion_de(correo: ContextoCorreo | None) -> date | None:
     except ValueError:
         return None
     if instante.tzinfo is None:
-        instante = instante.replace(tzinfo=timezone.utc)
+        instante = instante.replace(tzinfo=UTC)
     return instante.astimezone(ZONA_RECEPCION).date()
 
 
