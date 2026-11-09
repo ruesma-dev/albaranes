@@ -12,4 +12,4 @@ Rama `feature/F-117-partida-equivalente-en-obra` (worktree `../albaranes-F-117`)
 - [x] T7: cobertura de las líneas cambiadas y mutación de `equivalentes_partida` y de `normalizador_partidas.py`; informe `progress/mutacion_F-117.md`  |  Verificación: umbrales de `harness/rigor.json` (nivel critico); supervivientes analizados
 - [ ] T8: MANUAL (humano): desplegar comun 0.14.0 con sv6 (`.\deploy.ps1 -Only sv6` → `.\check_deploy.ps1`) y revalorar desde sv4 lo que decida por D7  |  Verificación: MANUAL (humano)
 - [ ] T9: MANUAL (líder, solo lectura): `.\scripts\medicion_F-117\run.ps1 m1_fuera_de_lista.py` y `... m2_estrategias.py` desde la raíz; esperado: lo revalorado con E1d/SUF = 1 sale con `partida_equivalente:` y sin `partida_fuera_de_lista`; listar falsos positivos si los hay (R-1)  |  Verificación: MANUAL (líder)
-- [ ] T10: Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
+- [x] T10: (2026-11-09: exit 0 sobre `f37c85a`, cobertura 57/57, verificado por el reviewer) Ejecutar `bash harness/init.sh` en verde  |  Verificación: `bash harness/init.sh`
