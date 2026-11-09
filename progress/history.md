@@ -5,6 +5,10 @@ Registro append-only. El líder mueve aquí el resumen de cada feature terminada
 
 ---
 
+## F-117 · Partida equivalente en la obra (cerrada 2026-11-09)
+
+Rigor `critico`, comun 0.14.0 y sv6. Cuando la partida leída no existe en la obra, sv6 propone la equivalente única por dos reglas deterministas (letra pegada en la hoja de la obra, `CI.03.08` ⇒ `CI.03A.8`; sufijo de 3 o más segmentos, `04.01.07` ⇒ `02.04.01.07`) y la manda a revisión no bloqueante (`partida_equivalente:`); con varias candidatas, revisión sin IA. Interruptor `PARTIDA_EQUIVALENTE_ENABLED` (defecto `true`). D1–D9 = (a). Review APPROVED (pasada 2), mutación 32/32. Desplegada el 2026-11-09 (sv6 `r20261109-0739`). Medición tras el despliegue (solo lectura): las mismas 6 líneas de la spec (0719), todas ya aprobadas con la partida que pondría la app, 0 falsos positivos; D7 sin nada que revalorar. Sin observar todavía una lectura nueva resuelta en producción. **Evals con LLM: renuncia del humano** (2026-11-09, «cierra todo ya»): los fixtures no traen la lista de partidas de la obra y `evals/procesos/sv6_build.py` no aplica la normalización, así que la pasada no observa F-117, y la base ya salía ROJO (06-10 y 19-10).
+
 ## F-098 · Selector de partidas por capítulo y partida con su código completo (cerrada 2026-11-08)
 
 Rigor `critico`, comun, sv4, y tests en sv6 y sv9. Chips por capítulo; la partida se guarda con su cod y se enseña completa. Review APPROVED (pasada 2). T18 en producción solo mirando (28-10). T20: reelegir la misma partida no envía nada, porque el valor pintado no cambia; las 2 líneas de la 0686 (3ac58fca) se corrigieron con «Valorar ahora» y quedaron con final `21.02.21` (comprobado en BBDD). No probado en producción: «Dividir» y un alta real con esas líneas.
