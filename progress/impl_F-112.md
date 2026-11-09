@@ -172,6 +172,9 @@ Verde: `82 passed in 2.31s`. **T6b** igual: `ImportError: cannot import name 'si
 | Mutación (muestreada, 20, semilla 20260820) | **20 generados, 20 muertos, 0 supervivientes**, 0 timeouts (4663 s, `--workers 2`; con 4 la línea base pasaba de 600 s). Sin supervivientes que analizar; detalle en `progress/mutacion_F-112.md` |
 | Tiempo de la suite | raíz 302 s; sv2 21,8 s |
 
+- `mutacion_F-112.md` exige su fila en `progress/inventario_mutacion_F-039.md` (`test_f039_r2`): añadida, con
+  veredicto `VÁLIDA` y el recuento a 69 / 18 fuera de `services/`; sin ella el init final dio KO.
+
 ## 6. Pendiente (no es mío)
 
 - **T9** (líder): PDF a `evals/inputs/albaranes/FEC-NNN.pdf` y los 19 en `evals/casos_fecha.json`
