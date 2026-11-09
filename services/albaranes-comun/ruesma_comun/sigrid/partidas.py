@@ -21,6 +21,22 @@ lectura que coincide con una hoja tal cual o tras :func:`normalizar_partida`;
 jamás busca «la más parecida» (ni sufijo, ni prefijo, ni distancia, ni
 expansión de abreviaturas). Si no casa, lo dice y la lectura se queda.
 
+EXCEPCIÓN A H1 (F-117, D1, aprobada por el humano el 2026-11-05):
+:func:`equivalentes_partida`, que PROPONE con dos reglas cerradas y nunca
+decide sola —quien la usa (sv6) manda la línea a revisión—, para una lectura
+que :func:`resolver_partida_obra` da ``fuera_de_lista``:
+
+- regla de la **letra**: la lectura no tiene ningún segmento con letra
+  (:data:`RE_SEGMENTO_CON_LETRA`, ``03A``) y la hoja sí; cambiando cada uno por
+  su número (``03A`` ⇒ ``3``) sus segmentos son los de la lectura
+  (``CI.03.08`` ⇒ ``CI.03A.8``). Nunca al revés.
+- regla del **sufijo**: la lectura tiene :data:`MIN_SEGMENTOS_SUFIJO` (3) o
+  más segmentos y la hoja termina, segmento a segmento, en ellos
+  (``04.01.07`` ⇒ ``02.04.01.07``).
+
+Ni prefijo, ni distancia, ni descripción. Todo lo demás del módulo sigue
+sin elegir.
+
 - :data:`SQL_PARTIDAS_POR_OBRA`: la de sv4 más el filtro de empresa
   (``con_obr.emp = 1``).
 - :func:`hojas_de_filas` y :meth:`ListaPartidasObra.desde_filas`: hojas con
@@ -44,6 +60,7 @@ expansión de abreviaturas). Si no casa, lo dice y la lectura se queda.
   :func:`mostrar_partida` y :meth:`CachePartidasObra.consultar`.
 - (F-111) :func:`candidatas_residuos`: las hojas del capítulo de gestión de
   residuos de la obra (reconoce, no elige: H1 sigue intacta).
+- (F-117) :func:`equivalentes_partida`: la excepción a H1 de arriba.
 """
 from __future__ import annotations
 
@@ -677,6 +694,79 @@ def resolver_partida_obra(lista: ListaPartidasObra, lectura: Any, alm: str | Non
     if caso.motivo == MOTIVO_AMBIGUA:
         return ResolucionPartida(leida, RESOLUCION_AMBIGUA, leida)
     return ResolucionPartida(leida, RESOLUCION_FUERA_DE_LISTA, leida)
+
+
+# ------------------------------------------------------------------ #
+# F-117 · la partida equivalente en la obra (excepción a H1, D1)
+# ------------------------------------------------------------------ #
+#: (F-117 R2) Segmento con letra: dígitos seguidos de letras (``03A``,
+#: ``12B``), ya normalizado (mayúsculas). ``P4``, ``PJ`` o ``CD2`` no lo son:
+#: empiezan por letra.
+RE_SEGMENTO_CON_LETRA = re.compile(r"^(\d+)([A-Z]+)$")
+#: (F-117 R5) Segmentos mínimos de la lectura para la regla del sufijo.
+MIN_SEGMENTOS_SUFIJO = 3
+
+
+def _sin_letra(segmentos: list[str]) -> list[str]:
+    """Cada segmento con letra pasa a su número sin ceros (``03A`` ⇒ ``3``)."""
+    resultado = []
+    for segmento in segmentos:
+        letra = RE_SEGMENTO_CON_LETRA.match(segmento)
+        resultado.append((letra.group(1).lstrip("0") or "0") if letra else segmento)
+    return resultado
+
+
+def _equivalente(lectura: list[str], lectura_con_letra: bool, hoja: list[str]) -> bool:
+    """¿Los segmentos ``hoja`` de una forma de la hoja equivalen a la lectura?"""
+    if (
+        not lectura_con_letra
+        and any(RE_SEGMENTO_CON_LETRA.match(s) for s in hoja)
+        and _sin_letra(hoja) == lectura
+    ):
+        return True  # regla de la letra (R2, R3)
+    return (
+        len(lectura) >= MIN_SEGMENTOS_SUFIJO
+        and len(hoja) > len(lectura)
+        and hoja[-len(lectura):] == lectura
+    )  # regla del sufijo (R4, R5)
+
+
+def equivalentes_partida(lista: ListaPartidasObra, lectura: Any, alm: str | None) -> tuple[str, ...]:
+    """(F-117) Los cods de las hojas equivalentes a una lectura fuera de lista.
+
+    PROPONE, no decide: quien la usa manda la línea a revisión (excepción a H1
+    aprobada el 2026-11-05, D1). Solo para lecturas que
+    :func:`resolver_partida_obra` da ``fuera_de_lista``, que no son compuestas
+    (``/``) y cuya clave no es la de un código NO hoja (un capítulo no se
+    cambia por una hoja, R8); en otro caso, ``()``.
+
+    Dos reglas, sobre los segmentos de :func:`normalizar_partida` de la lectura
+    y de cada forma de la hoja (su cod y su código completo):
+
+    - **letra**: la lectura no tiene segmento con letra, la forma sí, y con
+      cada ``03A`` cambiado por ``3`` sus segmentos son los de la lectura;
+    - **sufijo**: la lectura tiene 3 o más segmentos y la forma, más, y
+      termina en ellos segmento a segmento.
+
+    Sin duplicados (un cod cuenta una vez) y en el orden de ``lista.hojas``.
+    Nunca devuelve algo que no sea el cod de una hoja de la lista.
+    """
+    if resolver_partida_obra(lista, lectura, alm).motivo != RESOLUCION_FUERA_DE_LISTA:
+        return ()
+    if "/" in str(lectura) or _choca_con_no_hoja(lista, lectura):
+        return ()
+    segmentos = str(normalizar_partida(lectura)).split(".")
+    con_letra = any(RE_SEGMENTO_CON_LETRA.match(s) for s in segmentos)
+    cods: list[str] = []
+    for hoja in lista.hojas:
+        if hoja.codigo in cods:
+            continue
+        for forma in (hoja.codigo, hoja.codigo_completo):
+            clave = normalizar_partida(forma)
+            if clave is not None and _equivalente(segmentos, con_letra, clave.split(".")):
+                cods.append(hoja.codigo)
+                break
+    return tuple(cods)
 
 
 # ------------------------------------------------------------------ #
