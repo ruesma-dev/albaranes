@@ -345,3 +345,8 @@ def test_f117_r12_exportada():
 
     assert S.equivalentes_partida is P.equivalentes_partida
     assert "equivalentes_partida" in S.__all__
+
+
+def test_f117_t7_hoja_sin_nada_comparable_no_rompe():
+    # Un cod sin letras ni dígitos no tiene clave: se salta, sin excepción.
+    assert eq(hojas("-", "CI.03A.8"), "CI.03.08") == ("CI.03A.8",)

@@ -716,19 +716,19 @@ def _sin_letra(segmentos: list[str]) -> list[str]:
     return resultado
 
 
-def _equivalente(lectura: list[str], lectura_con_letra: bool, hoja: list[str]) -> bool:
-    """¿Los segmentos ``hoja`` de una forma de la hoja equivalen a la lectura?"""
-    if (
-        not lectura_con_letra
-        and any(RE_SEGMENTO_CON_LETRA.match(s) for s in hoja)
-        and _sin_letra(hoja) == lectura
-    ):
+def _equivalente(lectura: list[str], hoja: list[str]) -> bool:
+    """¿Los segmentos ``hoja`` de una forma de la hoja equivalen a la lectura?
+
+    Solo se llama con una lectura fuera de lista, así que ninguna forma de
+    ninguna hoja tiene sus mismos segmentos. De ahí salen, sin escribirlas, tres
+    condiciones de design §3: en la regla de la letra, que la hoja tenga algún
+    segmento con letra (si no, ``_sin_letra(hoja) == hoja``) y que la lectura no
+    tenga ninguno (``_sin_letra`` no deja ninguno: R3); en la del sufijo, que la
+    hoja tenga más segmentos (con los mismos sería igual a la lectura).
+    """
+    if _sin_letra(hoja) == lectura:
         return True  # regla de la letra (R2, R3)
-    return (
-        len(lectura) >= MIN_SEGMENTOS_SUFIJO
-        and len(hoja) > len(lectura)
-        and hoja[-len(lectura):] == lectura
-    )  # regla del sufijo (R4, R5)
+    return len(lectura) >= MIN_SEGMENTOS_SUFIJO and hoja[-len(lectura):] == lectura  # sufijo (R4, R5)
 
 
 def equivalentes_partida(lista: ListaPartidasObra, lectura: Any, alm: str | None) -> tuple[str, ...]:
@@ -756,14 +756,13 @@ def equivalentes_partida(lista: ListaPartidasObra, lectura: Any, alm: str | None
     if "/" in str(lectura) or _choca_con_no_hoja(lista, lectura):
         return ()
     segmentos = str(normalizar_partida(lectura)).split(".")
-    con_letra = any(RE_SEGMENTO_CON_LETRA.match(s) for s in segmentos)
     cods: list[str] = []
     for hoja in lista.hojas:
         if hoja.codigo in cods:
             continue
         for forma in (hoja.codigo, hoja.codigo_completo):
             clave = normalizar_partida(forma)
-            if clave is not None and _equivalente(segmentos, con_letra, clave.split(".")):
+            if clave is not None and _equivalente(segmentos, clave.split(".")):
                 cods.append(hoja.codigo)
                 break
     return tuple(cods)
