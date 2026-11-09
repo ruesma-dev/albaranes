@@ -7,6 +7,8 @@ humano) y T9 (medición, líder) no son mías. Nada contra Azure, BBDD real, Sig
 
 ## 0. Estado y bloqueo de la puerta de cobertura
 
+**T1–T7 hechas; F-117 marcada `blocked` en `harness/features.json`** por lo que sigue.
+
 **`bash harness/init.sh` NO sale en verde, y no por el código de F-117**: todas las suites pasan y solo cae la
 PUERTA COBERTURA, porque el diff de la rama contra `dev` incluye los scripts de medición del spec-author
 (`scripts/medicion_F-117/{comun_ro,m1_fuera_de_lista,m2_estrategias}.py`, 206 líneas ejecutables, sin tests y
@@ -128,7 +130,36 @@ Corregido el fixture (una línea de contrato de otra partida; neto 540): `5 pass
 
 ## 5. Tests y evidencias
 
-INIT_PENDIENTE
+Última `bash harness/init.sh` (sobre `2ce59db` + fila del inventario, con `PYTHONPATH` a la comun del worktree
+y `ARNES_SIN_CACHE=1`): **EXIT=1**, `1 comprobaciones fallidas`, la única la de cobertura (§0). Todas las suites en verde:
+
+| Suite | Resultado | Tiempo |
+|---|---|---|
+| raíz | 1919 passed | 219,4 s |
+| sv1 | 236 passed | 16,9 s |
+| sv2 | 496 passed, 1 warning | 14,2 s |
+| sv3 | 1608 passed | 32,6 s |
+| sv4 | 2562 passed, 1 warning | 220,2 s |
+| sv5 | 149 passed | 18,6 s |
+| sv6 | **706 passed** (668 antes de F-117 + 38 nuevos) | 11,9 s |
+| sv9 | 1186 passed | 32,8 s |
+| comun | **1492 passed**, 2 skipped (1422 antes + 70 nuevos) | 37,2 s |
+
+La pasada anterior falló además en la raíz (`test_f039_r2_todo_informe_de_mutacion_figura_en_el_inventario`):
+faltaba la fila de `mutacion_F-117.md` en `progress/inventario_mutacion_F-039.md`; añadida (recuento 67 ⇒ 68).
+
+### Evidencias
+
+| Evidencia | Valor real |
+|---|---|
+| Tests nuevos de F-117 | 108 (comun 70, sv6 33 + 5), todos en verde |
+| Cobertura líneas cambiadas, puerta de init (base `dev`) | `PUERTA COBERTURA: 21.7% de 263 líneas cambiadas cubiertas (57/263, umbral 80%, nivel critico)` — KO por los 206 de `scripts/medicion_F-117/` (§0) |
+| Cobertura de lo de F-117 (`python -m harness.cobertura --base 9c4bf43`) | `PUERTA COBERTURA: 100.0% de 57 líneas cambiadas cubiertas (57/57, umbral 80%, nivel critico)` |
+| Mutación (`python -m harness.mutacion --feature F-117 --base 9c4bf43`) | **32 generados, 32 muertos, 0 supervivientes**, 0 timeouts, 291,3 s, 4 workers (`progress/mutacion_F-117.md`) |
+| Puerta de tamaño | OK (requirements 83/150, design 163/250, impl dentro del tope) |
+| Lint | `ruff check` de los ficheros tocados: `All checks passed!` |
+
+Sin supervivientes, no hay análisis pendiente.
 
 ## 6. Verificaciones MANUAL pendientes (no mías)
 
