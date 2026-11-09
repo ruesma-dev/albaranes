@@ -18,7 +18,10 @@ import logging
 
 import pytest
 from application.services import normalizador_partidas as modulo
-from application.services.normalizador_partidas import NormalizacionSobre, NormalizadorPartidas
+from application.services.normalizador_partidas import (
+    NormalizacionSobre,
+    NormalizadorPartidas,
+)
 from tests.f076_sobres import PuertoFalso, leidas, linea_contrato, lista_obra, sobre
 
 #: La 0719 reducida: letra (CI.03A.8), sufijo (02.04.01.07) y hojas sin letra.
