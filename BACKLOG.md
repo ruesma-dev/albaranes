@@ -3,13 +3,11 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **116 features**, 74 abiertas (1 en curso, 6 con la spec lista, 7 bloqueadas y 60 en backlog) y 42 terminadas.
+Resumen: **116 features**, 74 abiertas (0 en curso, 6 con la spec lista, 8 bloqueadas y 60 en backlog) y 42 terminadas.
 
 ## En curso
 
-| # | Feature | Prioridad | Rigor | Rama |
-|---|---|---|---|---|
-| F-117 | Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8) | 2 | critico | `feature/F-117-partida-equivalente-en-obra` |
+_Ninguna feature en curso._
 
 ## Spec lista
 
@@ -27,6 +25,7 @@ Resumen: **116 features**, 74 abiertas (1 en curso, 6 con la spec lista, 7 bloqu
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
 | F-110 | El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS) | 2 | critico | `feature/F-110-descuento-linea-sigrid` |
+| F-117 | Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8) | 2 | critico | `feature/F-117-partida-equivalente-en-obra` |
 | F-104 | sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (F-015): proveedor_no_encontrado, proveedor_ambiguo y retencion_no_soportada a alta a mano; avisos retencion_del_contrato y cabecera_sin_dato informativos | 3 | critico | `feature/F-104-codigos-contrato-v83` |
 | F-086 | Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol | 6 | critico | `feature/F-086-opus-ia3` |
 | F-100 | IA3 solo valora e IA4 casa TODAS las líneas valoradas: candidatas del contrato con el mismo precio unitario (±0,02 €) y la misma partida, y entre ellas por significado de la descripción | 7 | critico | `feature/F-100-ia3-valora-ia4-casa` |
@@ -162,7 +161,7 @@ ORIGEN: el humano, 2026-10-29, por los albaranes de HERMANOS SAN JUAN: 5176 B le
 
 ### F-117 · Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8)
 
-estado **en curso** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-117-partida-equivalente-en-obra`
+estado **bloqueada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-117-partida-equivalente-en-obra`
 
 ORIGEN: el humano, 2026-11-05: «Que la valoración proponga sola la equivalente en la obra cuando la partida del albarán no exista». Caso: obra 0719, contrato CTSB26/0373, línea «grua pk 50 - montar muro y hormigonar» 9 UD × 60 € con la partida leída CI.03.08; la obra no la tiene (numera CI.03A.n MAQUINARIA AJENA, CI.03P.n PROPIA); sv6 la dejó con partida_fuera_de_lista, se aprobó y sigrid-api rechazó el alta (partida_no_encontrada ⇒ no_admitido). La equivalente es CI.03A.8 (CAMION GRUA). ALCANCE (spec): regla determinista en comun (equivalentes_partida: letra pegada al número solo en la hoja; sufijo de ≥3 segmentos, según D2) aplicada en la normalización de F-076 en sv6; única ⇒ se valora con ella, motivo partida_equivalente:<leída>><cod> y revisión no bloqueante; varias ⇒ revisión con las candidatas; ninguna ⇒ como hoy. Nunca almacén ni partida inventada. Excepción acotada a H1 de F-049 (D1). Medición y decisiones D1–D9 en progress/spec_F-117.md. Fuera: que sv4 impida aprobar con partida_fuera_de_lista; la lectura que es un capítulo (CD.02 de 0692).
 

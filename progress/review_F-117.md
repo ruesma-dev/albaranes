@@ -1,11 +1,13 @@
 <!-- progress/review_F-117.md -->
 # F-117 · Review (reviewer)
 
-Revisión completa (pasada 1): `git diff 9c4bf43..f37c85a` (HEAD), rama `feature/F-117-partida-equivalente-en-obra`.
+Revisión incremental desde f37c85a (pasada 2): delta `f37c85a..7528a8c`. Pasada 1: completa, `9c4bf43..f37c85a`.
 
-**Veredicto: CHANGES_REQUESTED** — el código, los tests y la campaña están bien. Lo que falta es papeleo de
-cierre del líder: C4 (MANUAL en `current.md` sin su comando) y C5 (`tasks.md` T10). Son dos cambios de una línea;
-la pasada 2 puede ser incremental y no hace falta tocar código.
+**Veredicto: APPROVED** (pasada 2). La pasada 1 pidió cambios solo de papeleo (C4 y C5). El delta, `ea1852a` y
+`7528a8c`, toca solo `progress/current.md`, `tasks.md` y este informe; `--ignore-cr-at-eol` da 1 línea. Sin código,
+así que lo aprobado en la pasada 1 sigue en pie. `init.sh` entero sobre `7528a8c`: **EXIT=0**, los mismos totales
+de la pasada 1 (sv6 706, comun 1492, raíz 1919…), cobertura 57/57 [OK], tamaño [OK]. Árbol limpio.
+**Condición de `done`** (no de la fusión): evals de C4 ter, o la renuncia escrita del humano.
 
 **Nivel de rigor:** `critico`, declarado en `harness/features.json`. Exige fase RED, cobertura ≥ 80 % de lo
 cambiado, mutación con 0 supervivientes, RM1–RM6 y las MANUAL listadas con su comando exacto.
@@ -39,9 +41,8 @@ colas ni endpoints. [x] Primera línea con la ruta en los 3 tests nuevos (los `.
 con la excepción a H1. Las tres trampas: no se toca merge/raw ni schema, y los importes no cambian (R24: 540 €).
 **C3 bis** N/A: no toca `docs/referencia/`.
 **C4** [x] Todos los requisitos con test trazable y en verde (tabla abajo). [x] Sin red ni BBDD (puertos y
-repositorio falsos). **[ ] Las MANUAL no están en `progress/current.md` con su comando exacto.** La línea de
-F-117 dice «T8 (despliegue de sv6) es del humano; T9 la mide el líder», sin comando. Los comandos sí están en
-`tasks.md` T8/T9 y en `impl_F-117.md` §6, pero el checkpoint pide `current.md` → cambio 1.
+repositorio falsos). [x] (pasada 2) Las MANUAL T8, T9 y evals están en `current.md` con su comando exacto.
+Lo comprobé en `ea1852a` y `7528a8c`. En la pasada 1 era `[ ]`: faltaba el comando.
 **C4 bis**
 - [x] `rigor` declarado (`critico`).
 - [x] Fase RED con la salida real (`impl_F-117.md` §4): comun 68 failed/1 passed, con causas `AttributeError`
@@ -68,7 +69,7 @@ F-117 dice «T8 (despliegue de sv6) es del humano; T9 la mide el líder», sin c
 - [x] «Evidencias» con los cuatro números y los workers (4). [x] Ningún N/A sin motivo.
 
 **C4 ter** (rutas sensibles: el diff toca `services/albaran-valoracion-persist/application/services/**`)
-- [ ] Falta `progress/evals_F-117.md`. Exigencia declarada: `aviso`. **Dictamen: no bloquea el APPROVED, pero sí
+- N/A por `aviso`, justificado: falta `progress/evals_F-117.md`. **Dictamen: no bloquea el APPROVED, pero sí
   es condición de cierre (`done`).** Motivo: el arnés lo declara `aviso`, y la pasada es de pago y la lanza el
   humano. Pero F-117 cambia la partida que recibe IA4 (R-2 de design §10, el efecto buscado), y desde F-084 los
   fixtures de IA4 tienen 13 casos, así que la pasada ya no daría NO_EVALUABLE. Antes de `done`, o
@@ -78,7 +79,7 @@ F-117 dice «T8 (despliegue de sv6) es del humano; T9 la mide el líder», sin c
 - [x] El motivo del `aviso` consta aquí.
 
 **C5**
-- **[ ] `tasks.md` T10 sin marcar.** `init.sh` está en verde sobre HEAD (lo verifiqué yo) → cambio 2. T8 y T9 son
+- [x] (pasada 2) T10 marcada en `ea1852a`, y `init.sh` sigue en verde sobre `7528a8c`. T8 y T9 son
   MANUAL posteriores al despliegue y van tras la fusión: N/A justificado, como en F-110 y F-111. Un commit por
   tarea T1–T7 [x]: T7 en dos commits, `09d2800` y `2ce59db`, aceptable.
 - [x] Sin temporales ni ficheros sin trackear en el worktree. La *junction* `.venv` de sv4 está anotada para
@@ -111,7 +112,7 @@ F-117 dice «T8 (despliegue de sv6) es del humano; T9 la mide el líder», sin c
 | R24–R26 | `r24_albaran_de_0719`, `r24_sin_f117_es_lo_de_hoy`, `r25_sufijo_de_0719`, `r26_valoracion_directa[letra/sufijo]` |
 | R27 | ARCHITECTURE regla 23 (diff leído) y `azure-apps` `a3cd897` §11.2 (leído: variable, efecto, «pendiente de despliegue») |
 
-## Cambios requeridos (los dos son del líder; ninguno toca código)
+## Cambios requeridos en la pasada 1 (los dos HECHOS en la pasada 2)
 
 1. `progress/current.md`, línea de F-117 (punto de reanudación): listar las MANUAL con su comando exacto.
    - T8 (humano), desde `infra/`: `.\deploy.ps1 -Only sv6` → `.\check_deploy.ps1`, con la revaloración de D7.
