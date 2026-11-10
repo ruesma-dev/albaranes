@@ -202,6 +202,8 @@ RUTAS_DE_LA_SPEC: frozenset[str] = frozenset(
 #:   propios.py`, con su razón social) y el módulo de sv2 que la pinta en el
 #:   prompt de IA1 (`empresas_cliente.py`). Su texto lo lee la IA como las
 #:   empresas que nunca son el proveedor: solo los evals dicen si la ignora.
+#: - F-112 (T5, R25): el bloque de la fecha de recepción (`fecha_recepcion.py`),
+#:   que pinta la referencia del año en los prompts de IA1 e IA2.
 RUTAS_ANADIDAS_DESPUES: frozenset[str] = frozenset(
     {
         "services/albaranes-comun/ruesma_comun/contratos/familias.py",
@@ -212,6 +214,7 @@ RUTAS_ANADIDAS_DESPUES: frozenset[str] = frozenset(
         "services/albaranes-api/application/services/albaran_extraction_service.py",
         "services/albaranes-comun/ruesma_comun/proveedores/propios.py",
         "services/albaranes-api/application/services/empresas_cliente.py",
+        "services/albaranes-api/application/services/fecha_recepcion.py",
     }
 )
 

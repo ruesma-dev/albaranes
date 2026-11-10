@@ -23,7 +23,7 @@ import mimetypes
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict
 
 from application.services.albaran_extraction_service import (
@@ -46,6 +46,9 @@ class ExtractAlbaranRequest:
     file_bytes: bytes
     # (F-048 · R11) Texto del correo con el que llegó el albarán, o None.
     contexto_correo: ContextoCorreo | None = None
+    # (F-112 · R12) Día de recepción del correo (Europe/Madrid), referencia
+    # del AÑO para IA1. None = sin referencia (Nota sin recepción).
+    fecha_recepcion: date | None = None
 
 
 @dataclass(frozen=True)
@@ -65,6 +68,8 @@ class ReviewAlbaranRequest:
     # (F-048 · R14) El MISMO correo que la fase 1: IA2 recibe el mismo
     # bloque dentro de `{prompt_fase_1}`.
     contexto_correo: ContextoCorreo | None = None
+    # (F-112 · R12) La MISMA fecha de recepción que la fase 1.
+    fecha_recepcion: date | None = None
 
 
 class ExtractAlbaranPipeline:
@@ -101,6 +106,7 @@ class ExtractAlbaranPipeline:
             provider=self._provider_phase_1,
             prompt_key=self._prompt_key_phase_1,
             contexto_correo=request.contexto_correo,
+            fecha_recepcion=request.fecha_recepcion,
         )
         sha256 = hashlib.sha256(request.file_bytes).hexdigest()
         return self._envelope_block(
@@ -144,6 +150,7 @@ class ExtractAlbaranPipeline:
             phase_1_json=request.phase_1_json,
             sigrid_context=request.sigrid_context,
             contexto_correo=request.contexto_correo,
+            fecha_recepcion=request.fecha_recepcion,
         )
         sha256 = hashlib.sha256(request.file_bytes).hexdigest()
         return self._envelope_block(

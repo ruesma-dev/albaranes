@@ -21,6 +21,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
+from datetime import date
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Sequence, Type
 
 from pydantic import BaseModel
@@ -35,6 +36,11 @@ from application.services.empresas_cliente import (
 )
 from application.services.empresas_cliente import (
     empresas_cliente as empresas_cliente_de_serie,
+)
+from application.services.fecha_recepcion import (
+    MARCADOR_FECHA_RECEPCION,
+    render_fecha_recepcion,
+    render_revision_fecha,
 )
 from application.services.schema_registry import SchemaRegistry
 from domain.models.llm_attachment import LlmAttachment
@@ -64,7 +70,7 @@ MARCADOR_CONTEXTO_CORREO = "{contexto_correo}"
 
 # Marcadores del task de fase 2, sustituidos en UNA pasada (F-048 · R14).
 _MARCADORES_FASE_2 = re.compile(
-    r"\{(?:prompt_fase_1|revision_rules|json_fase_1|sigrid_context)\}"
+    r"\{(?:prompt_fase_1|revision_rules|json_fase_1|sigrid_context|revision_fecha)\}"
 )
 
 
@@ -147,6 +153,7 @@ class AlbaranExtractionService:
         provider: str,
         prompt_key: str,
         contexto_correo: ContextoCorreo | None = None,
+        fecha_recepcion: date | None = None,
     ) -> ProviderExtractionResult:
         spec = self._require_provider(provider)
         prompt_spec = self._prompts.get(prompt_key)
@@ -159,7 +166,7 @@ class AlbaranExtractionService:
         # embebido dentro del prompt de fase 2 y allí sufría la misma fuga
         # (ver `_render_task_fase_1`).
         task_rendered, obras = self._render_task_fase_1(
-            prompt_spec.task, contexto_correo,
+            prompt_spec.task, contexto_correo, fecha_recepcion,
         )
 
         instructions = self._compose_instructions(
@@ -174,11 +181,13 @@ class AlbaranExtractionService:
 
         logger.info(
             "Extracción FASE 1 proveedor=%s prompt_key=%s schema=%s "
-            "model=%s filename=%s obras_activas=%s correo=%s",
+            "model=%s filename=%s obras_activas=%s fecha_recepcion=%s "
+            "correo=%s",
             spec.provider, prompt_key, prompt_spec.schema,
             spec.model_name,
             attachments[0].filename if attachments else "n/a",
             len(obras) if obras else "NO DISPONIBLE",
+            _resumen_fecha(fecha_recepcion),
             _resumen_correo(contexto_correo),
         )
 
@@ -197,7 +206,10 @@ class AlbaranExtractionService:
     # FASE 1 — renderizado del task (F-002 · R1, F-043 · R6).
     # ---------------------------------------------------------- #
     def _render_task_fase_1(
-        self, task: str, correo: ContextoCorreo | None,
+        self,
+        task: str,
+        correo: ContextoCorreo | None,
+        fecha_recepcion: date | None = None,
     ) -> tuple[str, list[ObraActiva] | None]:
         """Sustituye TODOS los marcadores del task de fase 1.
 
@@ -219,6 +231,10 @@ class AlbaranExtractionService:
         correo es de un tercero y lo que se inserta después ya no se
         recorre, así que un correo que escriba ``{obras_activas}`` no
         recibe la lista dentro del bloque.
+
+        (F-112 · R6–R8) ``{fecha_recepcion}`` va justo ANTES del correo, por
+        la misma razón: un correo que escriba el literal lo conserva. Sin
+        marcador no se añade nada (la variante ``base`` del comparador).
 
         Devuelve el task renderizado y la lista de obras que se usó (o
         ``None``), que la fase 1 necesita para su log.
@@ -246,6 +262,13 @@ class AlbaranExtractionService:
             task = task.replace(
                 MARCADOR_EMPRESAS_CLIENTE,
                 render_empresas_cliente(self._empresas_cliente),
+            )
+        # (F-112 · R6–R8) Referencia del año, ANTES del correo. Sin marcador
+        # no se añade nada, como `{empresas_cliente}`.
+        if MARCADOR_FECHA_RECEPCION in task:
+            task = task.replace(
+                MARCADOR_FECHA_RECEPCION,
+                render_fecha_recepcion(fecha_recepcion),
             )
         return self._render_contexto_correo(task, correo), obras
 
@@ -401,6 +424,7 @@ class AlbaranExtractionService:
         phase_1_json: dict,
         sigrid_context: dict | None = None,
         contexto_correo: ContextoCorreo | None = None,
+        fecha_recepcion: date | None = None,
     ) -> ProviderExtractionResult:
         """Ejecuta la revisión de fase 2.
 
@@ -420,6 +444,9 @@ class AlbaranExtractionService:
             ERP. Si ``sigrid_context`` es None, el placeholder se
             sustituye por una nota de "no disponible" y la fase 2 se
             comporta exactamente como antes.
+          - {revision_fecha}: (F-112 · R17) el bloque de revisión
+            obligatoria de la fecha contra la de recepción, o su nota fija
+            sin fecha.
 
         Aquí los renderizamos antes de construir las instructions
         finales del LLM. El ``user_text`` queda mínimo (la "carne"
@@ -441,8 +468,9 @@ class AlbaranExtractionService:
         # catálogo de familias y de la lista de obras.
         # (F-048 · R14) Con el MISMO correo que la fase 1: IA2 recibe el
         # mismo bloque, dentro de `{prompt_fase_1}`.
+        # (F-112 · R9) Y con la MISMA fecha de recepción: el mismo bloque.
         task_fase_1, _obras = self._render_task_fase_1(
-            prompt_fase_1_spec.task, contexto_correo,
+            prompt_fase_1_spec.task, contexto_correo, fecha_recepcion,
         )
         prompt_fase_1_text = self._compose_instructions(
             system=prompt_fase_1_spec.system,
@@ -471,6 +499,8 @@ class AlbaranExtractionService:
             "{revision_rules}": revision_rules_text,
             "{json_fase_1}": json_fase_1_text,
             "{sigrid_context}": sigrid_context_text,
+            # (F-112 · R17) En la misma pasada: lo insertado no se recorre.
+            "{revision_fecha}": render_revision_fecha(fecha_recepcion),
         }
         task_rendered = _MARCADORES_FASE_2.sub(
             lambda m: valores[m.group(0)], plantilla,
@@ -504,13 +534,14 @@ class AlbaranExtractionService:
         logger.info(
             "Revisión FASE 2 proveedor=%s prompt_key=%s schema=%s "
             "model=%s filename=%s json_fase1_chars=%d "
-            "rules_count=%d sigrid_grounding=%s correo=%s",
+            "rules_count=%d sigrid_grounding=%s fecha_recepcion=%s correo=%s",
             spec.provider, prompt_key, prompt_spec.schema,
             spec.model_name,
             attachments[0].filename if attachments else "n/a",
             len(json_fase_1_text),
             self._revision_rules_repo.count,
             "SI" if sigrid_context is not None else "NO",
+            _resumen_fecha(fecha_recepcion),
             _resumen_correo(contexto_correo),
         )
 
@@ -768,6 +799,11 @@ class AlbaranExtractionService:
         if len(attachments) == 1:
             return _uno(attachments[0])
         return [_uno(a) for a in attachments]
+
+
+def _resumen_fecha(fecha: date | None) -> str:
+    """Fecha de recepción para el log: ISO o ``NO`` (F-112 · R10)."""
+    return fecha.isoformat() if fecha is not None else "NO"
 
 
 def _resumen_correo(correo: ContextoCorreo | None) -> str:

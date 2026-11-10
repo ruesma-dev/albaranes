@@ -13,3 +13,6 @@ google-cloud-documentai>=2.20
 PyMuPDF>=1.24
 opencv-python-headless>=4.9
 numpy>=1.26
+# (F-112 · R30) Base de zonas para ZoneInfo("Europe/Madrid"): Windows no la
+# trae y python:3.12-slim no la garantiza.
+tzdata>=2024.1

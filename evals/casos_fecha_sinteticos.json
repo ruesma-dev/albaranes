@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "_descripcion": "F-112 · juego D del comparador de la fecha: albaranes sintéticos de cambio de año, generados por `python -m evals.sinteticos_fecha` (imágenes en evals/inputs/albaranes/, ignorado por git). La referencia sale de `recibido_utc` con fecha_recepcion_de (Europe/Madrid).",
+  "casos": [
+    {
+      "caso_id": "SIN-001",
+      "papel": "28/12",
+      "recibido_utc": "2027-01-03T08:15:00Z",
+      "fecha_esperada": "2026-12-28",
+      "tipologia": "generico"
+    },
+    {
+      "caso_id": "SIN-002",
+      "papel": "02/01",
+      "recibido_utc": "2027-01-05T08:15:00Z",
+      "fecha_esperada": "2027-01-02",
+      "tipologia": "generico"
+    },
+    {
+      "caso_id": "SIN-003",
+      "papel": "15/12",
+      "recibido_utc": "2026-12-18T08:15:00Z",
+      "fecha_esperada": "2026-12-15",
+      "tipologia": "generico"
+    },
+    {
+      "caso_id": "SIN-004",
+      "papel": "28/12/2026",
+      "recibido_utc": "2027-01-03T08:15:00Z",
+      "fecha_esperada": "2026-12-28",
+      "tipologia": "generico"
+    },
+    {
+      "caso_id": "SIN-005",
+      "papel": "30/12/25",
+      "recibido_utc": "2026-01-02T08:15:00Z",
+      "fecha_esperada": "2025-12-30",
+      "tipologia": "generico"
+    },
+    {
+      "caso_id": "SIN-006",
+      "papel": "01/01",
+      "recibido_utc": "2026-12-31T23:30:00Z",
+      "fecha_esperada": "2027-01-01",
+      "tipologia": "generico"
+    }
+  ]
+}

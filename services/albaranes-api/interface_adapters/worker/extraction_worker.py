@@ -13,6 +13,9 @@ desde sv3); el esqueleto ya está listo.
 (F-048) Si el mensaje trae ``correo_blob``, lee el texto del correo y lo pasa
 a las DOS fases; tras el envelope final sella ``origen_datos`` (de dónde sale
 la obra: correo o papel) con el resolver puro de ``application``.
+
+(F-112) Del mismo correo sale la fecha de recepción (día en Europe/Madrid),
+calculada UNA vez y pasada igual a las dos fases como referencia del año.
 """
 from __future__ import annotations
 
@@ -29,6 +32,7 @@ from application.services.phase_merge import construir_envelope_final
 from application.services.clasificacion_resolver import (
     resolver_clasificacion,
 )
+from application.services.fecha_recepcion import fecha_recepcion_de
 from application.services.origen_datos_resolver import sellar_origen_datos
 from interface_adapters.worker.ports import (
     FuenteContextoCorreo,
@@ -101,6 +105,9 @@ def construir_handler_extraccion(
 
         # (F-048 · R11) Texto del correo, el MISMO para las dos fases.
         correo = _leer_correo(mensaje)
+        # (F-112 · R13, R14) Referencia del año: UNA vez, la misma para las
+        # dos fases. Sin correo (o sin `recibido_utc` válido), None.
+        fecha_recepcion = fecha_recepcion_de(correo)
 
         # 2) Fase 1 — extraccion.
         env1 = pipeline.run_phase_1(
@@ -109,6 +116,7 @@ def construir_handler_extraccion(
                 mime_type=doc.mime_type,
                 file_bytes=doc.file_bytes,
                 contexto_correo=correo,
+                fecha_recepcion=fecha_recepcion,
             )
         )
         sumidero.persistir(document_id=document_id, envelope=env1, fase="phase_1")
@@ -145,6 +153,7 @@ def construir_handler_extraccion(
                 sigrid_context=ctx,
                 prompt_key=prompt_fase2,
                 contexto_correo=correo,
+                fecha_recepcion=fecha_recepcion,
             )
         )
         sumidero.persistir(
