@@ -102,8 +102,8 @@
     {
       "caso_id": "FEC-015",
       "tipologia": "hormigon",
-      "clase": "dudoso",
-      "fecha_esperada": "2025-10-02",
+      "clase": "anio",
+      "fecha_esperada": "2026-10-02",
       "recibido": "2026-10-21T09:22:29Z"
     },
     {
