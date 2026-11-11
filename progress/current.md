@@ -3,12 +3,12 @@
 
 **F-111 · CERRADA (`done`, 2026-11-07).** Resumen en `history.md`. Seguimiento (humano): revalorar los 6 documentos de residuos que faltan (0686 1909 B y 2910 B, 0697 462044, 0459 460978, 0669 29900001672005, 0687 SS-0000168); el líder puede repetir `scripts/medicion_F-111/run.ps1 m1_residuos.py` para verlos. Worktree `../albaranes-F-111` retirado.
 
-**Punto de reanudación (2026-11-11):** F-112, F-117, F-098 y F-076 cerradas y desplegadas; dev y azure-apps subidos (push del humano el 2026-11-11). Siguiente fijo: T13 de F-112 hacia el 2026-11-24. Opcional: retirar worktrees viejos (22 en `PycharmProjects`, 28 de mutación de F-047 en `Temp`), siempre quitando antes las *junctions*.
+**Punto de reanudación (2026-11-11):** F-112, F-117, F-098 y F-076 cerradas y desplegadas; dev y azure-apps subidos (push del humano el 2026-11-11). Siguiente fijo: T13 de F-112 hacia el 2026-11-24. **2026-11-11:** F-077 cerrada; F-100 relanzada (T8, libro IA4). Opcional: retirar worktrees viejos (22 en `PycharmProjects`, 28 de mutación de F-047 en `Temp`), siempre quitando antes las *junctions*.
 - **`.venv` de la raíz rehecho (2026-11-07)** tras vaciarlo `git worktree remove` (ver memoria «worktree-remove-junctions»): requirements de los servicios + comun[llm,azure,markdown] + pytest, coverage, ruff y **openpyxl** (lo piden los tests de la raíz y no está en ningún requirements). `init.sh` verde. Desde PowerShell, `bash` es el de WSL (no instalado): usar `& "C:\Program Files\Git\bin\bash.exe" harness/init.sh`.
 - **F-112** `done` (2026-11-11): desplegada el 2026-11-10 (sv2 `r20261110-1643`), verificada en el log. Resumen en `history.md`. **T13 (líder, solo lectura)**: hacia el **2026-11-24**, la SQL de design §8 sobre lo creado desde `2026-11-10T15:46` (línea base 12 %, 21 de 158), anotada en `progress/impl_F-112.md`; se repite en enero de 2027.
 - **F-118** (incremento sin tarifa ⇒ importe 0 y aprobable) y **F-119** (unidad desde el contrato o UD por defecto): `pending`, dadas de alta el 2026-11-06; falta spec.
 - **Traiber 0707** (1261029152341 y 1261029123045): pregunta abierta al humano sobre el precio (HA-25 a 96,20 frente al HA-30 a 102,20 de la partida 02.02.04, y si los 11 €/m³ «INCREMENTO SUMINISTRO» son la revisión anual de 2026). Contorno dado: importe 0 en las filas 2 y 4.
-- **sigrid-api**: contrato **v8.5** publicado el 2026-11-09 (enmienda 1 de su F-008, `7b7a2e1`): la naturaleza de las líneas sin vincular sale de la ficha del producto; en la empresa 1 `MA9999` pasa a `MA1501` / `CDMA15`. Sin cambios de código en albaranes; documentado en `azure-apps/albaranes.md` §10 y en notas de F-053 (2026-11-09). Avisarán cuando borren la vieja `SIGRID_ALBARAN_NATURALEZA_POR_PRODUCTO`.
+- **sigrid-api**: contrato **v8.5** publicado el 2026-11-09 (enmienda 1 de su F-008, `7b7a2e1`): la naturaleza de las líneas sin vincular sale de la ficha del producto; en la empresa 1 `MA9999` pasa a `MA1501` / `CDMA15`. Sin cambios de código en albaranes; documentado en `azure-apps/albaranes.md` §10 y en notas de F-053 (2026-11-09). La vieja `SIGRID_ALBARAN_NATURALEZA_POR_PRODUCTO` se borró de Azure el 2026-11-11 (aviso de sigrid-api; previa sigue en `MA1501` / `0404.CDMA15`; `azure-apps` actualizado, sin push).
 - **F-110**: T21 HECHA (2026-11-08): sv9 y sv4 en `r20261108-1033`; `ALTA_SIGRID_ENVIAR_DTO=true` en las dos. **OJO: `infra/00_capps_vars.ps1` sigue versionado en `"false"` (lo exige `test_f110_r20`): relanzar `set_alta_sigrid.ps1` apagaría el dto; al cerrar F-110, fichero a `"true"` y ese test actualizado juntos.** Espera T22 del líder tras la primera alta con dto (0 de 146 a 08-11).
 - **Limpieza de bloqueadas, comprobaciones en solo lectura del 2026-11-08:** F-064 T12 VERDE (170 merges desde el despliegue, 0 con `proveedor_cif_propio:`). F-104 M3 sigue a la espera (0 altas con `retencion_del_contrato`). F-085: log de sv5 `IA3=openai/gpt-6.1-sol IA4=openai/gpt-6.1-sol`, sin Traceback. F-076 T19 aún NO verde: `medir_f076_partidas` da 3 pendientes «normalizable sin normalizar» y los 11 documentos de T19 siguen sin aprobar. F-098: siguen las 2 líneas `CD.21.02.21` de 3ac58fca; su commit 8fc47ef (T18 hecha) está solo en la rama. Orden acordado por medir: F-076 T19 antes de desplegar F-117; F-117/F-118/F-119 antes de T11 de F-100 o después de T21; IA3/IA4 de F-083 tras F-100 y desde `dev`, no desde su worktree. A revisar por el humano: alta `incierto` bb25c874 (`tiempo_agotado`, 23-10).
 - **Chrome del 2026-11-08 (líder, pedido por el humano):** 14 «Valorar ahora» hechos (9 de T19 de F-076 y 5 de residuos de F-111, 10:57–11:00 UTC). `89e463a7`, `bef66bce` y `a848c4cf` no se pudieron: botón deshabilitado (con contrato; por `app.js`, la ficha cree que hay una valoración en curso). Tras revalorar, `medir_f076_partidas` sigue en 3 «normalizable sin normalizar» pendientes: T19 NO verde. **F-098 T20 no se puede hacer como dice la spec:** reelegir la misma partida no envía nada (`partidaParaEnviar` da null si el valor pintado no cambia), así que 901 y 902 de 3ac58fca siguen con `CD.21.02.21` y solo quedaron `bloqueada=TRUE` por el «Guardar» de fila. **Resuelto el mismo día (humano: «inténtalo»):** «Valorar ahora» en 3ac58fca (12:05 UTC) deja las 2 líneas (ids nuevos 1442 y 1443) con final `21.02.21`, siguen bloqueadas. La T20 debe decir «revalorar», no «reelegir». `89e463a7`, `bef66bce` y `a848c4cf` también tienen valoración de hoy (10:58–10:59 UTC, status ok) aunque el botón no se pulsó: causa sin averiguar. Las 3 líneas «normalizable sin normalizar» de T19 son las 3 `CI.04.18` ⇒ `CI.4.18` de `355449d9`: corregidas a mano el 2026-11-08 y medición en 0. El humano descarta la corrección de 10802b4f.
@@ -57,7 +57,7 @@
 - **Review pasada 1 (REJECTED) atendida (implementer, 2026-10-25):** cambios 1–6 de su §7 (los 5 mutantes de plantilla de su §4 mueren, tabla en `progress/impl_F-098.md` §6) y (a)/(b) de su §8 por decisión del líder (`codigoParaEnviar` sin cods repetidos; «Traer líneas contrato» busca por `partMostrada`). `init.sh` con `PYTHONPATH` y `ARNES_SIN_CACHE=1` en verde sobre `a19b78c`; tal cual, rojo solo por el entorno del worktree. Lista para la pasada 2.
 - **Desviaciones justificadas (implementer):** (1) R5 dice «tests de F-076 sin tocarlos», pero la spec cambia lo que tres de ellos fijan literalmente: `test_f076_r4_motivos_declarados` (design §5.1 mete `completa` en `MOTIVOS_PARTIDA`), `test_f076_t4_version_080` (R33: 0.9.0; pasa a «desde 0.8.0», como hizo F-076 con el de F-052) y, en sv4, `test_f076_r15_el_endpoint_sirve_los_items_de_hoy` (R14 añade campos y `capitulos`; ahora compara los tres campos de siempre). Se tocó solo esa aserción en cada uno. (2) Los campos nuevos de `PartidaObra` van con `compare=False`: sin eso, los tests de hojas de F-076 (igualdad con 3 campos) caerían. (3) `PartidasObraPort` de sv4 se crea en T8, no en T9 (lo pide la firma de `ReviewService`). (4) `consultar` sin obra da `(None, False)`. (5) Tests viejos de JS: añaden `codigoParaEnviar` a su lista de funciones sacadas y aceptan la forma nueva de `partidasDeRespuesta`/`opcionesPartida` (design §5.3); ninguna aserción de comportamiento relajada (detalle en `progress/impl_F-098.md` §2).
 
-**F-104 · `blocked` (2026-10-24): review APPROVED (pasada 2), fusionada en `dev` (`3ae37eb`) y DESPLEGADA por el humano: sv9 `r20261024-1838` (escala a cero, despierta con `q-feedback`), sv4 `r20261024-1841` (una revisión activa, 100 %, arranque limpio). M1 en verde (sv9 sin `ALTA_SIGRID_AVISOS_BLOQUEANTES`: defecto `producto_sin_historico`). F-015 de sigrid-api desplegada el 24-10. M2 en verde el 28-10 (recuentos en `progress/impl_F-104.md`); T8 y T9 hechas; espera la review de T8–T9, la fusión y el despliegue de sv9 con la T8. M3 (panel de un alta con retención) cuando pase la primera** — sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (`871cc0c`). Spec en `specs/F-104-codigos-contrato-v83/` (rama `feature/F-104-codigos-contrato-v83`, worktree `../albaranes-F-104`, *junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`). **PARADA 1 cerrada por el humano el 2026-10-24 («sí, apruebo 104»): D1 = opción 1, D2 = opción 1** (anotado en `design.md` §8).
+**F-104 · `blocked` (2026-10-24): review APPROVED (pasada 2), fusionada en `dev` (`3ae37eb`) y DESPLEGADA por el humano: sv9 `r20261024-1838` (escala a cero, despierta con `q-feedback`), sv4 `r20261024-1841` (una revisión activa, 100 %, arranque limpio). M1 en verde (sv9 sin `ALTA_SIGRID_AVISOS_BLOQUEANTES`: defecto `producto_sin_historico`). F-015 de sigrid-api desplegada el 24-10. M2 en verde el 28-10 (recuentos en `progress/impl_F-104.md`); T8 y T9 hechas, review pasada 4 APPROVED y fusionadas en `dev` el 28-10 (`f9dcaa6`); desplegadas con el sv9 `r20261108-1033` (imagen comprobada en Azure el 2026-11-11). M3 (panel de un alta con retención) cuando pase la primera** — sv9 y sv4 entienden los códigos del contrato v8.3 de sigrid-api (`871cc0c`). Spec en `specs/F-104-codigos-contrato-v83/` (rama `feature/F-104-codigos-contrato-v83`, worktree `../albaranes-F-104`, *junction* `.venv` de sv4: quitarla con `cmd /c rmdir` antes de `git worktree remove`). **PARADA 1 cerrada por el humano el 2026-10-24 («sí, apruebo 104»): D1 = opción 1, D2 = opción 1** (anotado en `design.md` §8).
 
 - **Alcance de esta pasada: T1–T7.** M1, M-D, M2 y T8–T9 dependen del despliegue de la F-015 de sigrid-api: M1/M2 las hace el líder, el despliegue el humano. Tras APPROVED de T1–T7, F-104 queda `blocked` («espera al despliegue de F-015 de sigrid-api») hasta M2 en verde y T8.
 - **T1–T7 hechas (implementer, 2026-10-24)**, `init.sh` en verde; review APPROVED en la pasada 2 (`progress/review_F-104.md`). Informe `progress/impl_F-104.md`, mutación `progress/mutacion_F-104.md`, `azure-apps` `8f6f243` local sin push.
@@ -217,66 +217,7 @@ Las llamadas de pago son T13–T15, MANUAL del humano, con los comandos de desig
 
 **F-073 · CERRADA (`done`, 2026-10-21).** Desplegada en sv3 (r20261019-0952, y con F-080 en r20261019-1114); paso 0 en verde el 2026-10-20 (54b82479, dedf011a, 53337da7 → FEYMACO, CTSU24/0466). El log del próximo albarán sin CIF se observa sin bloquear. Resumen en `history.md`.
 
-**F-077 · PUNTO 4 EN ROJO (2026-10-22 22:22 local, líder en Chrome, con el sí del humano):** en `d550baa3` (ANFERSA 0692, elegida porque sv9 la frena por `fecha_no_plausible`) se desbloqueó la línea 788 (POST `/lines/788/desbloquear`, autorizado), se escribió `zzzz` en su partida (el combo mostraba «Cargando partidas…») y se pulsó «Guardar y aprobar» (con `alert`/`confirm` redirigidos a una lista en la página para no bloquear la extensión). RESULTADO: **ningún aviso**, ningún PATCH de fila, **PUT de aprobación 200** y recarga «Documento guardado y aprobado»: la fila con `zzzz` NO se trató como fila pendiente, así que la validación de partidas no saltó. Daño: ninguno en Sigrid (sv9 → `revisar`, `fecha_no_plausible`, intento 4); en BBDD el albarán quedó `approved=true` (por residuos@ruesma.es, la sesión del navegador), la línea 788 con CD2.14 (el `zzzz` no se guardó) y desbloqueada. Punto 5 aceptado por el humano con la evidencia de uso real (19 aprobaciones de Óscar Domingo con filas guardadas, registradas en Sigrid). F-077 sigue `blocked`: hay que reproducir en local (¿la fila solo cuenta como pendiente tras el evento `change`/la carga de la lista?) y arreglar antes de cerrarla.
-
-**F-077 · `blocked` (2026-10-17): review APPROVED (pasada 2), fusionada en `dev`; espera la MANUAL T14, que hace el
-líder en el navegador tras desplegar sv4 (abajo)** — rama
-`feature/F-077-guardar-y-aprobar` (worktree `../albaranes-F-077`), `dev` fusionado. Spec v2 en
-`specs/F-077-guardar-y-aprobar/` (con las notas de implementación aceptadas en review); informe:
-`progress/impl_F-077.md`; review: `progress/review_F-077.md`; mutación: `progress/mutacion_F-077.md`. Solo sv4, rigor
-`estandar`. *Junction* `.venv` de sv4 en el worktree (quitarla con `cmd /c rmdir` antes de `git worktree remove`).
-**T14 (líder, 2026-10-18, sv4 `r20261018-1741`):** punto 1 VERDE (panel rojo «No admitido», «Línea 2: La línea no
-tiene descripción», title `falta_descripcion`, fila 386; 385/386 sin ⚠). Punto 2 VERDE tras F-078 T14 («Simulado (no
-grabado)», sin el motivo). Punto 3 VERDE en lo negativo: 12 de 12 albaranes con filas Contrato (son todos los de la BBDD),
-ningún ⚠ en Nueva ni en Contrato coincidentes; no hay hoy ningún caso positivo (Contrato con lectura distinta) que mirar.
-Pendientes: punto 4 (`zzzz`, ficha que elija el humano) y punto 5 (solo si hay una corrección real).
-
-#### F-077 · MANUAL T14 (la hace el LÍDER en el navegador, con el humano)
-
-**Cuándo y dónde encaja.** Tras el APPROVED, la fusión en `dev` y `init.sh` en verde en el árbol principal. sv4 desde
-`dev` lleva F-078 y F-076: mientras su **secuencia combinada** (bloque «F-076 · MANUAL») siga pendiente, F-077 se
-despliega en su **paso 4** (`deploy.ps1 -Only sv4`, lo lanza el humano) y esta T14 va **justo después**; el punto 1
-va siempre **antes del paso 6** (F-078 T14), que deja `86c13097` en `simulado`. Nunca sv4 suelto antes del paso 3. Si
-la secuencia ya está hecha, el humano despliega sv4 con `. .\00_vars.ps1`, `. .\00_capps_vars.ps1`,
-`.\deploy.ps1 -Only sv4` y `.\check_deploy.ps1` (en `infra\`; VERDE: sv4 en el tag nuevo).
-
-Precondición: sv4 con `ALTA_SIGRID_DESDE_UTC` puesta y `ALTA_SIGRID_COMMIT=false`. **Acciones marcadas
-[ESCRIBE EN PRODUCCIÓN]: cada una necesita el sí expreso del humano en el chat, para esa acción, antes de pulsar.**
-El resto solo abre fichas y mira (sin escribir nada).
-
-1. **Solo lectura, ANTES del paso 6.** Abrir la ficha de `86c13097-98f8-4e4b-91af-6a378c28d9cf`. VERDE: el panel
-   «Alta en Sigrid» sale **en rojo** con «Error en el alta en Sigrid: No admitido» y, en su lista de motivos,
-   **«Línea N: La línea no tiene descripción»**, con N la posición de la fila 386 en la tabla de líneas de la ficha
-   (al pasar el ratón, `falta_descripcion`); las filas 385 y 386 (manuales) sin ⚠ de partida. Si el panel dice en su
-   lugar «Sigrid no ha respondido en 5 minutos…», se comprueba en solo lectura `SET default_transaction_read_only =
-   on; SELECT m.approved_at_utc, a.approved_at_utc, a.estado FROM albaran_documents_merge m JOIN albaran_altas_sigrid
-   a ON a.document_id = m.id WHERE m.id = '86c13097-98f8-4e4b-91af-6a378c28d9cf';`: si los dos instantes difieren, se
-   reaprobó sin respuesta de sv9 (el panel es correcto, pero el punto no se puede verificar: se avisa al humano).
-2. **Solo lectura, tras el paso 6** (F-078 T14, autorizado en su bloque). Reabrir `86c13097`. VERDE: panel sin
-   rojo (no `error`) con «Estado: Simulado (no grabado)» y sin el motivo «La línea no tiene descripción».
-3. **⚠ de partida (solo lectura).** En fichas que el humano indique (o las ya abiertas): ⚠ solo en filas «Contrato»
-   cuya partida leída no coincide, con tooltip «… · No coincide con la partida leída en el albarán (X)»; en «Nueva»,
-   manuales o partes de un reparto, ningún ⚠. VERDE: así en todas las vistas.
-4. **Partida no válida (no escribe nada si sale verde).** En una ficha pendiente que elija el humano: escribir `zzzz`
-   en la partida de una fila y pulsar «Guardar y aprobar». VERDE: aviso «Hay partidas no válidas (en rojo)…», casilla
-   en rojo y, en F12 → Red, **ninguna** petición PATCH ni PUT. Después, recargar sin guardar (la fila vuelve como
-   estaba y el albarán sigue pendiente). Si saliera alguna petición, es el defecto: parar y avisar.
-5. **[ESCRIBE EN PRODUCCIÓN] «Guardar y aprobar» con filas cambiadas.** Solo si el humano tiene un albarán pendiente
-   que **necesite de verdad** corregir una o más filas: la ficha y los valores los elige él (nada inventado: con
-   `COMMIT=false` sale `simulado`, pero un «Solicitar alta» posterior con `COMMIT=true` mandaría esos valores a
-   Sigrid). Escribe en producción: (a) el **PATCH de cada fila** cambiada (`…/conciliacion/campos?bloquear=1`: la
-   guarda y la bloquea), (b) el **PUT de aprobación** de la cabecera y (c) la **publicación en `q-feedback`** del alta
-   para sv9. Con el sí expreso del humano para esas tres, cambiar las filas **sin** pulsar su «Guardar» y pulsar
-   «Guardar y aprobar» (aceptar la confirmación de la suma si sale). VERDE: la **misma ficha se recarga aprobada**
-   (solo lectura, con el mensaje de guardado) con las filas guardadas con los valores nuevos; el panel dice «Alta en
-   curso…» sin estado viejo ni botones, F12 → Red enseña `/alta-sigrid/fase` cada 3 s, y en segundos la ficha se
-   recarga sola con el resultado de sv9 (lo esperable con `COMMIT=false`: «Estado: Simulado (no grabado)»; si sale
-   `no_admitido`/`revisar`/`error`, en rojo y con sus motivos en texto). **Si no hay ninguna corrección real
-   pendiente, este punto no se hace:** «guardar las filas antes de aprobar» queda cubierto por
-   `tests/test_f077_guardar_y_aprobar_js.py` (23 tests con node) y se anota así.
-
-Con el verde de 1–4 (y el de 5 o su «no aplica» anotado), el líder lo anota en `progress/impl_F-077.md` (§6) y
-F-077 pasa a `done`.
+**F-077 · CERRADA (`done`, 2026-11-11).** Resumen en `history.md`; T14 en `progress/impl_F-077.md` §6.
 
 **F-076 · CERRADA (`done`, 2026-11-08). Resumen en `history.md`. Lo de abajo queda como referencia** — rama `feature/F-076-normalizar-partidas`
 (worktree `../albaranes-F-076`), `dev` fusionado (F-078 incluida). T1–T17 y T5b hechas; T18–T20 son MANUAL del humano
