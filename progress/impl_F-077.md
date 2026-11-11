@@ -132,7 +132,22 @@ de 92 líneas cambiadas (92/92)**; PUERTA TAMAÑO dentro. Pasada final: §7.
 sv4` lleva F-077 si ya está en `dev`); el punto 1 (`86c13097` en `no_admitido`, «Línea N: La línea no tiene
 descripción», solo lectura) antes del paso 6. Solo el punto 5 escribe en producción (PATCH de fila, PUT de
 aprobación, `q-feedback`), con el sí expreso del humano y con correcciones reales que elija él; si no hay ninguna,
-queda cubierto por los tests y se anota. Resultado: **PENDIENTE**.
+queda cubierto por los tests y se anota. Resultado: **HECHA, cerrada el 2026-11-11** (abajo).
+
+**Resultado de T14 (líder):**
+
+- Punto 1 VERDE y punto 2 VERDE (2026-10-18, sv4 `r20261018-1741`; el 2 tras F-078 T14).
+- Punto 3 VERDE en lo negativo (12 de 12 albaranes con filas Contrato, sin ⚠ indebido; ningún caso positivo que mirar).
+- Punto 4 (2026-10-22 y repetido el 2026-11-11 en sv4 `r20261108-1033`, albarán IV00098067 `00c344e2`, pendiente,
+  con toda escritura bloqueada en la página: fetch no GET, XHR, formularios, `alert`/`confirm`): `zzzz` en la partida
+  de la línea 510 y «Guardar y aprobar» ⇒ al salir de la casilla el combo devuelve la partida anterior
+  (`volverSiNoVale`, `app.js:1138`, F-065 O6 del 2026-10-13); la fila queda sin cambios, no hay PATCH de fila, no
+  sale el aviso y se intenta el PUT de aprobación (bloqueado por la prueba: nada escrito). El aviso de la spec es
+  inalcanzable por diseño del combo; una partida no válida nunca se guarda. **Dado por bueno por el humano el
+  2026-11-11** («f77 lo doy por bueno, cierra»). Sin probar en producción: el aviso con una fila que llegue con
+  partida inválida (cubierto por `tests/test_f077_guardar_y_aprobar_js.py`).
+- Punto 5 aceptado por el humano con el uso real (19 aprobaciones de Óscar Domingo con filas guardadas, registradas
+  en Sigrid).
 
 ## 7. Evidencias
 
