@@ -23,6 +23,14 @@ Sin clave no hay caché: con cambios sin commitear (como siempre), con una
 dependencia fuera de `HEAD`, con un módulo que resuelve fuera del repositorio
 o de las rutas declaradas, o si la sonda falla. Salvo el primer caso, todos
 avisan: un verde que no se puede reutilizar debe decir por qué.
+
+Dos casos que la clave no ve (F-028). `depende_de: ["."]` declara el
+repositorio entero: su hash es el árbol raíz en `HEAD`, así que cualquier
+commit, y cualquier cambio sin commitear, anula la caché. Más barato para un
+barrido que lee todo el repositorio (`progress/`, `docs/`...) es declararlo en
+`ejecutar_siempre`: al servir de caché, la salida lleva una línea
+`SIEMPRE|<ruta>` por cada una e init.sh las ejecuta igualmente. No entran en
+la clave: declararlas o cambiarlas no invalida un verde.
 """
 
 from __future__ import annotations
@@ -93,6 +101,10 @@ class Decision:
     #: `AAAA-MM-DD HH:MM` (hora local) del verde que se reutiliza; solo si `servir`.
     fecha_verde: str | None
     avisos: tuple[str, ...]
+    #: Rutas de `ejecutar_siempre` que init.sh ejecuta aunque sirva la suite
+    #: de caché (F-028); solo si `servir`: al ejecutar, la suite entera ya las
+    #: incluye.
+    siempre: tuple[str, ...] = ()
 
 
 class ErrorDeSonda(Exception):
@@ -116,8 +128,13 @@ def _git(args: list[str], raiz: str) -> subprocess.CompletedProcess:
 
 
 def hash_en_head(ruta: str, raiz: str) -> str | None:
-    """Hash del objeto de `ruta` en `HEAD`; `None` si no está versionada."""
-    proceso = _git(["rev-parse", "--verify", "--quiet", f"HEAD:{ruta}"], raiz)
+    """Hash del objeto de `ruta` en `HEAD`; `None` si no está versionada.
+
+    `.` es el repositorio entero (F-028): `HEAD:` da el árbol raíz, y `HEAD:.`
+    falla porque git no resuelve `.` dentro de un árbol.
+    """
+    objeto = "" if ruta == "." else ruta
+    proceso = _git(["rev-parse", "--verify", "--quiet", f"HEAD:{objeto}"], raiz)
     hash_objeto = proceso.stdout.strip()
     if proceso.returncode != 0 or not hash_objeto:
         return None
@@ -338,14 +355,20 @@ def decidir(
         else None
     )
     return Decision(
-        servir=servir, clave=clave, fecha_verde=fecha_verde, avisos=tuple(avisos)
+        servir=servir,
+        clave=clave,
+        fecha_verde=fecha_verde,
+        avisos=tuple(avisos),
+        siempre=servicio.ejecutar_siempre if servir else (),
     )
 
 
 def lineas_de_salida(decision: Decision) -> list[str]:
-    """Protocolo para init.sh: `AVISO|...` y al final `SERVIR|` o `EJECUTAR|`."""
+    """Protocolo para init.sh: `AVISO|...`, al servir `SIEMPRE|<ruta>` por cada
+    ruta de `ejecutar_siempre`, y al final `SERVIR|` o `EJECUTAR|`."""
     lineas = [f"AVISO|{' '.join(aviso.split())}" for aviso in decision.avisos]
     if decision.servir:
+        lineas.extend(f"SIEMPRE|{ruta}" for ruta in decision.siempre)
         lineas.append(f"SERVIR|{decision.fecha_verde}")
     else:
         lineas.append(f"EJECUTAR|{decision.clave or ''}")
