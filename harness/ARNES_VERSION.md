@@ -23,7 +23,9 @@ Lo escribe `instalar_arnes.ps1`. **No lo edites a mano.**
 > de la 1.10.0: fuera el hook `PostToolUse` local). `docs/referencia/README.md`
 > no cambia. Los tests con nombre propio que copiaban tests genericos
 > (`test_f038_*`, `test_f039_r15_r16_*`, `test_f040_r*`, cinco de `test_f072_*`)
-> se borraron a favor de sus genericos; los que traen casos propios siguen.
+> se borraron a favor de sus genericos; `test_f039_r3_r7_*` quedo reducido a su
+> caso propio (`test_f039_r7_paridad_f012.py`) y los que traen casos propios
+> siguen.
 > Detalle en `progress/arnes_1.10.0.md`.
 
 > **AVISO de la 1.6.3: hay informes de mutacion que pueden no valer.**
