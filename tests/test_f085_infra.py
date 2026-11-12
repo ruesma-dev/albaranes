@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from harness.tiempos import escalar_timeout
+
 RAIZ = Path(__file__).resolve().parent.parent
 INFRA = RAIZ / "infra"
 CREATE_CAPPS = INFRA / "create_capps.ps1"
@@ -249,7 +251,7 @@ def _ejecutar(tmp_path: Path, guion: str, *argumentos: str) -> tuple[list[str], 
         [POWERSHELL, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
          "-File", str(envoltorio)],
         capture_output=True, text=True, encoding="utf-8", errors="replace",
-        env=entorno, timeout=120, check=False,
+        env=entorno, timeout=escalar_timeout(120), check=False,
     )
     salida = resultado.stdout + resultado.stderr
     assert "AZ-CMD-REAL-NO" not in salida, "se llamó a az.exe y no a la función falsa"

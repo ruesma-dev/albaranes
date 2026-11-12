@@ -84,7 +84,7 @@ def test_f012_r7_workers_por_defecto_reservan_dos_nucleos_por_worker(
 
     El motivo, con medición: cada worker arranca un proceso pytest completo, no
     un hilo, así que el recurso escaso es la máquina y no el núcleo. El detalle
-    y los ocho tamaños de máquina están en `test_f040_r1_r10_dimensionado.py`.
+    y los ocho tamaños de máquina están en `test_mutacion_dimensionado.py`.
     """
     monkeypatch.setattr("harness.mutacion.os.cpu_count", lambda: 8)
 

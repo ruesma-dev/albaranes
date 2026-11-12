@@ -5,6 +5,10 @@ Los siete servicios que importan `ruesma_comun` lo declaran (dependencia de la
 carpeta de la comun y módulo vigilado), para que un commit en la comun invalide
 su caché y un worktree que importa la comun de otro árbol lo diga. La comun e
 `infra` no declaran nada. El ejemplo documenta los tres campos nuevos.
+
+R30 (que `harness/ARNES_VERSION.md` anotase la caché de la 1.7.16 sobre un
+arnés sellado en la 1.7.2) se retiró al actualizar el arnés a la 1.10.0: el
+repositorio ya no lleva piezas sueltas y esa nota dejó de existir.
 """
 
 from __future__ import annotations
@@ -72,10 +76,3 @@ def test_f072_r29_el_ejemplo_documenta_y_usa_los_tres_campos() -> None:
                for servicio in ejemplo["servicios"])
     assert "find_spec" in ejemplo["$doc"] or "conftest" in ejemplo["$doc"]
 
-
-def test_f072_r30_arnes_version_anota_la_cache_de_la_1_7_16() -> None:
-    nota = (RAIZ / "harness" / "ARNES_VERSION.md").read_text(encoding="utf-8")
-    version = (RAIZ / "harness" / "VERSION").read_text(encoding="utf-8")
-
-    assert "1.7.16" in nota and "F-072" in nota
-    assert "ARNES_VERSION=1.7.2" in version

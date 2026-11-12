@@ -3,10 +3,10 @@
 
 `x is None` es LA forma de preguntar por la ausencia en Python, y era el punto
 ciego del mutador: la tabla `COMPARACIONES` no la conocía. Es justo el patrón
-de los dos defectos más caros de este proyecto —la red KG→TN que se apagaba
-con un `derived_line is not None` y la precedencia del importe de línea con un
-`importe_albaran_declarado is not None`—, así que sus campañas se midieron
-ciegas en el sitio que más importaba.
+de los dos defectos más caros vistos en `albaranes` —la red KG→TN que se
+apagaba con un `derived_line is not None` y la precedencia del importe de línea
+con un `importe_albaran_declarado is not None`—, así que sus campañas se
+midieron ciegas en el sitio que más importaba.
 
 Aquí se fija, además, el efecto colateral que aparece al mutar un operador
 escrito con letras: `is` cabe dentro de cualquier palabra («análisis»), y el
@@ -169,7 +169,12 @@ def test_f034_r4_el_operador_declarado_es_comparacion():
     """R4: van etiquetados como `comparacion` y `clave_de_mutante` los distingue."""
     mutantes = _mutantes(FUENTE_IS)
 
-    assert [mutante.operador for mutante in mutantes] == ["comparacion"]
+    # F-026 (R9): la guarda da además el mutante de `veracidad` (`if not x:`),
+    # que no sustituye al de `comparacion`: el `is` → `is not` sigue aquí.
+    assert sorted(mutante.operador for mutante in mutantes) == ["comparacion", "veracidad"]
+    assert [m.mutado for m in mutantes if m.operador == "comparacion"] == [
+        "if x is not None:"
+    ]
 
     dos = _de_operador(FUENTE_DOS_IS, "comparacion")
     claves = {
@@ -293,16 +298,22 @@ def test_f034_r8_el_mutante_compila_y_el_ast_lleva_el_operador_contrario():
     assert isinstance(_primera_comparacion(mutada_inversa).ops[0], ast.Is)
 
 
-def test_f034_r14_la_puerta_de_evals_no_se_declara_sobre_lo_no_versionado():
-    """R14: la subida de la puerta se condiciona a artefactos VERSIONADOS.
+def test_la_declaracion_de_rutas_sensibles_dice_cuando_sube_a_bloqueo():
+    """Una exigencia que arranca en `aviso` tiene que decir cuándo deja de serlo.
 
-    Los libros `.xlsx` de `evals/ground_truth/` existen, pero `.gitignore` los
-    excluye: quien clona el repositorio no los ve. Condicionar una puerta a
-    ellos es condicionarla a algo que nadie puede comprobar. Lo que consume
-    `evals.runner` son los fixtures versionados de `evals/fixtures/`.
+    Sin esa frase, «aviso» se convierte en permanente por olvido: nadie sabe
+    qué tendría que pasar para que la puerta bloquee de verdad, así que no pasa
+    nunca. Se exige UNA sola, porque dos condiciones distintas en el mismo
+    campo es no tener ninguna.
 
-    En un repositorio sin declaración de rutas sensibles no hay puerta que
-    comprobar y el test se salta: este fichero viaja tal cual a `arnes-base`.
+    Lo que la condición nombre debe estar **versionado**: en albaranes se
+    condicionó a unos libros `.xlsx` que `.gitignore` excluye —existían en la
+    máquina del humano y no en el repositorio—, así que la puerta dependía de
+    un artefacto que quien clona no puede ver. La regla está escrita en
+    `harness/rutas_sensibles.ejemplo.json`; comprobarla automáticamente exige
+    saber qué artefacto consume cada verificación, y eso es de cada proyecto.
+
+    En un repositorio sin declaración no hay puerta que comprobar: se salta.
     """
     if not RUTA_DECLARACION.exists():
         pytest.skip(f"este repositorio no declara {RUTA_DECLARACION.as_posix()}")
@@ -315,12 +326,4 @@ def test_f034_r14_la_puerta_de_evals_no_se_declara_sobre_lo_no_versionado():
     assert len(condiciones) == 1, (
         f"esperada UNA frase que declare cuándo se sube a 'bloqueo', "
         f"hay {len(condiciones)} en {RUTA_DECLARACION.as_posix()}"
-    )
-    assert "evals/fixtures/" in condiciones[0], (
-        "la condición de la puerta no nombra los fixtures versionados: "
-        f"{condiciones[0]!r}"
-    )
-    assert "ground_truth" not in condiciones[0], (
-        "la condición de la puerta vuelve a apoyarse en los libros .xlsx no "
-        f"versionados: {condiciones[0]!r}"
     )

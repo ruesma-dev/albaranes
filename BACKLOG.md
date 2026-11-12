@@ -3,23 +3,13 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **116 features**, 71 abiertas (0 en curso, 5 con la spec lista, 6 bloqueadas y 60 en backlog) y 45 terminadas.
+Resumen: **116 features**, 71 abiertas y 45 terminadas. Por columna: 0 en Review, 6 en Blocked, 0 en In progress, 5 en Spec aprobada, 0 en To do, 60 en Backlog y 45 en Done.
 
-## En curso
+## Review
 
-_Ninguna feature en curso._
+_Nada esperando revisión._
 
-## Spec lista
-
-| # | Feature | Prioridad | Rigor | Rama |
-|---|---|---|---|---|
-| F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | 43 | critico |  |
-| F-003 | Tanda 2 — Albaranes valorados, match estricto y coherencia (G3+G4+G5) | 59 | estandar | `feature/F-003-valorados-match-estricto` |
-| F-004 | Tanda 3 — Hormigón fino y veto de mortero | 62 | estandar | `feature/F-004-hormigon-fino` |
-| F-005 | Tanda 4a — Tipología bombeo | 63 | estandar | `feature/F-005-bombeo` |
-| F-006 | Tanda 4b — Residuos: lógica de pago LLEVAR/RETIRAR y canon | 64 | estandar | `feature/F-006-residuos-pago` |
-
-## Bloqueadas
+## Blocked
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
@@ -29,6 +19,24 @@ _Ninguna feature en curso._
 | F-100 | IA3 solo valora e IA4 casa TODAS las líneas valoradas: candidatas del contrato con el mismo precio unitario (±0,02 €) y la misma partida, y entre ellas por significado de la descripción | 7 | critico | `feature/F-100-ia3-valora-ia4-casa` |
 | F-083 | Comparar modelos de IA por fase (IA1–IA4): Claude ≥ 4.8, Gemini ≥ Flash 3.7, OpenAI ≥ 5.5 y «Luna», con acierto y coste por albarán | 13 | critico | `feature/F-083-comparar-modelos` |
 | F-092 | Gestión de almacén: crear la gestión del almacén (acopios) de las obras | 21 | critico |  |
+
+## In progress
+
+_Ninguna feature en implementación._
+
+## Spec aprobada
+
+| # | Feature | Spec aprobada | Prioridad | Rigor | Rama |
+|---|---|---|---|---|---|
+| F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | pendiente de tu aprobación | 43 | critico |  |
+| F-003 | Tanda 2 — Albaranes valorados, match estricto y coherencia (G3+G4+G5) | pendiente de tu aprobación | 59 | estandar | `feature/F-003-valorados-match-estricto` |
+| F-004 | Tanda 3 — Hormigón fino y veto de mortero | pendiente de tu aprobación | 62 | estandar | `feature/F-004-hormigon-fino` |
+| F-005 | Tanda 4a — Tipología bombeo | pendiente de tu aprobación | 63 | estandar | `feature/F-005-bombeo` |
+| F-006 | Tanda 4b — Residuos: lógica de pago LLEVAR/RETIRAR y canon | pendiente de tu aprobación | 64 | estandar | `feature/F-006-residuos-pago` |
+
+## To do
+
+_Nada comprometido._
 
 ## Backlog
 
@@ -95,55 +103,55 @@ _Ninguna feature en curso._
 | F-107 | sv1 lee el buzón cuando llega un correo (notificación de cambio de Graph) y no con una réplica siempre activa | 75 | critico |  |
 | F-109 | sv2 lee ANTHROPIC_FORZAR_HERRAMIENTA, como sv5, para poder usar Claude 5.5 en la extracción | 76 | estandar |  |
 
-## Terminadas
+## Done
 
-| # | Feature | Prioridad | Rigor |
-|---|---|---|---|
-| F-001 | Test de estructura del monorepo | 1 | estandar |
-| F-019 | Importe de línea: manda el unitario leído; el importe solo se despeja si faltan campos | 1 | critico |
-| F-034 | Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra | 1 | estandar |
-| F-043 | IA1 clasifica el albaran: la tipologia la decide la IA, siempre y con definiciones claras, nunca una regla determinista | 1 | critico |
-| F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | 1 | critico |
-| F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | 1 | critico |
-| F-053 | Alta en Sigrid de los albaranes aprobados | 1 | critico |
-| F-054 | sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822) | 1 | estandar |
-| F-062 | sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno | 1 | critico |
-| F-063 | El CIF de Construcciones Ruesma nunca es el proveedor: sv3 lo descarta y busca el proveedor por nombre | 1 | critico |
-| F-065 | Lo editado en las líneas de sv4 manda (guardados separados, guardar = bloquear la línea, aprobado = solo lectura), la partida se elige entre las de la obra y una línea se divide con F6 | 1 | critico |
-| F-070 | La obra siempre con el 0 inicial (salvo VAR y POSTV2): sv3 la sella canónica, sv4 consulta y guarda canónica, sv9 da de alta canónica | 1 | critico |
-| F-072 | Arnés: la caché de suites de init.sh tiene en cuenta las dependencias de cada servicio | 1 | critico |
-| F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | 1 | critico |
-| F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | 1 | critico |
-| F-106 | Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid | 1 | critico |
-| F-113 | Fotos reenviadas con MIME application/octet-stream: IA2 (OpenAI) las rechaza y no llegan a la plataforma | 1 | estandar |
-| F-114 | Elegir proveedor: check «Solo de la obra» (por defecto) o todos los proveedores de Sigrid | 1 | estandar |
-| F-115 | Al cambiar el proveedor: se reinicia la búsqueda de contrato y la valoración, sin regenerar las líneas | 1 | estandar |
-| F-116 | Guardado automático de la ficha al salir de cada campo, sin bloquear la línea | 1 | estandar |
-| F-011 | Evals de IA con ground truth y puerta en el arnés | 2 | estandar |
-| F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | 2 | critico |
-| F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | 2 | estandar |
-| F-039 | Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota | 2 | estandar |
-| F-040 | Arnes: la campana de mutacion se dimensiona sola y deja de mentir sobre lo que ha medido | 2 | estandar |
-| F-045 | El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos | 2 | critico |
-| F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | 2 | critico |
-| F-069 | Lista de equivalencias usuario de la app ↔ usuario Y EMPLEADO de Sigrid para el alta (sv9): usu y empide de quien aprueba | 2 | critico |
-| F-084 | El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None») | 2 | critico |
-| F-108 | Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha | 2 | estandar |
-| F-111 | Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén | 2 | critico |
-| F-112 | Año del albarán mal leído: la IA lee la fecha con la del correo como referencia | 2 | estandar |
-| F-117 | Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8) | 2 | critico |
-| F-012 | Campaña de mutación en paralelo | 3 | estandar |
-| F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | 3 | estandar |
-| F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | 4 | estandar |
-| F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | 4 | critico |
-| F-103 | Alta en Sigrid sin heredar la facturación del albarán plantilla: el AC nuevo no queda vinculado a una factura ajena ni con fechas de facturación, entrega o límite copiadas | 4 | critico |
-| F-098 | Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64» | 5 | critico |
-| F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | 13 | critico |
-| F-075 | El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán | 13 | critico |
-| F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086) | 14 | critico |
-| F-064 | IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor | 31 | critico |
-| F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | 34 | critico |
-| F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | 35 | estandar |
+| # | Feature | Cierre | OK humano | Prioridad | Rigor |
+|---|---|---|---|---|---|
+| F-001 | Test de estructura del monorepo | sin fecha | sin anotar | 1 | estandar |
+| F-019 | Importe de línea: manda el unitario leído; el importe solo se despeja si faltan campos | sin fecha | sin anotar | 1 | critico |
+| F-034 | Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra | sin fecha | sin anotar | 1 | estandar |
+| F-043 | IA1 clasifica el albaran: la tipologia la decide la IA, siempre y con definiciones claras, nunca una regla determinista | sin fecha | sin anotar | 1 | critico |
+| F-048 | El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel | sin fecha | sin anotar | 1 | critico |
+| F-052 | sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF) | sin fecha | sin anotar | 1 | critico |
+| F-053 | Alta en Sigrid de los albaranes aprobados | sin fecha | sin anotar | 1 | critico |
+| F-054 | sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822) | sin fecha | sin anotar | 1 | estandar |
+| F-062 | sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno | sin fecha | sin anotar | 1 | critico |
+| F-063 | El CIF de Construcciones Ruesma nunca es el proveedor: sv3 lo descarta y busca el proveedor por nombre | sin fecha | sin anotar | 1 | critico |
+| F-065 | Lo editado en las líneas de sv4 manda (guardados separados, guardar = bloquear la línea, aprobado = solo lectura), la partida se elige entre las de la obra y una línea se divide con F6 | sin fecha | sin anotar | 1 | critico |
+| F-070 | La obra siempre con el 0 inicial (salvo VAR y POSTV2): sv3 la sella canónica, sv4 consulta y guarda canónica, sv9 da de alta canónica | sin fecha | sin anotar | 1 | critico |
+| F-072 | Arnés: la caché de suites de init.sh tiene en cuenta las dependencias de cada servicio | sin fecha | sin anotar | 1 | critico |
+| F-078 | La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia | sin fecha | sin anotar | 1 | critico |
+| F-080 | Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados | sin fecha | sin anotar | 1 | critico |
+| F-106 | Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid | sin fecha | sin anotar | 1 | critico |
+| F-113 | Fotos reenviadas con MIME application/octet-stream: IA2 (OpenAI) las rechaza y no llegan a la plataforma | sin fecha | sin anotar | 1 | estandar |
+| F-114 | Elegir proveedor: check «Solo de la obra» (por defecto) o todos los proveedores de Sigrid | sin fecha | sin anotar | 1 | estandar |
+| F-115 | Al cambiar el proveedor: se reinicia la búsqueda de contrato y la valoración, sin regenerar las líneas | sin fecha | sin anotar | 1 | estandar |
+| F-116 | Guardado automático de la ficha al salir de cada campo, sin bloquear la línea | sin fecha | sin anotar | 1 | estandar |
+| F-011 | Evals de IA con ground truth y puerta en el arnés | sin fecha | sin anotar | 2 | estandar |
+| F-027 | Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto | sin fecha | sin anotar | 2 | critico |
+| F-035 | Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto | sin fecha | sin anotar | 2 | estandar |
+| F-039 | Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota | sin fecha | sin anotar | 2 | estandar |
+| F-040 | Arnes: la campana de mutacion se dimensiona sola y deja de mentir sobre lo que ha medido | sin fecha | sin anotar | 2 | estandar |
+| F-045 | El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos | sin fecha | sin anotar | 2 | critico |
+| F-051 | Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas» | sin fecha | sin anotar | 2 | critico |
+| F-069 | Lista de equivalencias usuario de la app ↔ usuario Y EMPLEADO de Sigrid para el alta (sv9): usu y empide de quien aprueba | sin fecha | sin anotar | 2 | critico |
+| F-084 | El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None») | sin fecha | sin anotar | 2 | critico |
+| F-108 | Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha | sin fecha | sin anotar | 2 | estandar |
+| F-111 | Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén | sin fecha | sin anotar | 2 | critico |
+| F-112 | Año del albarán mal leído: la IA lee la fecha con la del correo como referencia | sin fecha | sin anotar | 2 | estandar |
+| F-117 | Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8) | sin fecha | sin anotar | 2 | critico |
+| F-012 | Campaña de mutación en paralelo | sin fecha | sin anotar | 3 | estandar |
+| F-038 | Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor | sin fecha | sin anotar | 3 | estandar |
+| F-002 | Tanda 1 — Identificación de obra y proveedor (G1+G2) | sin fecha | sin anotar | 4 | estandar |
+| F-036 | La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten | sin fecha | sin anotar | 4 | critico |
+| F-103 | Alta en Sigrid sin heredar la facturación del albarán plantilla: el AC nuevo no queda vinculado a una factura ajena ni con fechas de facturación, entrega o límite copiadas | sin fecha | sin anotar | 4 | critico |
+| F-098 | Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64» | sin fecha | sin anotar | 5 | critico |
+| F-073 | Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate | sin fecha | sin anotar | 13 | critico |
+| F-075 | El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán | sin fecha | sin anotar | 13 | critico |
+| F-085 | Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086) | sin fecha | sin anotar | 14 | critico |
+| F-064 | IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor | sin fecha | sin anotar | 31 | critico |
+| F-076 | La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura | sin fecha | sin anotar | 34 | critico |
+| F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | sin fecha | sin anotar | 35 | estandar |
 
 ## Detalle
 
@@ -840,19 +848,19 @@ ORIGEN: el humano, 2026-10-28, al revisar los modelos tras el despliegue (Opus 5
 
 ### F-001 · Test de estructura del monorepo
 
-estado **terminada** · prioridad 1 · rigor `estandar` · SDD no · rama `feature/F-001-test-estructura`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `estandar` · SDD no · rama `feature/F-001-test-estructura`
 
 Feature trivial de calentamiento para validar el circuito completo del arnés (rama, acceptance, implementer, reviewer, cierre) sin tocar ningún servicio: un test en tests/ raíz que valida la coherencia de harness/servicios.json contra el árbol real.
 
 ### F-019 · Importe de línea: manda el unitario leído; el importe solo se despeja si faltan campos
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-019-importe-unitario-manda`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-019-importe-unitario-manda`
 
 Fallo REAL detectado en la prueba local del 2026-08-18 (lote FERRETERIA, Feymaco 2.137.569 y 2.139.643): la lectura de IA1 es exacta pero el importe valorado sale multiplicado por la cantidad (139,66 € reales -> 6.238,14 € valorados; 19,41 € -> 970,50 €). CADENA: (1) el SELECT de sv5 (infrastructure/database/sqlalchemy_valuation_context_repository.py, ~100-123, comentado como «FIX jun 2026») calcula importe_albaran = cantidad × precio_neto dando por hecho que precio_neto es un unitario NETO, cuando el prompt de IA1 (services/albaranes-api/config/prompts.yaml:75) lo define como cantidad*precio*(1-descuento/100), es decir el IMPORTE de la línea (columna NETO del albarán); (2) sv6 (application/services/price_reconciler.py) da prioridad al importe sobre el unitario leído y deriva unitario = importe / (cantidad × (1-dto/100)), con lo que 3.800,52 / (108 × 0,6) = 58,65 €/ud en vez de 0,543. REGLA DEL HUMANO (2026-08-18): si el PDF trae cantidad, precio unitario y descuento, importe = cantidad × precio_unitario × (1 - descuento/100) y el unitario leído MANDA; solo si faltan esos campos y hay importe final se despeja el unitario de esa misma fórmula. Alcance: alinear la semántica de precio_neto entre el prompt de IA1 y el consumidor de sv5, y ajustar la precedencia del reconciliador de sv6. Corrigiendo solo (1) la cadena ya cuadra (derivado 0,543 = declarado), pero la precedencia debe quedar explícita. Toca sv5 y sv6; revisar si el prompt de sv2 necesita precisar el significado del campo. Detalle y números en progress/prueba_local_feymaco_20260818.md.
 
 ### F-034 · Arnés: la mutación no muta `is`/`is not`, y dos incoherencias que la puerta de evals arrastra
 
-estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-034-mutacion-is-y-coherencia-evals`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-034-mutacion-is-y-coherencia-evals`
 
 URGENTE Y PRIMERO (decisión del humano, 2026-08-19): esto cambia la VARA DE MEDIR de todas las features, así que cada feature que se cierre antes de arreglarlo se mide con una campaña de mutación ciega en su punto más delicado. Sale de las observaciones del reviewer de F-027 (progress/review_F-027.md §12) y de la experiencia de F-019.
 
@@ -866,7 +874,7 @@ ALCANCE: `harness/mutacion.py`, `CHECKPOINTS.md`, `harness/rutas_sensibles.json`
 
 ### F-043 · IA1 clasifica el albaran: la tipologia la decide la IA, siempre y con definiciones claras, nunca una regla determinista
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-043-clasificacion-por-ia1`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-043-clasificacion-por-ia1`
 
 DECISION DE DISENO DEL HUMANO, 2026-08-25, prioridad 1: "vamos a preguntarle a la IA1 que, ademas de leer la info que necesitamos (lo maximo posible), clasifique el albaran. Es de las tareas mas importantes que puede hacer. SIEMPRE debe clasificar, aunque sea en generico". Y antes, el criterio de fondo: "es SIEMPRE la IA la responsable de clasificar tras entender el problema; lo que pasa es que hay que definirle bien que significa cada clasificacion (residuos, que hormigon y mortero no es lo mismo, etc.): debe entenderlo, asi que en el prompt necesitara una definicion clara de las posibilidades".
 
@@ -886,7 +894,7 @@ COSTE Y RIESGO: config/prompts.yaml es RUTA SENSIBLE del arnes, asi que el cierr
 
 ### F-048 · El texto del correo (asunto y cuerpo) llega a IA1 como contexto: SOLO el codigo de OBRA, cruzado con el papel
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-048-correo-contexto-ia1`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-048-correo-contexto-ia1`
 
 PRIORIDAD 1 por decision del humano el 2026-09-18: «pon una feature prioridad 1, que sea leer el codigo de obra y/o partida del email (asunto o cuerpo) de forma que el texto se le pase como contexto a la IA1, para que lo procese, si viene el codigo de la obra ya no tiene que leerlo, y con la partida igual».
 
@@ -920,7 +928,7 @@ DECISIONES DEL HUMANO DEL 2026-09-23, aplicadas en specs/F-048-correo-contexto-i
 
 ### F-052 · sv3 pierde proveedores de la obra: la lista de candidatos llega truncada a 1.000 filas (y sv4 no rebusca el contrato al cambiar el CIF)
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-052-proveedores-truncados`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-052-proveedores-truncados`
 
 PRIORIDAD 1 por decision del humano el 2026-09-29. ORIGEN: albaran SS-0026122 de SALMEDINA (caso RES-007) en la prueba local de F-048. Diagnostico de solo lectura en progress/explore_salmedina_proveedor.md.
 
@@ -936,7 +944,7 @@ DECISIONES DEL HUMANO (2026-09-30): aceptadas las recomendaciones D1-D7 de la sp
 
 ### F-053 · Alta en Sigrid de los albaranes aprobados
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-053-alta-sigrid`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-053-alta-sigrid`
 
 PETICION DEL HUMANO (2026-09-30): «Alta en Sigrid de los albaranes aprobados». Aprobar ES registrar: los dos botones de sv4 que aprueban («Guardar y aprobar» de la ficha y «Aprobar» del listado) disparan el alta del albaran en Sigrid.
 
@@ -950,7 +958,7 @@ SUSTITUYE A F-013. ORDEN: F-052 (done) -> F-051 en dev -> implementacion de F-05
 
 ### F-054 · sv1 ingiere los PDF e imagenes de correos adjuntos encadenados (message/rfc822)
 
-estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-054-correo-adjunto-encadenado`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-054-correo-adjunto-encadenado`
 
 PETICION DEL HUMANO (2026-09-30): hay albaranes que llegan como CORREO ADJUNTO (itemAttachment, contentType message/rfc822) con el PDF dentro, a veces anidado. Hoy sv1 lo descarta: si es el unico adjunto el correo va a Errores ("sin adjuntos elegibles"); si va junto a un PDF directo, el interior se PIERDE EN SILENCIO y el correo va a Procesados.
 
@@ -962,7 +970,7 @@ RIGOR estandar: solo sv1, sin schema, sin contratos de cola ni blob, sin recurso
 
 ### F-062 · sv3 aplica el proveedor propuesto antes de buscar contratos: CIF mal leído + candidato claro con contrato en la obra ⇒ se corrige y se busca con el bueno
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-062-proveedor-aplicado`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-062-proveedor-aplicado`
 
 SÍNTOMA (humano, 2026-10-07): «ya ha pasado varias veces que el CIF y el nombre están bien traídos por la IA pero luego no encuentra el contrato; si vuelvo a meter el mismo proveedor, entonces ya sí». CAUSA: la red de proveedor de sv3 (F-002 R8–R10, F-052 R15–R19; header_resolver_service._red_proveedor_por_cif) encuentra el proveedor bueno con contrato en la obra pero solo lo PROPONE en una nota (D3 de F-002) y la búsqueda de contratos se hace con el CIF leído ⇒ `ninguno`.
 
@@ -974,7 +982,7 @@ FUERA (por los datos): normalización única del CIF y SQL normalizada, reintent
 
 ### F-063 · El CIF de Construcciones Ruesma nunca es el proveedor: sv3 lo descarta y busca el proveedor por nombre
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-063-cif-propio-no-es-proveedor`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-063-cif-propio-no-es-proveedor`
 
 ARREGLO URGENTE DE PRODUCCIÓN (humano, 2026-10-08: «arregla urgente esto»). INCIDENCIA (logs de Azure): albarán de FEYMACO, obra 0694 (merges b1d3e179-… y 401d9c00-…). sv2 devolvió proveedor_nombre «FERRETERÍA Y MAQUINARIA PARA LA CONSTRUCCIÓN, S. A.» (bien) y proveedor_cif A81873903, el CIF de CONSTRUCCIONES RUESMA (el cliente impreso en el albarán). sv3 lo validó porque existe en Sigrid, canonizó el nombre a «CONSTRUCCIONES RUESMA, S.A.» y buscó contratos con ese CIF ⇒ 0. El mismo albarán llegó sin CIF (0bd5d331-…) y sv3 lo resolvió bien por nombre dentro de la obra (FEYMACO, A28733558).
 
@@ -984,7 +992,7 @@ FUERA: backfill de los merges ya canonizados a Ruesma (los corrige el revisor en
 
 ### F-065 · Lo editado en las líneas de sv4 manda (guardados separados, guardar = bloquear la línea, aprobado = solo lectura), la partida se elige entre las de la obra y una línea se divide con F6
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-065-lineas-editadas-y-reparto`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-065-lineas-editadas-y-reparto`
 
 ORIGEN (humano, 2026-10-09: «mételo todo en una spec de prioridad 1, y luego lo analizamos juntos»): correo de administración de obra sobre un albarán de METALFIRE (contrato CTSU25/0359): «Las unidades del albarán tengo que repartirlas en 3 partidas distintas»; «Si le cambio las partidas me arrastra del contrato, si le doy que no me la cambie me la pone como nueva»; puso 6 y 7 en dos líneas de 8 y 10 y trajo una tercera de 5 del contrato: «Guardar todas» dejó 18 y «Guardar y aprobar» volvió a 8+10+5 = 23 unidades.
 
@@ -998,25 +1006,25 @@ SPEC v2 (2026-10-09, PARADA 1 resuelta por el humano; informe progress/spec_F-06
 
 ### F-070 · La obra siempre con el 0 inicial (salvo VAR y POSTV2): sv3 la sella canónica, sv4 consulta y guarda canónica, sv9 da de alta canónica
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-070-obra-con-cero-inicial`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-070-obra-con-cero-inicial`
 
 ORIGEN (diagnóstico del líder, 2026-10-14, en producción y solo lectura): en los albaranes de HERMANOS SAN JUAN (obra 0686, contrato CTSU24/0524) el combo de partida de sv4 solo ofrece «Almacén». El merge tiene obra_codigo = "686" y sv4 llama a sigrid-api con "686": /api/sigrid/partidas?obra=686 devuelve ok y 0 partidas (con 0686, 2412); contratos 0 frente a 117; proveedores 0 frente a 115. En la bandeja hay 5 pendientes con obra de 3 cifras (686, 711, 723). sv9 (F-053, validador_alta.py) mandaría cod_obra = "686" sin completar y el alta fallaría. CAUSA SEGÚN EL HUMANO (literal): «el error es que al leer la obra del correo ha leído 686 y no ha normalizado. Es crucial que añada el 0 inicial si no es VAR ni POSTV2». REGLA: todo código de obra lleva el 0 inicial, salvo VAR y POSTV2, códigos válidos que se dejan tal cual (comprobado en Sigrid: existen como con.cod de obra). ALCANCE (spec 2026-10-14, progress/spec_F-070.md): normalización en un único punto de comun (ruesma_comun.obras: CODIGOS_OBRA_SIN_CERO, normalizar_codigo_obra con VAR/POSTV2 y canonizar_codigo_obra); sv3 canoniza la obra al sellar el merge (correo y papel) y al deducirla por texto, y deja de descartar VAR/POSTV2; sv4 canoniza en las tres consultas a Sigrid por obra (si no encaja, tal cual) y al guardar la cabecera; sv9 canoniza cod_obra antes del alta. Sin migración ni escrituras en producción: los merges ya guardados con 3 cifras los cubren sv4 y sv9. sv2 no cambia. Orden de despliegue: sv4 -> sv3; sv9 con F-053 desde un dev que ya tenga F-070. Coordinación con la rama de F-053 (v8) en design §7.
 
 ### F-072 · Arnés: la caché de suites de init.sh tiene en cuenta las dependencias de cada servicio
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-072-cache-con-dependencias`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-072-cache-con-dependencias`
 
 ORIGEN: review de F-070, observación O1 (progress/review_F-070.md de su rama, §Automejora). La clave de la caché de suites de init.sh §7 bis (.arnes_cache/suite_<svc>.ok) es solo `git rev-parse HEAD:<ruta del servicio>`. Fallos reales: (a) un cambio en services/albaranes-comun no invalida la caché de sv1-sv9, que la importan, y un verde viejo tapa una rotura; (b) en un worktree los intérpretes importan la comun editable del árbol principal, e init.sh dio verde por caché con sv3/sv4/sv9 rotos (ImportError: canonizar_codigo_obra). PETICIÓN DEL HUMANO: «arregla la caché». ARREGLO: dependencias declaradas por servicio en servicios.json (depende_de, importa, entradas_no_versionadas), clave calculada en Python (harness/cache_suites.py) con el hash de servicio y dependencias, intérprete, ruta real de los módulos importados y huella por metadatos de las entradas no versionadas; módulo importado desde fuera del repositorio en curso = [AVISO] visible y sin caché; fecha del verde reutilizado; ARNES_SIN_CACHE=1. Un servicios.json sin los campos nuevos funciona igual. Genérico: se porta a arnes-base como 1.7.16 en el mismo trabajo (cubre F-028 del taller y el encargo 1.7.12). Spec: specs/F-072-cache-con-dependencias/.
 
 ### F-078 · La línea valorada guarda lo que se ve: cada fila de albaran_line_valuations lleva descripción, unidad y cantidad de la ficha, la ficha pinta solo la fila y sv9 no cambia
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-078-linea-guarda-lo-que-se-ve`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-078-linea-guarda-lo-que-se-ve`
 
 ORIGEN (producción, 2026-10-16, solo lectura): sv9 dejó no_admitido con falta_descripcion el albarán 86c13097-98f8-4e4b-91af-6a378c28d9cf (modo real): la fila manual 386 tiene descripcion_linea vacía, pero la ficha pinta «CARGA INCOMPLETA» porque la saca de contrato_lines_derived (review_repository.py, _load_conciliation_map_in_session); la 385 también va vacía y sv9 la cubre con el concepto del merge. El producto «MA9999 · Suministro de materiales» no se guarda: es el por defecto que sv4 y sv9 calculan igual con ruesma_comun.alta_sigrid.producto_efectivo. PRINCIPIO DEL HUMANO (literal): «Lo que está en la tabla es lo que debería estar guardado en BBDD, ya que lo ha puesto el humano. No es que sv9 tenga que buscar en muchos sitios, sino que esté bien guardado todo.» MEDICIÓN (105 filas de 42 documentos activos, progress/spec_F-078.md §3): 93 sin descripción en la fila que la ficha rellena (6 que sv9 rechazaría y 16 en que sv9 mandaría otro texto que el que se ve), 7 sin vincular con unidad_albaran vacía (sv9 mandaría sin unidad) y 6 vinculadas con cantidad_convertida nula y factor 1 (sv9: cantidad_sin_convertir); precio, importe, partida y unidad de Q, 0. SPEC v1 (specs/F-078-linea-guarda-lo-que-se-ve/, PARADA 1 APROBADA 2026-10-16: P1 = (b), en las Nueva con blanca se guarda y se ve el concepto del papel; P8 fuera, es F-079; P2-P7, P9, P10 por defecto): regla única «lo que se veía» en comun (ruesma_comun.linea_valorada.fila_a_guardar); sv6 la aplica a cada registro antes del replace; sv4 pinta solo la fila (vacío = vacío), el PATCH guarda la descripción en toda fila y la unidad también en unidad_albaran sin conversión, y las vías que crean o reapuntan filas la materializan; no se aprueba con filas sin vincular sin descripción; relleno de lo existente con un script de sv6 (lectura por defecto, --aplicar con autorización expresa del humano), sin DDL; sv9 sin código. Despliegue: sv6 -> relleno -> sv4. RELACIONADAS: F-053 (reintentar el alta tras el relleno), F-065 (sustituye CR1/H1), F-058, F-075 (su builder directo pasa por el mismo paso), F-076, F-077 (conflictos de texto).
 
 ### F-080 · Proveedor en sv3: tras un empate por nombre, la familia solo elige entre los empatados
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-080-empate-solo-entre-empatados`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-080-empate-solo-entre-empatados`
 
 ORIGEN: H4 de progress/review_F-073.md, decisión del humano del 2026-10-17 («solo entre empatados»).
 
@@ -1030,49 +1038,49 @@ SPEC (specs/F-080-empate-solo-entre-empatados/, 2026-10-18): tras un empate por 
 
 ### F-106 · Al cambiar la medición de una línea en la ficha, el precio unitario se recalcula y se ve coherente con el importe (cantidad × precio × (1 − dto) = importe) antes de aprobar y de volcar a Sigrid
 
-estado **terminada** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-106-precio-al-cambiar-medicion`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-106-precio-al-cambiar-medicion`
 
 ORIGEN: correo de Óscar Domingo (obra 0692), reenviado por el humano el 2026-10-26: «Este albarán de Cecois ha volcado mal el precio, está ok en la IA y mal en el Sigrid; no, lo que ha hecho es que cuando he cambiado la medición al volcarlo lo ha cuadrado para que se cuadre con el importe del albarán». El humano: «esa ficha ponla con prioridad altísima». VERIFICADO (solo lectura, 2026-10-26) en AC26/30435 (CECOIS A 26017815, con_ide 2859417): la IA leyó 11,20 −7 % e importe 104,16 (≈ 10 unidades); el revisor cambió la cantidad a 48; la ficha siguió mostrando precio 11,20 y dto 7 % con 48 unidades e importe 104,16 (incoherente: 48 × 11,20 × 0,93 = 499,97); sv9 manda precio = |importe| / |cantidad| (`services/albaranes-alta-sigrid/domain/services/validador_alta.py:294`) = 2,17, y Sigrid grabó 48 × 2,17 = 104,16. El importe en Sigrid es correcto; el precio es el neto por la nueva unidad, pero el revisor no lo vio antes de aprobar y en la ficha queda otro. A DECIDIR EN LA SPEC: al cambiar la cantidad, qué se conserva (el importe del albarán, recalculando el precio y manteniendo el dto; o el precio, recalculando el importe), si se pregunta al revisor o se avisa; qué precio se muestra y cuál se persiste (sv4 escribe el merge; ¿revalorar con sv6?); el mismo caso al cambiar el precio o el dto; tolerancia de redondeo; que lo que ve el revisor sea exactamente lo que sv9 mandará (precio, y con F-095 bruto + dto). RELACIONADAS: F-095 (bruto + % de descuento a Sigrid), F-019 (el importe del albarán manda), F-065 (líneas editadas en la ficha), F-053 (alta).
 
 ### F-113 · Fotos reenviadas con MIME application/octet-stream: IA2 (OpenAI) las rechaza y no llegan a la plataforma
 
-estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-113-mime-adjuntos-octet-stream`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-113-mime-adjuntos-octet-stream`
 
 ORIGEN: el humano, 2026-10-30. Llega un correo de la obra 0728 a las 11:01 con 5 albaranes de FEYMACO en foto (adjuntos «WhatsApp Image 2026-10-30 at 09.39.xx.jpeg»). Sale como procesado en el buzón, pero no aparece en la plataforma. DIAGNÓSTICO del líder (solo lectura: workflow_runs y logs de ca-sv2-extraccion): Graph entrega los adjuntos con contentType `application/octet-stream`. sv1 guarda ese MIME tal cual (y el blob con extensión .pdf). IA1 (Gemini) los lee, pero IA2 (OpenAI Responses) devuelve 400 «Expected a base64-encoded data URL with an image MIME type … got unsupported MIME type 'application/octet-stream'». El error es NO retryable, así que los 5 mensajes de q-extraccion agotan los 5 intentos y acaban en poison. PROPUESTA del líder, aceptada por el humano para spec: (1) sv1 detecta el MIME real por la firma de bytes (JPEG, PNG, WebP, PDF; y por la extensión si hace falta) cuando Graph dice octet-stream o un tipo genérico; (2) defensa en profundidad en comun: el cliente de OpenAI (y el de Gemini si aplica) normaliza el MIME de la imagen con la misma función compartida antes de construir el data URL; (3) tests con una imagen declarada octet-stream. A RESOLVER EN LA SPEC: dónde vive la función de detección (comun); qué hacer con un adjunto que no es ni imagen ni PDF; nombre y extensión del blob de entrada; cómo se recuperan los 5 documentos atascados (reenviar el correo frente a reencolar los mensajes de poison, que es una escritura en producción y la autoriza el humano); medir en producción (solo lectura) cuántos documentos han caído por esto. Despliegue: comun → sv1 → sv2, lo lanza el humano. URGENTE: va antes que el resto de la cola.
 
 ### F-114 · Elegir proveedor: check «Solo de la obra» (por defecto) o todos los proveedores de Sigrid
 
-estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-114-proveedor-todos-sigrid`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-114-proveedor-todos-sigrid`
 
 ORIGEN: el humano, 2026-10-30, por el documento 097191e9 (obra sin contratos). Hoy el desplegable de proveedor de la ficha (sv4, `/api/sigrid/proveedores?obra=`, `_SQL_PROVEEDORES_POR_OBRA` en `sigrid_lookup_client.py`) solo ofrece proveedores con contrato en la obra (ctr de emp 1); en una obra sin contratos sale vacío. PETICIÓN: junto al desplegable, un check «Solo de la obra», marcado por defecto, que se comporta como ahora; desmarcado, se elige entre TODOS los proveedores dados de alta en Sigrid (tabla `prv`, solo lectura vía sigrid-api `sql/read`). A RESOLVER EN LA SPEC: tamaño de `prv` (medir en solo lectura) y, según eso, lista completa o búsqueda al escribir (nombre o CIF); duplicados por CIF y proveedores de baja; qué pasa aguas abajo al elegir un proveedor sin contrato en la obra (contratos, valoración, alta en Sigrid de sv9 con `sin_contrato`). Si sv9 necesita cambios, se propone aparte. Servicio: sv4. Va DETRÁS de F-113 y antes que el resto de la cola.
 
 ### F-115 · Al cambiar el proveedor: se reinicia la búsqueda de contrato y la valoración, sin regenerar las líneas
 
-estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-115-cambio-proveedor-reinicia-contrato`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-115-cambio-proveedor-reinicia-contrato`
 
 ORIGEN: el humano, 2026-10-30, al aprobar la PARADA 1 de F-114 (era su D6). PROBLEMA (ya existe hoy, F-114 lo hará más frecuente): si el albarán tenía elegido un contrato del proveedor A y en la ficha (sv4) se cambia el proveedor a B (corrección manual de F-062), el contrato de A sigue seleccionado; la valoración usaría el contrato de A y el alta en Sigrid (sv9) mandaría el contrato de A con el CIF de B (Sigrid lo rechaza: fallo visible, no silencioso). PETICIÓN del humano: «al cambiar proveedor debe reiniciarse el proceso de busqueda de contrato y valoracion pero no la generacion de nuevas lineas». Es decir: al cambiar el proveedor se quita la selección de contrato del proveedor anterior, se vuelven a buscar los contratos del proveedor nuevo y se revalora; las líneas extraídas (y sus ediciones manuales) se conservan, sin volver a extraer (no se relanza IA1/IA2). A RESOLVER EN LA SPEC: qué hace hoy el cambio de proveedor de F-062 (qué cola publica: q-persistencia re-fetch o q-valoracion revalorar) y qué pieza vuelve a buscar contratos (enriquecimiento de sv3) sin regenerar líneas; qué se borra exactamente (contrato elegido, vinculaciones de línea a contrato, valoración previa) y qué se conserva (líneas, ediciones manuales de F-106, partidas/almacén elegidos a mano); qué pasa si el proveedor nuevo no tiene contrato en la obra (valoración sin contrato, como hoy); si el albarán ya está aprobado o con alta en Sigrid, no se permite o se avisa. Servicios previstos: sv4 (y sv3/sv6 si la re-búsqueda de contratos lo exige; se confirma en la spec). Va DETRÁS de F-114.
 
 ### F-116 · Guardado automático de la ficha al salir de cada campo, sin bloquear la línea
 
-estado **terminada** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-116-guardado-automatico-ficha`
+estado **terminada** · sin fecha de cierre · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-116-guardado-automatico-ficha`
 
 ORIGEN: el humano, 2026-11-01, al cerrar F-108: «al escribir la fecha sea de la forma que sea, deberia guardarse solo sin darle a guardar, igual con numero de albaran»; después lo amplía: «en general, quiero que todos los campos se guarden automaticamente», y precisa: «no quites guardar. ese boton ademas bloquea la linea. lo que quiero simplemente es que al salir de cada celda guarde lo escrito, pero no que bloquee. son 2 comportamientos independientes. los botones de guardar y guardar todos siguen igual». ALCANCE (solo sv4): (1) cabecera editable (fecha, número de albarán, forma de pago, notas de revisión y cualquier otro campo de texto de la cabecera que hoy solo se guarde con «Guardar»): al salir del campo, si el valor es válido y ha cambiado, se guarda solo, sin recargar la página, con una marca discreta de guardado; endpoint propio si hace falta (no tiene por qué ser el mismo que el de las líneas). Fecha no válida: no se guarda, rojo y aviso (F-108). (2) líneas: al salir de CADA celda editada se guarda lo escrito (con el recálculo de F-106), SIN bloquear la línea: el bloqueo es otro comportamiento, independiente, que sigue haciéndose solo con los botones. Partida fuera de la lista: no se guarda, rojo (como hoy). (3) Sin cambios: botones «Guardar» de cada fila, «Guardar todas» y «Guardar» general siguen igual (y siguen bloqueando lo que bloquean hoy); proveedor, obra y contrato ya se guardan solos. «Guardar y aprobar» espera a los guardados en curso. A RESOLVER EN LA SPEC: qué es exactamente «bloquear» hoy (`?bloquear=1` de `conciliacion/campos`, marca «✋» y `edicion_manual_json` de F-106) y si un guardado sin bloqueo conserva o no la edición al revalorar; qué campos de cabecera existen y cuáles ya se guardan solos; carreras entre guardado automático, botones y aprobar; «Deshacer» con el guardado automático. FUERA: dos pestañas editando el mismo albarán; el listado.
 
 ### F-011 · Evals de IA con ground truth y puerta en el arnés
 
-estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-011-evals-ia`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-011-evals-ia`
 
 Proceso de evaluación de las 4 fases de IA contra resultado esperado, al estilo de tests unitarios. Contrato de datos ya definido en evals/ (5 Excel: IA1-IA4 + INPUTS, pestañas por tipología; los rellena el humano). Alcance: (1) conversor xlsx -> fixtures JSON versionables, con barrido de datos sensibles C3-bis; (2) runner de evals: IA1/IA2 contra la extracción real (a demanda, cuesta llamadas LLM), IA3/IA4 con modo determinista contra las redes de sv6 además del modo real; (3) puerta del arnés: declaración de rutas sensibles (prompts, clientes LLM, schemas, redes deterministas) tal que si el diff de una feature las toca, el cierre exige evals en verde además de los tests; (4) el mecanismo genérico de la puerta (declaración de rutas -> verificación extra obligatoria) se porta a arnes-base como capacidad opcional del arnés (regla de propagación).
 
 ### F-027 · Error de ×1000 en el importe: la red KG→TN de UnitConverter es código muerto
 
-estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-027-conversion-kg-tn-muerta`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-027-conversion-kg-tn-muerta`
 
 HALLAZGO H-1 (CRÍTICA). El albarán 58826 de MAHORSA se valoró en 468.763,40 € cuando el administrativo dice 390,99 €, y el 58878 en 462.282,80 € frente a 385,59 €. Son 30.380 kg × 15,43 €/TN y 29.960 kg × 15,43: un factor 1000 de unidad (el albarán da kg sin literal de unidad y el contrato tarifa en TN). CAUSA RAÍZ: la red determinista que existe EXACTAMENTE para este caso (`cantidad_sin_unidad_reinterpretada_kg_a_tn`, con `_TN_UMBRAL_CONVERTIR = 1000`) NUNCA SE EJECUTA. Cuando las categorías de unidad no casan, `ValuationBuilder` llama al conversor con `cantidad=None` (services/albaran-valoracion-persist/application/services/valuation_builder.py:1020-1030, rama else de `if category_match`), y `UnitConverter.convert` sale por la guarda `cantidad is None` (unit_converter.py:64-70) ANTES de llegar al bloque de plausibilidad de toneladas (unit_converter.py:83-101), que se añadió en julio de 2026 justo para esto. El importe cae después al fallback con la cantidad cruda. El propio código documenta el caso gemelo: árido «M 20/40», 29920 sin unidad, 298.302 €. POR QUÉ ES LO PRIMERO: es un error de tres órdenes de magnitud que llega PERSISTIDO a `albaran_valuations.total_valorado` y de ahí a la bandeja del revisor; y no es raro, porque TODO el árido a granel viene en kg sin literal de unidad. PROPUESTA: invertir el orden — convertir primero y decidir revisión después. Llamar siempre a `convert()` con la cantidad real y usar `category_match=False` solo para marcar revisión, no para anular la cantidad; alternativamente, mover la comprobación de plausibilidad de TN a un guard previo e independiente. EXIGE test de regresión con el caso real 30380 kg / contrato en TN. RELACIÓN: F-024 (la unidad no se extrae de IA1) ataca la causa aguas arriba; esta feature es la red de seguridad de sv6, que debe funcionar aunque IA1 siga sin unidad. F-025 (falsa alarma `no_quantity_in_albaran`) toca la misma rama del builder: coordinar para no pisarse. Toca sv6. Fuente: progress/revision_resto_lote_20260818.md (revision de los 7 albaranes restantes del lote alvaro_17082026, 2026-08-18).
 
 ### F-035 · Arnés: el instalador en modo `actualizar` no puede pisar ficheros de estado del proyecto
 
-estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-035-instalador-no-pisa-estado`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-035-instalador-no-pisa-estado`
 
 Sale de un incidente real: el 2026-08-19, al actualizar el arnes de 1.5.0 a 1.5.2 con `instalar_arnes.ps1 -Modo actualizar`, el instalador ofrecio -y aplico- sobrescribir con sus PLANTILLAS GENERICAS ficheros que son ESTADO DEL PROYECTO, no arnes: `harness/features.json` paso de 34 features a 1 (el ejemplo F-001), `docs/ARCHITECTURE.md` de 183 a 37 lineas, y `progress/current.md` e `progress/history.md` perdieron 157 y 161 lineas. Nada se habia commiteado y se recupero entero desde git, y el 1.5.2 se acabo aplicando por copia quirurgica (commit 3a146cd), pero la proxima vez puede tocar a alguien que haga `git add -A` sin mirar.
 
@@ -1086,7 +1094,7 @@ NOTA DE RAMA (2026-08-20): el codigo de esta feature vive en arnes-base, no aqui
 
 ### F-039 · Arnes: estabilizar la suite de la raiz y remedir las campanas juzgadas con la invocacion rota
 
-estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-039-remedir-campanas-invocacion-rota`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-039-remedir-campanas-invocacion-rota`
 
 Deuda declarada por F-038 (decision D5 de su design, confirmada por el humano el 2026-08-20). Hasta F-038, un fichero que no cae en ningun servicio de harness/servicios.json se juzgaba con `python -m pytest` SIN ruta desde la raiz; como la raiz no tiene testpaths, esa invocacion moria en la recoleccion en menos de un segundo y el ejecutor la leia como exit 1 = MUERTO. Resultado: mutantes declarados muertos sin que NINGUN test los juzgara. Afecta como minimo a progress/mutacion_F-012.md (61 mutantes) y a cualquier otro informe cuyo alcance incluya ficheros fuera de services/. F-038 solo estampa el aviso de invalidez en cabecera (su R22): NO remide, porque la auditoria de supervivientes cuesta justo lo que aquella feature viene a ahorrar. Aqui se remide de verdad, ya con `ejecutor_para` arreglado. OJO: los supervivientes que aparezcan son huecos reales de test que hoy nadie ve, asi que esta feature puede abrir trabajo nuevo; eso es el objetivo, no un efecto colateral. Requiere F-038 cerrada y mergeada.
 
@@ -1106,7 +1114,7 @@ DEUDA HEREDADA (observacion 1 del reviewer, no bloqueante): el filtro de filas d
 
 ### F-040 · Arnes: la campana de mutacion se dimensiona sola y deja de mentir sobre lo que ha medido
 
-estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-040-campana-dimensionada-y-honesta`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-040-campana-dimensionada-y-honesta`
 
 Cuatro defectos del motor de mutacion + los huecos de test que dejaron F-039 y la verificacion del paralelo. Todos salieron el 2026-08-20/21 y el humano pidio cerrarlos en UNA feature porque son el mismo tema -que la campana se dimensione bien y diga la verdad- y tocan los mismos ficheros.
 
@@ -1126,7 +1134,7 @@ ALCANCE: harness/mutacion.py, harness/mutacion_paralela.py, harness/alcance.py, 
 
 ### F-045 · El banco de evals recoge la revision manual de los 32 albaranes: convertir los comentarios del humano en casos que se comprueban solos
 
-estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-045-banco-evals-revision-manual`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-045-banco-evals-revision-manual`
 
 ORIGEN: el humano reviso UNO A UNO los albaranes que probo en local y anoto en 'evals_summary.xlsx' (carpeta evals de OneDrive) el resultado esperado de cada linea y, en una columna de comentarios, QUE HA FALLADO hoy. Aviso el 2026-09-13. Los PDF estan en la raiz de esa misma carpeta.
 
@@ -1153,7 +1161,7 @@ RELACIONADAS: F-011 (el banco y su flujo), F-043 (el enrutado por familia que es
 
 ### F-051 · Almacen por LINEA: partida vacia = almacen en el portal, elegible siempre en la lista de partidas, y boton «almacen a todas las lineas»
 
-estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-051-almacen-por-linea`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-051-almacen-por-linea`
 
 PETICION DEL HUMANO (2026-09-29), literal: «si no hay partida se deje en blanco (almacen en el portal) o que se pueda siempre elegir almacen en la lista de partidas. si hay almacen en la lista en sigrid se crea el albaran sin partida en esa linea (el almacen es por linea, boton de asignar almacen a todas las lineas)».
 
@@ -1173,13 +1181,13 @@ SPEC v4 (2026-10-05), PARADA 1 hecha, todas las decisiones del humano: D1 rehech
 
 ### F-069 · Lista de equivalencias usuario de la app ↔ usuario Y EMPLEADO de Sigrid para el alta (sv9): usu y empide de quien aprueba
 
-estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-069-usuario-empleado-sigrid`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-069-usuario-empleado-sigrid`
 
 PETICIÓN DEL HUMANO (2026-10-14, PARADA 1 de F-053 v8): «en el futuro habrá una lista de mapeo usuario vs usuario sigrid para los casos raros». F-053 v8 (R47) resuelve el `usu` del alta con la parte local del correo @ruesma.es de quien aprueba contra `dbo.usu.cod` y, si no casa, usa `ALTA_SIGRID_USUARIO_RESPALDO` (pgris). Esta feature añade una lista de equivalencias (correo → login de Sigrid) que se consulta ANTES de la parte local, para los usuarios cuyo login no coincide con su correo. Dónde vive (variable, tabla propia o fichero) y quién la mantiene, a decidir en su PARADA 1. Depende de F-053. AMPLIADA 2026-10-23 (absorbe la F-099 dada de alta ese día, por decisión del humano: «crea la feature o usa F-069»): la equivalencia también debe dar el EMPLEADO. ORIGEN: el humano, 2026-10-23: «el usuario que está registrando en Sigrid siempre es pgris, cuando debe depender del que está en el portal». VERIFICADO (solo lectura, 2026-10-23): el `usu` del alta SÍ es el del que aprueba (peticion_json.usu = odomingo/tortiz/lgarcia; dbo.log.usu y dbo.gra.usu del adjunto también). Lo que sale siempre es el EMPLEADO de la cabecera: dca.empide = 2425207 («PABLO GRIS MARTINEZ») en las 46 altas del pipeline, porque sv9 manda `empide` = null y sigrid-api pone `request.empide or settings.sigrid_albaran_empide` (create_albaran_compra_use_case.py:844). En las altas manuales cada usuario lleva su empleado (cperez 537256, vnueda 1129947, dgarcia 2157467…). dbo.usu y dbo.emp no comparten clave fiable: usu.dni vacío; usu.codemp ≈ emp.tarseg casa en algunos (tortiz, lgarcia, cperez) y no en otros (pgris, odomingo, vnueda). A DECIDIR EN LA SPEC: de dónde sale el empleado del usuario que aprueba (tabla de equivalencias usu→empide configurable, el empide de sus últimos albaranes manuales, la clave codemp/tarseg medida en todos los usuarios del portal) y qué se hace si no se encuentra (no mandar empide ⇒ el defecto de sigrid-api, o bloquear el alta); sv9 manda `empide` (ya admitido por el contrato de sigrid-api, campo opcional ≥1). RELACIONADAS: F-053 (alta Sigrid), F-095 (descuentos en el alta). Fallo aparte, de sigrid-api (otro proyecto): la cabecera clonada copia idefac/fecfac/horfac/antestfac/fecent/feclim del último albarán del proveedor: 12 altas vinculadas a facturas ajenas (11 de Jarama a FR26/10960, AC26/30543 a FR26/11027).
 
 ### F-084 · El banco de evals valora de verdad: IA3/IA4 producen líneas valoradas (hoy el 93 % de los fallos de IA3 son «obtenido None»)
 
-estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-084-banco-valoracion`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-084-banco-valoracion`
 
 ORIGEN: pruebas rápidas de modelos del 2026-10-19 (progress/evals_prueba-{luna,sol,argon}.md, fuera de git) y pasada de F-075: IA3, IA4 y E2E salen idénticos caso a caso con cualquier modelo; en IA3, 126 de 136 fallos (15 casos) y 388 de 408 (59 casos, F-075) son «obtenido None»: la valoración del banco no produce líneas valoradas salvo FER-001/FER-002. Así el banco no mide el modelo de valoración.
 
@@ -1191,37 +1199,37 @@ SPEC (2026-10-20, specs/F-084-banco-valoracion/, PARADA 1 resuelta, design §11)
 
 ### F-108 · Fecha y número de albarán editables con normalidad en la ficha, con un calendario para la fecha
 
-estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-108-fecha-numero-editables`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-108-fecha-numero-editables`
 
 ORIGEN: el humano, 2026-10-28: «los campos de fecha, numero de albaran tiene que poder editarse con normalidad (fecha con un desplegable de calendario como adicional)». HOY (leído por el líder): en `document_detail.html` los dos son `input type=text` editables salvo con el documento no editable (aprobado / dado de alta); no se ve en el código nada que bloquee el teclado. A RESOLVER EN LA SPEC: el síntoma exacto (preguntado al humano: no deja escribir / se pierde al guardar / formato de la fecha) reproduciéndolo en solo lectura; cómo se guardan y validan (`fecha` en el PUT de la ficha, formato ISO frente a dd/mm/aaaa) y su efecto en sv9 (`fecha_albaran` AAAAMMDD, `fecha_no_plausible`); calendario adicional sin perder la escritura a mano (botón junto al campo de texto que abre el selector de fecha del navegador).
 
 ### F-111 · Residuos: contenedores de 3, 6 o 9 m³ con el precio general del contrato, y partida del capítulo de gestión de residuos en vez de almacén
 
-estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-111-residuos-contenedores-y-partida`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-111-residuos-contenedores-y-partida`
 
 ORIGEN: el humano, 2026-10-29, por los albaranes de HERMANOS SAN JUAN (4839 B: 8 m³ de madera valorados como 2 contenedores de 6 = 278 € en vez de 1 = 139 €; 1350 B igual). Contrato CTSU24/0524 sin tamaño en sus líneas («CONTENEDOR LER 170201 MADERA»). Hoy IA3 (prompt de sv5) y sv6 (`residuos_container_calc.py`, F-036 R22) aplican «6 m³ por defecto» y ceil(m³/6). REGLAS DEL HUMANO (literales): (1) «en residuos salvo que se diga lo contrario en el contrato los contenedores son de 3, 6 o 9m3. debe elegir uno de esos. si en contrato no se especifica que use el precio general para todos»; se elige el MÁS PEQUEÑO en el que caben los m³ (≤3 → 3, ≤6 → 6, ≤9 → 9, 1 contenedor); «no se mezclan contenedores, si son de mas de 9 paquetes de 6» (más de 9 m³ ⇒ ceil(m³/6) contenedores de 6). Si el contrato da tamaños, manda el contrato. (2) «añade en el circuito de residuos que si no tienen partida no van a almacen sino que busque la partida en el capitulo de gestion de residuos. que la busque por descripcion»: una línea de residuos sin partida no va a almacén; se busca la partida entre las del capítulo de gestión de residuos de la obra (capítulos de F-098, `ruesma_comun.sigrid.partidas`) por la descripción. A RESOLVER EN LA SPEC: cómo se reconoce el capítulo de residuos en las obras reales (medir en solo lectura); quién elige la partida (IA por significado restringida al capítulo, como IA4, frente a texto); qué pasa sin capítulo o sin candidata (revisión, nunca almacén); efecto en revalorar, en sv4 y en el alta (sv9 manda lo aprobado); alcance medido en producción (hoy 2 líneas con 8 m³ → 2). Va DESPUÉS de F-106 (comparte sv6 y la fila de valoración).
 
 ### F-112 · Año del albarán mal leído: la IA lee la fecha con la del correo como referencia
 
-estado **terminada** · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-112-anio-fecha-albaran`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `estandar` · SDD sí · rama `feature/F-112-anio-fecha-albaran`
 
 ORIGEN: el humano, 2026-10-29, por los albaranes de HERMANOS SAN JUAN: 5176 B leído con fecha 17-10-2022 y 5629 B con 16-10-2024 (llegaron el 28-10-2026); los tres del 14-10 (1909 B, 1350 B, 2910 B) con 2020 y 2023. Día y mes parecen bien; el año sale imposible (marca `fecha_albaran_fuera_de_rango` en sv3; sv9 ya no da de alta con `fecha_no_plausible`). PROPUESTA del líder, aceptada por el humano para spec: dar a la IA de lectura (sv2, IA1/IA2) la fecha de recepción del correo como referencia para leer el año; la fecha la sigue leyendo la IA, sin corrección determinista. A RESOLVER EN LA SPEC: dónde entra la fecha del correo en el prompt (IA1 Gemini, IA2 OpenAI o ambas) y qué hacer si el albarán imprime de verdad otra fecha antigua; medir en producción (solo lectura) cuántos documentos tienen la fecha a más de 1 año de su correo y de qué proveedores; banco de evals si existe para la cabecera. FUERA: los números de albarán mal leídos (4889/4839, 5029/5629), que se corrigen a mano. Va DESPUÉS de F-106; F-108 (fecha editable con calendario) facilita la corrección a mano.
 
 ### F-117 · Partida equivalente en la obra cuando la del albarán no existe (CI.03.08 ⇒ CI.03A.8)
 
-estado **terminada** · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-117-partida-equivalente-en-obra`
+estado **terminada** · sin fecha de cierre · prioridad 2 · rigor `critico` · SDD sí · rama `feature/F-117-partida-equivalente-en-obra`
 
 ORIGEN: el humano, 2026-11-05: «Que la valoración proponga sola la equivalente en la obra cuando la partida del albarán no exista». Caso: obra 0719, contrato CTSB26/0373, línea «grua pk 50 - montar muro y hormigonar» 9 UD × 60 € con la partida leída CI.03.08; la obra no la tiene (numera CI.03A.n MAQUINARIA AJENA, CI.03P.n PROPIA); sv6 la dejó con partida_fuera_de_lista, se aprobó y sigrid-api rechazó el alta (partida_no_encontrada ⇒ no_admitido). La equivalente es CI.03A.8 (CAMION GRUA). ALCANCE (spec): regla determinista en comun (equivalentes_partida: letra pegada al número solo en la hoja; sufijo de ≥3 segmentos, según D2) aplicada en la normalización de F-076 en sv6; única ⇒ se valora con ella, motivo partida_equivalente:<leída>><cod> y revisión no bloqueante; varias ⇒ revisión con las candidatas; ninguna ⇒ como hoy. Nunca almacén ni partida inventada. Excepción acotada a H1 de F-049 (D1). Medición y decisiones D1–D9 en progress/spec_F-117.md. Fuera: que sv4 impida aprobar con partida_fuera_de_lista; la lectura que es un capítulo (CD.02 de 0692).
 
 ### F-012 · Campaña de mutación en paralelo
 
-estado **terminada** · prioridad 3 · rigor `estandar` · SDD sí · rama `feature/F-012-mutacion-paralela`
+estado **terminada** · sin fecha de cierre · prioridad 3 · rigor `estandar` · SDD sí · rama `feature/F-012-mutacion-paralela`
 
 python -m harness.mutacion tarda minutos porque evalúa cada mutante en serie relanzando la suite. Paralelizarla: N workers, cada uno en su git worktree aislado, repartiéndose los mutantes; agregación de resultados en un único progress/mutacion_F-XXX.md idéntico al actual; restauración del árbol garantizada POR WORKER incluso ante excepción o Ctrl-C (la garantía actual, multiplicada); número de workers configurable en harness/rigor.json o parámetro --workers con default sensato (nº de núcleos - 2). La mejora es genérica del arnés: se porta a arnes-base en la misma feature. Criterio de éxito: mismo informe y mismos totales que la campaña en serie sobre la misma feature, en una fracción del tiempo.
 
 ### F-038 · Arnés: bajar el coste en tokens del ciclo SDD sin bajar el rigor
 
-estado **terminada** · prioridad 3 · rigor `estandar` · SDD sí · rama `feature/F-038-coste-del-ciclo-sdd`
+estado **terminada** · sin fecha de cierre · prioridad 3 · rigor `estandar` · SDD sí · rama `feature/F-038-coste-del-ciclo-sdd`
 
 Pedido por el humano el 2026-08-19 con cinco proyectos en marcha y consumo alto. Medicion de la sesion: los cuatro subagentes gastaron ~712.000 tokens (implementer F-034 234k, agente del arnes 1.6.0 206k, spec-author F-034 159k, spec-author F-035 113k) y progress/ acumula 12.250 lineas, con review_F-019.md en 1.365 e impl_F-019.md en 1.189. La campana de mutacion NO gasta tokens -es Python y pytest, gasta CPU-: el coste esta en el papeleo y en las repeticiones. Cada linea de spec se paga TRES veces: la escribe el spec-author, la lee el implementer y la relee el reviewer; las 978 lineas de la spec de F-035, para arreglar un script PowerShell, son casi mil lineas por tres.
 
@@ -1259,13 +1267,13 @@ NOTA DE COORDINACION: R5 y R6 estan hoy tambien anotadas en la F-010 de otro pro
 
 ### F-002 · Tanda 1 — Identificación de obra y proveedor (G1+G2)
 
-estado **terminada** · prioridad 4 · rigor `estandar` · SDD sí · rama `feature/F-002-obra-proveedor`
+estado **terminada** · sin fecha de cierre · prioridad 4 · rigor `estandar` · SDD sí · rama `feature/F-002-obra-proveedor`
 
 La mayor fuente de albaranes inválidos del feedback (6 de 16). Obras activas de Sigrid inyectadas en el prompt de IA1 (la IA elige SOLO de esa lista) + red determinista en sv3: obra extraída inexistente => sin obra + revisión. Proveedor = razón social del bloque fiscal resuelta por CIF contra Sigrid, nunca la marca del logotipo; si el CIF no casa pero el nombre contiene un proveedor con contrato en la obra => propuesta a revisión. Guard de año: fecha_albaran a más de 1 año de la recepción del email => revisión. Casos de referencia: obra 0937 inventada, MACOTRAN en 4 obras erróneas, GRUPO OTTO HORPRESOL vs HORPRESOL S.L. Toca sv2 (prompt IA1) y sv3 (redes).
 
 ### F-036 · La cantidad de residuos se valora sin la regla de contenedores en unos albaranes sí y en otros no, y los incrementos por LER nunca se emiten
 
-estado **terminada** · prioridad 4 · rigor `critico` · SDD sí · rama `feature/F-036-residuos-contenedores-e-incrementos`
+estado **terminada** · sin fecha de cierre · prioridad 4 · rigor `critico` · SDD sí · rama `feature/F-036-residuos-contenedores-e-incrementos`
 
 Defecto MEDIDO el 2026-08-19 sobre los 7 albaranes de SALMEDINA del lote de residuos (evidencia: progress/revision_residuos_salmedina_20260819.md) y DIAGNOSTICADO el 2026-08-21/22 contra el codigo y contra la BBDD real (progress/explore_F-036.md, con su APENDICE de confirmacion). El diagnostico de la version anterior de esta ficha era INCORRECTO: no es un defecto de sv6 con dos caras, son TRES defectos independientes en tres servicios distintos.
 
@@ -1293,19 +1301,19 @@ RIESGO A VIGILAR: F-024 (unidad_medida no se extrae, NULL en las lineas base). L
 
 ### F-103 · Alta en Sigrid sin heredar la facturación del albarán plantilla: el AC nuevo no queda vinculado a una factura ajena ni con fechas de facturación, entrega o límite copiadas
 
-estado **terminada** · prioridad 4 · rigor `critico` · SDD sí
+estado **terminada** · sin fecha de cierre · prioridad 4 · rigor `critico` · SDD sí
 
 ORIGEN: el humano, 2026-10-23: «escribir bien los albaranes sin coger facturas de albaranes anteriores, gran parte es en Sigrid». MEDIDO (solo lectura, sql/read, 2026-10-23, 46 altas del pipeline): sigrid-api clona la cabecera del último albarán del proveedor y arrastra idefac, fecfac, horfac y antestfac (= 3), además de fecent, feclim y cocide. 12 altas quedan vinculadas a una factura ajena (11 de HORMIGONES DEL JARAMA a FR26/10960: AC26/30573, 30576, 30578, 30580, 30582, 30596, 30598, 30599, 30629, 30633, 30634; AC26/30543 a FR26/11027) y otras 5 llevan fecfac o antestfac copiados (AC26/29714, 30594, 30595, 30617, 30631); estfac sí queda a 0. sigrid-api lo confirmó: lo cubre su F-015 R3 y ninguna factura ha absorbido aún esas líneas; proponen arreglo urgente aparte y limpieza en dry-run, y que el humano decida sobre pausar. El humano decidió mantener el alta real (ALTA_SIGRID_COMMIT=true). EL ARREGLO DE FONDO ES DE SIGRID-API (otro proyecto): albaranes no edita sigrid-api, coordina con su sesión. ALCANCE DE ALBARANES: (1) coordinar con sigrid-api el arreglo y la limpieza de las 12 + 5 altas ya escritas (decisión del humano; albaranes no escribe en Sigrid salvo por el alta); (2) tras su despliegue, verificar en solo lectura que el alta de un proveedor cuyo último AC está facturado sale con idefac vacío, fecfac/horfac/antestfac a 0 y fecent/feclim/cocide como acuerden; (3) script de solo lectura que revise las altas recientes del pipeline y avise si reaparece; (4) si el contrato de sigrid-api admite fijar esos campos en la petición, valorar que sv9 los mande explícitos. RELACIONADAS: F-053 (alta Sigrid), F-069 (usu y empide de quien aprueba), F-095 (descuentos en el alta).
 
 ### F-098 · Selector de partidas como el de partes (preselección por capítulo de primer nivel CD/CI/CP/…) y partida con su código completo (CD.99.01.64) aunque en Sigrid la hoja sea «99.01.64»
 
-estado **terminada** · prioridad 5 · rigor `critico` · SDD sí · rama `feature/F-098-partidas-por-capitulo`
+estado **terminada** · sin fecha de cierre · prioridad 5 · rigor `critico` · SDD sí · rama `feature/F-098-partidas-por-capitulo`
 
 ORIGEN: el humano, 2026-10-23, prioridad alta: «que el filtro de partidas funcione igual que el de partes, tenga cd, ci, cp o cualquier otro sufijo en primer nivel como preselección, y luego las partidas» y «la partida completa (0686, Porcelanosa 96306082) debe incluir todo el código de la partida y aquí no incluye cd, he tenido que poner 99.01.64 y no cd.99.01.64». VERIFICADO (solo lectura, 2026-10-23): en Sigrid la obra 0686 tiene 4 capítulos raíz (98 AJUSTES ALMACÉN, CD COSTES DIRECTOS, CI COSTES INDIRECTOS, CP COSTES PROPORCIONALES); las hojas de CI/CP/98 llevan el prefijo en su `cod` (CI.4.18, 95 hojas) pero las 2313 hojas de CD NO (`cod` = '99.01.64', ruta CD › 99 › 99.01 › 99.01.64; '07.17' igual). El albarán 8c4e026a (Porcelanosa 96306082, línea 903) llevaba partida leída y final 'CD.99.01.64'; aprobado por lgarcia el 23-10 06:48, sv9 lo envió así y sigrid-api lo rechazó: «La obra no tiene ninguna partida 'CD.99.01.64'» (no_admitido); a las 07:02 se guardó la línea con '99.01.64' y hoy el albarán está sin aprobar. CÓMO LO HACE PARTES (services/partes-front): GET /api/sigrid/partidas devuelve solo hojas con {ide, cod, res, capitulo}; el capítulo se calcula subiendo el árbol (partida_catalog.py: prefijo del cod y, si no, palabra clave en res); el buscador (static/app.js _partidaCombo/buildPartidaPicker) tiene chips Todas/CD/CI encima de la lista, filtra por capítulo y luego por texto; guarda partida_ide y escribe paride = ide en Sigrid. CÓMO ESTÁ ALBARANES: ruesma_comun.sigrid.partidas (_hojas) devuelve el `cod` en bruto sin capítulo ni ide; sv4 attachPartidaCombo (app.js 805-977) filtra por texto y guarda el texto; F-076 normalizar_partida no casa 'CD.99.01.64' con '99.01.64'; sv9 (validador_alta.py) envía codigo_partida_final como texto. A DECIDIR EN LA SPEC: (1) la lista de partidas de comun devuelve también ide y capítulo raíz (todos los de la obra, no solo CD/CI/CP) y el código completo mostrado = capítulo + cod cuando el cod no lo lleva; (2) en sv4, preselección por capítulo de primer nivel (chips o combo previo con los capítulos que tenga la obra) y después la partida, como en partes; (3) qué se guarda (código completo para el humano, cod de Sigrid y/o ide) y qué envía sv9 a sigrid-api para que no vuelva a fallar; (4) casar en sv6/F-076 y en la lectura de IA (F-049) 'CD.99.01.64' con la hoja '99.01.64' de CD; (5) los albaranes ya guardados con el prefijo. RELACIONADAS: F-049 (partida de la lista), F-076 (blocked, normalización), F-077 (partida inválida no frena Guardar y aprobar), F-096 (ediciones de partida perdidas al guardar), F-053 (alta Sigrid).
 
 ### F-073 · Proveedor por nombre en sv3: un único criterio con similitud (TEYMACO casa con FEYMACO) y nunca se elige en un empate
 
-estado **terminada** · prioridad 13 · rigor `critico` · SDD sí · rama `feature/F-073-proveedor-por-similitud`
+estado **terminada** · sin fecha de cierre · prioridad 13 · rigor `critico` · SDD sí · rama `feature/F-073-proveedor-por-similitud`
 
 INCIDENCIA DE PRODUCCIÓN (2026-10-15, correo «0694» de administración de obra, obra 0694, 5 albaranes de FEYMACO): en 3 la IA leyó el CIF de Ruesma (A81873903), sv3 lo descartó (F-063) y buscó por nombre «FEYMACO, S.A.» / «TEYMACO, S.A.». Log de sv3 (merge 54b82479-…): A19004589 (HIERROS RODRIGO, S.A.) y A28733558 (FERRETERIA Y MAQUINARIA PARA LA CONSTRUCCION, S.A. (FEYMACO)) empatan a nombre=0.50 y el atajo «por NOMBRE dentro de la obra» elige el primero ⇒ 3 albaranes con HIERROS RODRIGO y CTSU26/0001.
 
@@ -1315,7 +1323,7 @@ SPEC (specs/F-073-proveedor-por-similitud/, informe progress/spec_F-073.md): cri
 
 ### F-075 · El importe del albarán manda: sin contrato y con importes pasa directo (valoración directa en sv6, aprobable y alta sin vincular), el pie leído (base/IVA/total) como control y sv4 muestra el importe del albarán
 
-estado **terminada** · prioridad 13 · rigor `critico` · SDD sí · rama `feature/F-075-importe-leido`
+estado **terminada** · sin fecha de cierre · prioridad 13 · rigor `critico` · SDD sí · rama `feature/F-075-importe-leido`
 
 ORIGEN (correo de administración de obra, obra 0686, 2026-10-15): un albarán de DISCOIN con precios sale con «Importe valorado —» y «Sin valoración» y no se puede aprobar: no hay contrato (sv3 no dispara q-valoracion) y sv6 no valora. Merges: dfdc8aab-08e1-49f0-978d-bb906515e748 y 5dea6509-4a81-4192-b8b0-3a21041931ca.
 
@@ -1325,7 +1333,7 @@ SPEC v2 (2026-10-15, specs/F-075-importe-leido/, informe progress/spec_F-075.md 
 
 ### F-085 · Modelos de producción por fase: IA1 gemini-4-argon, IA2 gpt-6.1-sol (encendida), IA3 e IA4 gpt-6.1-sol (Opus 5.5 en IA3 → F-086)
 
-estado **terminada** · prioridad 14 · rigor `critico` · SDD sí · rama `feature/F-085-modelos-produccion`
+estado **terminada** · sin fecha de cierre · prioridad 14 · rigor `critico` · SDD sí · rama `feature/F-085-modelos-produccion`
 
 ORIGEN: decisión del humano, 2026-10-20, tras la prueba rápida de modelos (IA1: Argon 52 fallos frente a 56 del Gemini actual en 15 casos).
 
@@ -1337,7 +1345,7 @@ PARADA 1 resuelta por el humano (2026-10-20): P1–P5 según la recomendación d
 
 ### F-064 · IA1 e IA2 ignoran al cliente (Construcciones Ruesma) y la IA2 confirma el proveedor
 
-estado **terminada** · prioridad 31 · rigor `critico` · SDD sí · rama `feature/F-064-proveedor-en-prompts`
+estado **terminada** · sin fecha de cierre · prioridad 31 · rigor `critico` · SDD sí · rama `feature/F-064-proveedor-en-prompts`
 
 PETICIÓN DEL HUMANO (2026-10-08), tras la incidencia de FEYMACO (obra 0694) que arregló F-063 en sv3: «añade en el prompt de sv2 que estos CIF y empresas son los del cliente, y debe ignorarlos y buscar otros» y «F-064 será para IA 1 y 2. Ambas deben confirmar proveedor». Empresas del cliente: «de momento esa» (Construcciones Ruesma, A81873903).
 
@@ -1351,12 +1359,12 @@ ESTADO (2026-10-18): review APPROVED (también la pasada O1). T9 y T10 del human
 
 ### F-076 · La partida se normaliza contra las de la obra: sv6 fija como partida final el código exacto de Sigrid (CI.04.18 -> CI.4.18) cuando la equivalencia es segura
 
-estado **terminada** · prioridad 34 · rigor `critico` · SDD sí · rama `feature/F-076-normalizar-partidas`
+estado **terminada** · sin fecha de cierre · prioridad 34 · rigor `critico` · SDD sí · rama `feature/F-076-normalizar-partidas`
 
 ORIGEN (T51 de F-053, 2026-10-16, producción en simulación): sv9 dejó no_admitido dos albaranes de la obra 0678 (A27244 y A27239, contrato CTSU26/0313) porque sigrid-api rechazó todas sus líneas con partida_no_encontrada: la IA leyó CI.04.18 y la obra tiene CI.4.18 (confirmado con la lista de la obra y con la previa: el humano la cambió a mano y pasaron a simulado). PETICIÓN DEL HUMANO: «eso hay que arreglarlo, debe normalizar partidas». MEDICIÓN (solo lectura, progress/spec_F-076.md §2): 35 de 74 líneas valoradas con partida final no existen en su obra; 29 se arreglan quitando ceros a la izquierda en segmentos numéricos; mayúsculas, espacios y separadores, 0 (sigrid-api ya compara sin mayúsculas ni espacios de cola); 0 ambiguas; 6 sin candidata. spec APROBADA el 2026-10-16: P1–P11 por defecto y ampliación R23–R25. PROPUESTA: sv6 normaliza la lectura de cada línea contra las partidas hoja de la obra antes de sus reglas (exacta o normalizada => el código de la lista; 0 o >1 candidatas o choque con un código no hoja => no se toca y a revisión con motivo; sin lista => como hoy), con la obra leída del merge, una caché por obra y un cliente de solo lectura de sigrid-api nuevo en sv6; comun recibe el subconjunto ya aprobado de F-049 (ruesma_comun.sigrid.partidas) y sv4 lo importa en vez de su copia. sv9 sin código: lo que enseña la ficha es lo que se manda. Lo existente se corrige revalorando desde sv4 (sin escrituras de agentes en producción). RELACIONADAS: F-049 (rebasa sobre esto: su partidas.py es superconjunto), F-053, F-065, F-075 (su valoración directa recibe el sobre normalizado y debe anotar), F-058.
 
 ### F-077 · Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4)
 
-estado **terminada** · prioridad 35 · rigor `estandar` · SDD sí · rama `feature/F-077-guardar-y-aprobar`
+estado **terminada** · sin fecha de cierre · prioridad 35 · rigor `estandar` · SDD sí · rama `feature/F-077-guardar-y-aprobar`
 
 ORIGEN (humano, 2026-10-16, en producción tras la T51 de F-053): (1) «Guardar y aprobar» con filas sin guardar solo avisaba «Hay N líneas con cambios sin guardar» (F-065 R19) y no hacía nada; (2) tras reaprobar, la ficha pintó durante 3-13 s el no_admitido viejo con la partida vieja, o «Sin alta en Sigrid todavía» con «Solicitar alta», porque sv9 aún no había respondido; (3) el ⚠ de partida no decía contra qué no coincide; (4) un no_admitido con un motivo de línea (falta_descripcion, línea manual sin descripción, documento 86c13097) no enseñaba ninguna razón porque la petición venía vacía. ALCANCE (PARADA 1 aprobada 2026-10-16; spec en specs/F-077-guardar-y-aprobar/, resumen en progress/spec_F-077.md): «Guardar y aprobar» y «Guardar» de la cabecera guardan primero, con el mismo PATCH por fila y las mismas validaciones (R27 v5), las filas con cambios y después aprueban/guardan; si una fila falla se para, no se aprueba y la fila queda en rojo (no atómico: las guardadas quedan); se mantiene la confirmación de la suma (releída tras guardar). El panel del alta pinta «Alta en curso…» sin resultado viejo ni botones solo mientras sv9 procesa la aprobación vigente, sondeando cada 3 s una ruta de solo lectura nueva; a los 5 min sin respuesta, error de tiempo; un resultado malo (no_admitido/revisar/error) se pinta como error. El ⚠ de partida solo en filas Contrato con lectura del albarán distinta, con tooltip «No coincide con la partida leída en el albarán (X)». Todos los motivos del alta visibles y con texto legible (los de línea sin fila, como «Línea N»), código en el title. PARADA 1 aprobada con P1–P4 resueltas (spec v2). Solo sv4; sv4 no escribe albaran_altas_sigrid. Fuera: equivalencia de partidas (F-076), F7 (F-068).
