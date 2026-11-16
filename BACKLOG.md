@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **116 features**, 71 abiertas y 45 terminadas. Por columna: 0 en Review, 6 en Blocked, 0 en In progress, 5 en Spec aprobada, 0 en To do, 60 en Backlog y 45 en Done.
+Resumen: **117 features**, 72 abiertas y 45 terminadas. Por columna: 0 en Review, 6 en Blocked, 0 en In progress, 5 en Spec aprobada, 0 en To do, 61 en Backlog y 45 en Done.
 
 ## Review
 
@@ -44,6 +44,7 @@ _Nada comprometido._
 |---|---|---|---|---|
 | F-118 | Incremento sin tarifa: la valoración pone importe 0, no null, y el albarán se puede aprobar | 2 | estandar | `feature/F-118-incremento-sin-tarifa-importe-cero` |
 | F-119 | Línea sin unidad en el albarán: se toma la de la línea de contrato similar o la del documento del contrato y, si no, UD por defecto | 2 | estandar | `feature/F-119-unidad-por-defecto-desde-contrato` |
+| F-120 | Banco de evals: instantánea de las partidas de cada obra (sigrid-api, solo lectura) para normalizar las partidas como producción antes de IA4 | 3 | critico | `feature/F-120-partidas-obra-banco` |
 | F-095 | Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto | 8 | critico |  |
 | F-105 | Traer a IA3 todos los documentos de contrato (PDF y anexos) de cada contrato, no solo el de gra_rep_ide | 9 | critico |  |
 | F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 10 | critico |  |
@@ -178,6 +179,12 @@ ORIGEN: el humano, 2026-11-06, a raíz del correo del administrativo de obra sob
 estado **bloqueada** · prioridad 3 · rigor `critico` · SDD sí · rama `feature/F-104-codigos-contrato-v83`
 
 ORIGEN: el humano, 2026-10-24 («sí a todo»), al recibir de la sesión de sigrid-api la petición de acuse del contrato v8.3 (rama feature/F-015-albaran-plantilla-y-retencion, commit 871cc0c; resumen en sigrid-api/progress/t0_F-015_albaranes.md). Sale de la D6 de F-103 (parada hasta que sigrid-api termine) para tenerlo listo ANTES de que sigrid-api despliegue su F-015: sin estos mapeos, un código de cabecera desconocido va a `error` (F-053 H25). ACUSE ENVIADO el 2026-10-24 con estos mapeos, decididos por el humano: (1) errores de cabecera `proveedor_no_encontrado`, `proveedor_ambiguo` y `retencion_no_soportada` ⇒ `no_admitido` (alta a mano) en `domain/services/clasificador.py` (CODIGOS_CABECERA) de sv9; (2) avisos `retencion_del_contrato` y `cabecera_sin_dato` informativos: NO entran en `ALTA_SIGRID_AVISOS_BLOQUEANTES` (defecto en config/settings.py ni en infra/), pero se ven en el panel; (3) textos legibles de los cinco en `TEXTOS_MOTIVO_ALTA` de sv4 (`domain/models/alta_sigrid_models.py`; el test de F-077 R27 lo exige); (4) `proveedor_sin_albaran_previo` (retirado en la v8.3) se mantiene hasta verificar el despliegue de sigrid-api y se quita después (tarea final o nota). FUERA: enseñar `totales.tot` (neto con retención) en el panel; la comparación de la previa sigue por línea (totales.tot, retenciones y filas.dcarec no se comparan). El usu del adjunto ya es el de la petición (F-069; confirmado a sigrid-api). DESPLIEGUE: sv9 y sv4 antes o a la vez que la F-015 de sigrid-api, que avisará antes de desplegar. Actualizar sv9.md y §10 de azure-apps/albaranes.md. RELACIONADAS: F-103 (D6), F-053 (H25), F-077 (R27), F-069.
+
+### F-120 · Banco de evals: instantánea de las partidas de cada obra (sigrid-api, solo lectura) para normalizar las partidas como producción antes de IA4
+
+estado **pendiente** · prioridad 3 · rigor `critico` · SDD sí · rama `feature/F-120-partidas-obra-banco`
+
+ORIGEN: F-100 O4 (2026-11-15, opción C elegida por el humano; estudio en `progress/impl_F-100_O4.md` de la rama de F-100). En producción sv6 normaliza las partidas del albarán (F-076, `_normalizar_partidas`, y F-117 equivalentes) y asigna la de residuos (F-111) ANTES de IA4, con la obra del documento (BBDD) y la lista de partidas de esa obra (sigrid-api `CachePartidasObra`). El banco de `evals/` no tiene ninguna de las dos, así que valora sin normalizar: design §8 de F-100 lo deja como límite conocido y la huella de pasada lleva `cadena: sin_normalizar_partidas`. Afecta a 12 líneas en 10 casos con partida fuera del contrato (10 hoy en `?` en el libro IA4; observables MOR-002 y MOR-004 línea 1). PROPUESTA: (1) un importador que lanza el humano con sus credenciales lee por sigrid-api, solo lectura, la lista de partidas de cada obra del banco y la congela (caché local o fichero sin valores sensibles); (2) la obra de cada caso entra en `INPUTS.xlsx` (hoy solo 7 contratos indexados la traen); (3) la cadena compone el `NormalizadorPartidas` importado de sv6 (y F-111) con un puerto que lee la instantánea, en el mismo punto que producción; (4) se cambia `VERSION_CADENA` para que R12 no compare pasadas con y sin normalizar. Puede resolver parte de las filas `?` del libro IA4 (patrón «la pieza y el precio están, pero en otra partida», `progress/explore_F-100_T8.md`). ORDEN: después de F-100 (su ANTES ya está medido sin normalizar, 2026-11-16); si entra, hay que medir de nuevo la línea base.
 
 ### F-086 · Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol
 

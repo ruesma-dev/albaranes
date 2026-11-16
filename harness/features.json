@@ -1471,6 +1471,19 @@
         "sv5-valoracion-api"
       ],
       "branch": "feature/F-119-unidad-por-defecto-desde-contrato"
+    },
+    {
+      "id": "F-120",
+      "title": "Banco de evals: instantánea de las partidas de cada obra (sigrid-api, solo lectura) para normalizar las partidas como producción antes de IA4",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 3,
+      "servicios": [
+        "evals"
+      ],
+      "branch": "feature/F-120-partidas-obra-banco",
+      "description": "ORIGEN: F-100 O4 (2026-11-15, opción C elegida por el humano; estudio en `progress/impl_F-100_O4.md` de la rama de F-100). En producción sv6 normaliza las partidas del albarán (F-076, `_normalizar_partidas`, y F-117 equivalentes) y asigna la de residuos (F-111) ANTES de IA4, con la obra del documento (BBDD) y la lista de partidas de esa obra (sigrid-api `CachePartidasObra`). El banco de `evals/` no tiene ninguna de las dos, así que valora sin normalizar: design §8 de F-100 lo deja como límite conocido y la huella de pasada lleva `cadena: sin_normalizar_partidas`. Afecta a 12 líneas en 10 casos con partida fuera del contrato (10 hoy en `?` en el libro IA4; observables MOR-002 y MOR-004 línea 1). PROPUESTA: (1) un importador que lanza el humano con sus credenciales lee por sigrid-api, solo lectura, la lista de partidas de cada obra del banco y la congela (caché local o fichero sin valores sensibles); (2) la obra de cada caso entra en `INPUTS.xlsx` (hoy solo 7 contratos indexados la traen); (3) la cadena compone el `NormalizadorPartidas` importado de sv6 (y F-111) con un puerto que lee la instantánea, en el mismo punto que producción; (4) se cambia `VERSION_CADENA` para que R12 no compare pasadas con y sin normalizar. Puede resolver parte de las filas `?` del libro IA4 (patrón «la pieza y el precio están, pero en otra partida», `progress/explore_F-100_T8.md`). ORDEN: después de F-100 (su ANTES ya está medido sin normalizar, 2026-11-16); si entra, hay que medir de nuevo la línea base."
     }
   ]
 }
