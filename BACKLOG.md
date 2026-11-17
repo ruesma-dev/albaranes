@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **117 features**, 72 abiertas y 45 terminadas. Por columna: 0 en Review, 6 en Blocked, 0 en In progress, 5 en Spec aprobada, 0 en To do, 61 en Backlog y 45 en Done.
+Resumen: **119 features**, 74 abiertas y 45 terminadas. Por columna: 0 en Review, 6 en Blocked, 0 en In progress, 6 en Spec aprobada, 0 en To do, 62 en Backlog y 45 en Done.
 
 ## Review
 
@@ -28,6 +28,7 @@ _Ninguna feature en implementación._
 
 | # | Feature | Spec aprobada | Prioridad | Rigor | Rama |
 |---|---|---|---|---|---|
+| F-074 | Un albarán de varias páginas es UN albarán: sv1 pide a la IA dónde empieza cada albarán de un PDF multipágina y entrega un documento por grupo de páginas | pendiente de tu aprobación | 1 | critico | `feature/F-074-albaran-varias-paginas` |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | pendiente de tu aprobación | 43 | critico |  |
 | F-003 | Tanda 2 — Albaranes valorados, match estricto y coherencia (G3+G4+G5) | pendiente de tu aprobación | 59 | estandar | `feature/F-003-valorados-match-estricto` |
 | F-004 | Tanda 3 — Hormigón fino y veto de mortero | pendiente de tu aprobación | 62 | estandar | `feature/F-004-hormigon-fino` |
@@ -42,6 +43,7 @@ _Nada comprometido._
 
 | # | Feature | Prioridad | Rigor | Rama |
 |---|---|---|---|---|
+| F-121 | Importe de línea leído como precio neto unitario: la línea no cuadra; detectarlo, corregirlo y que «Recalcular importe» sea la opción por defecto | 1 | estandar | `feature/F-121-importe-leido-es-precio-neto` |
 | F-118 | Incremento sin tarifa: la valoración pone importe 0, no null, y el albarán se puede aprobar | 2 | estandar | `feature/F-118-incremento-sin-tarifa-importe-cero` |
 | F-119 | Línea sin unidad en el albarán: se toma la de la línea de contrato similar o la del documento del contrato y, si no, UD por defecto | 2 | estandar | `feature/F-119-unidad-por-defecto-desde-contrato` |
 | F-120 | Banco de evals: instantánea de las partidas de cada obra (sigrid-api, solo lectura) para normalizar las partidas como producción antes de IA4 | 3 | critico | `feature/F-120-partidas-obra-banco` |
@@ -155,6 +157,20 @@ _Nada comprometido._
 | F-077 | Ficha: «Guardar y aprobar» guarda antes las filas con cambios, el panel del alta dice «Alta en curso…» hasta que responde sv9, tooltip del ⚠ de partida y motivos de línea visibles (sv4) | sin fecha | sin anotar | 35 | estandar |
 
 ## Detalle
+
+### F-074 · Un albarán de varias páginas es UN albarán: sv1 pide a la IA dónde empieza cada albarán de un PDF multipágina y entrega un documento por grupo de páginas
+
+estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-074-albaran-varias-paginas`
+
+RESCATADA A DEV (2026-11-17): la ficha y la spec solo vivían en su rama (commits bf86747, 2ce9f93 y 5270e01, PARADA 1 aprobada el 2026-10-15, prioridad 12 el 2026-10-20) y nunca llegaron a dev, así que no salía en BACKLOG.md. El humano la marca como importante el 2026-11-17 («también es importante») y pasa a prioridad 1. La spec está en la rama feature/F-074-albaran-varias-paginas; es del 2026-10-15 y, antes de implementar, el spec-author la contrasta con sv1 de hoy.
+
+ORIGEN (incidencia real, 2026-10-15, correo de Lourdes, obra 0686): doc01930920261015121724.pdf (2 páginas, un único albarán DISCOIN DISTRIBUCIONES Y SUMINISTROS n.º 2613570) se trocea por páginas en sv1 (directos=1 paginas_aceptadas=2) y la bandeja enseña dos albaranes con el mismo número, proveedor y fecha (merges dfdc8aab-08e1-49f0-978d-bb906515e748 y 5dea6509-4a81-4192-b8b0-3a21041931ca). El 2026-10-14 pasó lo mismo con «ALBARAN DISCOIN» (2 páginas, enviado tres veces). El troceo por páginas existe a propósito (el escáner junta albaranes distintos en un PDF): falta reconocer las páginas de CONTINUACIÓN. EVIDENCIA (spec 2026-10-15, progress/spec_F-074.md): logs de sv1 de 30 días, 12 de 33 correos traen PDF multipágina (2, 3, 6 y 23 páginas); el banco de evals tiene 8 PDF de 2 páginas (HOR-005..011, MOR-003, todos B04685541) cuya página 2 son las condiciones generales de venta, que en producción salen como documento aparte. ALCANCE: antes de extraer, en sv1 (ingesta), UNA llamada de IA (Gemini, puerto LlmVisionClient de comun) por PDF de 2+ páginas devuelve por página si inicia albarán; la IA decide qué se junta y el código solo separa (confianza < 80, número distinto, grupo > 10 páginas) o vuelve al troceo por páginas si la IA falla o responde mal. Un documento por grupo (`__pages_desde-hasta_of_N`, page_number = desde), bytes deterministas para que la dedup de sv1 y sv3 siga funcionando. Apagada por defecto (SEGMENTACION_ENABLED); infra añade a ca-sv1-intake el secreto gemini-key y un script para encenderla. NO cambian sv2, sv3, sv4, sv5, sv6, sv9 ni comun. Sin backfill: los documentos ya creados no se tocan. Descartado juntar después en sv3 (detalle en el informe §3).
+
+### F-121 · Importe de línea leído como precio neto unitario: la línea no cuadra; detectarlo, corregirlo y que «Recalcular importe» sea la opción por defecto
+
+estado **pendiente** · prioridad 1 · rigor `estandar` · SDD sí · rama `feature/F-121-importe-leido-es-precio-neto`
+
+ORIGEN (el humano, 2026-11-17, «apunta como importante»): albarán db47e7b3-9990-4559-8e13-0fb69956b5c2, obra 0711, contrato CTSU26/0101, genérico/suministro, leído solo por OpenAI (`single_provider_openai`). Dos líneas con dto 42 %: SIKADUR 32 PLUS 1 KG, 4 × 37,25, y BROCHA CANARIA ANCHA Nº4, 2 × 5,95. IA1 leyó como importe de la línea el PRECIO NETO UNITARIO, ya descontado (37,25 × 0,58 = 21,61; 5,95 × 0,58 = 3,45), en vez del importe (86,42 y 6,90). El pie del albarán (base 93,32 €) cuadra con los importes buenos y no con lo leído (25,06 €). Consecuencia: la línea no cuadra (F-106 R14) y la ficha ofrece «Recalcular importe» y «Recalcular precio». El humano: por defecto debería recalcular el importe, porque el precio es en general el unitario. Hoy salen los dos porque F-106 R14 no decide cuál de los dos está mal. A RESOLVER EN LA SPEC: (1) extracción (sv2, prompt de IA1): distinguir la columna de precio neto unitario de la de importe; (2) detección determinista: si I ≈ P × (1 − d) sin la cantidad y Q ≠ 1, o si recalculando I la suma de líneas cuadra con la base del pie, corregir el importe (o proponerlo) con motivo de revisión; ver el aviso `line_net_mismatch` que ya calcula sv3 (albaran_confidence_service.py); (3) sv4: «Recalcular importe» como opción por defecto o destacada; decidir si «Recalcular precio» se queda como alternativa secundaria o se quita; (4) medir en producción (solo lectura) cuántas filas tienen I ≈ P × (1 − d) con Q ≠ 1. VISTO DE PASO, NO ES ESTA FEATURE: el alta en Sigrid de este albarán falló (dos intentos, 17/11 13:47) porque la partida CI.04.11 no existe en la obra 0711.
 
 ### F-110 · El alta en Sigrid manda el precio unitario sin descuento, el % de descuento de la línea y el importe ya descontado (albaranes de CECOIS)
 
