@@ -1557,6 +1557,20 @@
       ],
       "branch": "feature/F-124-prefiltro-unidad-linea-contrato",
       "description": "ORIGEN: O2 de la review de la parte B de F-100 y `progress/comparar_modelos_F-100.md` (O1) en su rama. Con F-100, el prefiltro de candidatas compara el precio unitario (±0,01 €) en la unidad de la línea valorada. Cuando IA3 da un precio pero no propone línea de contrato, una línea de contrato en otra unidad (p. ej. t frente a m³) se cae del lote aunque sea la buena. En el techo del banco fueron 10 casadas `SI` (es un efecto del banco: si IA3 propone la línea verdadera, entran las 10). A DECIDIR, POR EL HUMANO Y TRAS EL DESPUÉS DE F-100 (T21): si merece la pena convertir el precio a la unidad de cada línea de contrato candidata y con qué conversiones (las de F-084/F-100). Se mide con el banco VAL (de pago, lo lanza el humano). Depende de que F-100 esté en `dev`."
+    },
+    {
+      "id": "F-125",
+      "title": "Sin precio en el albarán, manda SIEMPRE el precio del PDF del contrato (1b) sobre el de la línea del contrato en Sigrid (1a), y se avisa de la diferencia",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 2,
+      "servicios": [
+        "sv6-valoracion-persist",
+        "sv4-front"
+      ],
+      "branch": "feature/F-125-manda-el-pdf-del-contrato",
+      "description": "ORIGEN (el humano, 2026-11-18, «debe mandar siempre el pdf»): albarán 5d009adc-0685-4cb2-b501-b9b1d9af85f1 (Porcelanosa, nº 96374261, obra 0678, contrato CTSU26/0424). El albarán no trae precios. La línea «BOTTEGA ACERO L 59,6X59,6» la casa IA4 con la línea 896 del contrato (SM370001, «SOLADO DE GRES PORCELÁNICO BOTTEGA ACERO», m², 21,75 en Sigrid). IA3 lee en la página 2 del PDF del contrato 19,73 €/m². Hoy `PriceReconciler` (sv6, `price_reconciler.py`, paso 3) hace prevalecer 1a (Sigrid): final 21,75, `contract_line_match`, `price_1a_vs_1b_mismatch:21.75!=19.73`, unos 861 € más en esa línea; las 6 líneas de alicatado del mismo albarán tienen el mismo desajuste (27,11 en Sigrid frente a 20,10/20,98 en el PDF). REGLA NUEVA: entre la línea del contrato en Sigrid y el PDF del contrato, manda el PDF. Las sintéticas ya iban así desde F-100 (R51). A RESOLVER EN LA SPEC: (1) alcance de «siempre»: se da por hecho que el precio leído en el albarán, o despejado de su importe, sigue por encima (pasos 1 y 2 del reconciler); confirmarlo con el humano; (2) cuando coinciden, quitar la media y quedarse con el del PDF; (3) el riesgo de que IA3 lea mal la fila del PDF (aquí 19,73 es también el precio del BOTTEGA CALIZA en Sigrid): evidencia obligatoria de IA3 (página, fila y referencia) y el aviso de diferencia sigue llevando la línea a revisión; (4) interacción con el prefiltro de IA4 de F-100 (precio ±0,01 €): si se valora con el precio del PDF y Sigrid está mal grabado, no queda candidata con ese precio; decidir con qué precio se prefiltra; (5) la ficha (sv4) enseña los dos precios y de dónde sale el que manda; (6) el alta en Sigrid manda el precio de la valoración y no el de la línea del contrato (comprobar con F-095/F-110); (7) avisar a quien mantiene los contratos en Sigrid de las diferencias (¿informe?). NO SE TOCA ANTES DE CERRAR F-100: su DESPUÉS (T21) mide con el reconciler de hoy. Medir en el banco VAL (de pago, lo lanza el humano). Relacionadas: F-100 (R51), F-017 (comparativo 1c), F-105 (todos los documentos de contrato a IA3)."
     }
   ]
 }
