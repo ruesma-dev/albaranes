@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **119 features**, 74 abiertas y 45 terminadas. Por columna: 0 en Review, 6 en Blocked, 0 en In progress, 6 en Spec aprobada, 0 en To do, 62 en Backlog y 45 en Done.
+Resumen: **122 features**, 77 abiertas y 45 terminadas. Por columna: 0 en Review, 6 en Blocked, 0 en In progress, 6 en Spec aprobada, 0 en To do, 65 en Backlog y 45 en Done.
 
 ## Review
 
@@ -47,11 +47,14 @@ _Nada comprometido._
 | F-118 | Incremento sin tarifa: la valoración pone importe 0, no null, y el albarán se puede aprobar | 2 | estandar | `feature/F-118-incremento-sin-tarifa-importe-cero` |
 | F-119 | Línea sin unidad en el albarán: se toma la de la línea de contrato similar o la del documento del contrato y, si no, UD por defecto | 2 | estandar | `feature/F-119-unidad-por-defecto-desde-contrato` |
 | F-120 | Banco de evals: instantánea de las partidas de cada obra (sigrid-api, solo lectura) para normalizar las partidas como producción antes de IA4 | 3 | critico | `feature/F-120-partidas-obra-banco` |
+| F-122 | La suite de tests de la raíz tarda 27 min (era ~8) y sus tests con timeout fijo de subproceso fallan con la máquina cargada: invalidan campañas de mutación | 4 | estandar | `feature/F-122-suite-raiz-lenta-timeouts-fijos` |
+| F-123 | Arnés, mejoras salidas de la review de F-100: veredicto «PENDIENTE DE REPETIR» en el inventario de mutación, informe también con salida 3 y RM2 con --con-seleccion | 5 | estandar | `feature/F-123-mejoras-arnes-review-f100` |
 | F-095 | Alta en Sigrid con el precio BRUTO y el % de descuento en su columna, no con el precio neto | 8 | critico |  |
 | F-105 | Traer a IA3 todos los documentos de contrato (PDF y anexos) de cada contrato, no solo el de gra_rep_ide | 9 | critico |  |
 | F-090 | Preprocesado: oscurecer y subir el contraste de los escaneos desvaídos antes de la IA (albaranes de hormigón de la 0692) | 10 | critico |  |
 | F-093 | La fecha del albarán se lee mal: 18 de 57 casos fallan en algún modelo y 3 en los 8; validarla y no inventarla | 11 | critico |  |
 | F-094 | Formato español en la ficha: fecha dd/mm/aaaa con selector y teclado (guardada canónica) y números con punto de miles | 12 | estandar |  |
+| F-124 | IA4 sin propuesta de IA3: comparar el precio también en la unidad de cada línea de contrato candidata | 14 | critico | `feature/F-124-prefiltro-unidad-linea-contrato` |
 | F-055 | IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2) | 15 | critico |  |
 | F-049 | La partida NO se lee a ciegas: se elige de la lista de partidas de la obra (sv2, con la consulta movida a comun) | 16 | critico |  |
 | F-087 | Aprobar y Registrar: el «aprobar» de hoy pasa a llamarse Registrar (guarda, bloquea y da de alta en Sigrid) y nace un estado Aprobar (guarda todo el albarán y lo bloquea dándolo por bueno, sin Sigrid) | 17 | critico |  |
@@ -202,6 +205,18 @@ estado **pendiente** · prioridad 3 · rigor `critico` · SDD sí · rama `featu
 
 ORIGEN: F-100 O4 (2026-11-15, opción C elegida por el humano; estudio en `progress/impl_F-100_O4.md` de la rama de F-100). En producción sv6 normaliza las partidas del albarán (F-076, `_normalizar_partidas`, y F-117 equivalentes) y asigna la de residuos (F-111) ANTES de IA4, con la obra del documento (BBDD) y la lista de partidas de esa obra (sigrid-api `CachePartidasObra`). El banco de `evals/` no tiene ninguna de las dos, así que valora sin normalizar: design §8 de F-100 lo deja como límite conocido y la huella de pasada lleva `cadena: sin_normalizar_partidas`. Afecta a 12 líneas en 10 casos con partida fuera del contrato (10 hoy en `?` en el libro IA4; observables MOR-002 y MOR-004 línea 1). PROPUESTA: (1) un importador que lanza el humano con sus credenciales lee por sigrid-api, solo lectura, la lista de partidas de cada obra del banco y la congela (caché local o fichero sin valores sensibles); (2) la obra de cada caso entra en `INPUTS.xlsx` (hoy solo 7 contratos indexados la traen); (3) la cadena compone el `NormalizadorPartidas` importado de sv6 (y F-111) con un puerto que lee la instantánea, en el mismo punto que producción; (4) se cambia `VERSION_CADENA` para que R12 no compare pasadas con y sin normalizar. Puede resolver parte de las filas `?` del libro IA4 (patrón «la pieza y el precio están, pero en otra partida», `progress/explore_F-100_T8.md`). ORDEN: después de F-100 (su ANTES ya está medido sin normalizar, 2026-11-16); si entra, hay que medir de nuevo la línea base.
 
+### F-122 · La suite de tests de la raíz tarda 27 min (era ~8) y sus tests con timeout fijo de subproceso fallan con la máquina cargada: invalidan campañas de mutación
+
+estado **pendiente** · prioridad 4 · rigor `estandar` · SDD sí · rama `feature/F-122-suite-raiz-lenta-timeouts-fijos`
+
+ORIGEN: la mutación de la parte B de F-100 (2026-11-15/17). SÍNTOMAS: (1) la suite de `tests/` de la raíz tarda ~27 min con la máquina libre y 45–55 min con otras campañas en marcha; en F-084 tardaba ~8 min. Con 4 workers la línea base y el mapa de cobertura de `harness.mutacion` agotaron dos veces los 2400 s; hubo que bajar a 2 workers con `--timeout 3000`. (2) Tests que lanzan un subproceso con un timeout fijo (`escalar_timeout(120)`) fallan cuando la máquina va cargada y no por un defecto: `test_f059_r19_pytest_no_colecta_nada_del_payload` y `test_f059_r7_…TIMEOUT`. El primero puso en rojo la línea base al cierre y la campaña salió NO VÁLIDA: hubo que repetirla de noche, con la máquina libre. A RESOLVER EN LA SPEC: (a) medir qué ficheros se llevan el tiempo (`--durations`) y por qué ha crecido ×3; (b) que los timeouts de subproceso escalen con la carga o con el `--timeout` de la campaña, o que esos tests no entren en la línea base de mutación; (c) qué parte es genérica (los timeouts fijos, `escalar_timeout`, la holgura de la línea base) y se porta a `arnes-base` en el mismo trabajo (regla de propagación).
+
+### F-123 · Arnés, mejoras salidas de la review de F-100: veredicto «PENDIENTE DE REPETIR» en el inventario de mutación, informe también con salida 3 y RM2 con --con-seleccion
+
+estado **pendiente** · prioridad 5 · rigor `estandar` · SDD no · rama `feature/F-123-mejoras-arnes-review-f100`
+
+ORIGEN: automejora propuesta por el revisor de F-100 (pasada 4, `progress/review_F-100_B.md` en su rama) y lo visto por el líder en la campaña; necesita el OK del humano. (1) DEL PROYECTO: añadir el veredicto `PENDIENTE DE REPETIR` al vocabulario de `progress/inventario_mutacion_F-039.md` y a `VEREDICTOS` de `tests/test_f039_r1_r2_r23_r25_documentos.py`. Así no hace falta escribir `VÁLIDA` sobre una campaña que la herramienta invalidó mientras se repite: hoy `test_f039_r2` exige un veredicto cerrado para cada `progress/mutacion_*.md` y deja `init.sh` en rojo. (2) GENÉRICO, se porta a `arnes-base`: `harness.mutacion` escribe su informe también cuando sale con código 3 (campaña NO VÁLIDA), para no perder los mutantes ya juzgados. (3) GENÉRICO: `reviewer.md` RM2 debe decir que, con `--con-seleccion`, lo que se compara con la línea base es la «media por mutante juzgado con la suite entera» y no la media global. Los subconjuntos de tests hunden la media global por debajo de 1/10 sin que haya fraude. (4) GENÉRICO: `CHECKPOINTS.md` C4 bis, cuando una feature diga «X no cambia `review_required`», pedir un test por cada vía que lo toque.
+
 ### F-086 · Opus 5.5 en IA3: sv5 valora con claude-opus-5-5 sin forzar la herramienta, cuando el banco de F-084 demuestre que mejora a gpt-6.1-sol
 
 estado **bloqueada** · prioridad 6 · rigor `critico` · SDD sí · rama `feature/F-086-opus-ia3`
@@ -265,6 +280,12 @@ PRIMERO: inventario de modelos disponibles por proveedor que cumplan el mínimo,
 RELACIONADAS: F-047 (ciclo completo), F-064 y F-075 (líneas base de evals con LLM: IA1 141, IA2 2), comparar_proveedor (patrón de comparador).
 
 SPEC (2026-10-19, specs/F-083-comparar-modelos/, anexo de inventario y precios con fuente progress/spec_F-083.md): comparador nuevo evals/comparar_modelos.py, una fase por invocación y varios modelos, con la referencia de producción medida en la misma corrida (IA1 gemini-3.7-flash, IA2 gpt-5.4, IA3/IA4 claude-opus-4-8); IA2 e IA4 con preparación única por la referencia, IA3 con la IA4 del libro; coste por albarán con los tokens reales leídos por un call_logger medidor (sin tocar los clientes) y la tabla versionada evals/precios_modelos.json; estimación previa, --estimar sin claves, paradas sin gastar (modelo, tabla caducada, claves, tope por invocación y de la feature) y corte en caliente por tope; criterio: elegible (0 ERROR y fallos ≤ referencia), banda máx(2, 5 %), el más barato de la banda, «cambiar» solo con mejora o ahorro claros, provisional con 1 repetición. HALLAZGOS: gemini-3.7-flash está descontinuado y Google lo redirige a gemini-3.8-flash; la línea base de F-075 probablemente no midió los modelos de producción (defaults del runner, IA3/IA4 con gemini); el cliente de Claude fuerza la herramienta y claude-opus-5-5, claude-sonnet-5-5 y claude-fable-5-1 lo rechazan con 400. «Luna» = gama Luna de OpenAI (gpt-6-luna, gpt-5.6-luna; no existe gpt-6.1-luna). PREGUNTAS P1–P6 (design §9): P1 qué Luna y si entra gpt-6.1-sol, P2 primera tanda (11 modelos), P3 tope (25 por invocación, 200 la feature; tanda 1 ≈ 150 USD), P4 repeticiones (1 y 3 en finalistas), P5 parámetro forzar_herramienta en comun (recomendado) o dejar fuera los Claude 5.5, P6 umbrales del criterio. FUERA: cambiar el modelo de producción (feature siguiente), barrer esfuerzo/pensamiento, infra/.
+
+### F-124 · IA4 sin propuesta de IA3: comparar el precio también en la unidad de cada línea de contrato candidata
+
+estado **pendiente** · prioridad 14 · rigor `critico` · SDD sí · rama `feature/F-124-prefiltro-unidad-linea-contrato`
+
+ORIGEN: O2 de la review de la parte B de F-100 y `progress/comparar_modelos_F-100.md` (O1) en su rama. Con F-100, el prefiltro de candidatas compara el precio unitario (±0,01 €) en la unidad de la línea valorada. Cuando IA3 da un precio pero no propone línea de contrato, una línea de contrato en otra unidad (p. ej. t frente a m³) se cae del lote aunque sea la buena. En el techo del banco fueron 10 casadas `SI` (es un efecto del banco: si IA3 propone la línea verdadera, entran las 10). A DECIDIR, POR EL HUMANO Y TRAS EL DESPUÉS DE F-100 (T21): si merece la pena convertir el precio a la unidad de cada línea de contrato candidata y con qué conversiones (las de F-084/F-100). Se mide con el banco VAL (de pago, lo lanza el humano). Depende de que F-100 esté en `dev`.
 
 ### F-055 · IA2 elige el proveedor entre los que tienen contrato en la obra (reconectar el grounding de Sigrid en fase 2)
 

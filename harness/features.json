@@ -1512,6 +1512,51 @@
       ],
       "branch": "feature/F-121-importe-leido-es-precio-neto",
       "description": "ORIGEN (el humano, 2026-11-17, «apunta como importante»): albarán db47e7b3-9990-4559-8e13-0fb69956b5c2, obra 0711, contrato CTSU26/0101, genérico/suministro, leído solo por OpenAI (`single_provider_openai`). Dos líneas con dto 42 %: SIKADUR 32 PLUS 1 KG, 4 × 37,25, y BROCHA CANARIA ANCHA Nº4, 2 × 5,95. IA1 leyó como importe de la línea el PRECIO NETO UNITARIO, ya descontado (37,25 × 0,58 = 21,61; 5,95 × 0,58 = 3,45), en vez del importe (86,42 y 6,90). El pie del albarán (base 93,32 €) cuadra con los importes buenos y no con lo leído (25,06 €). Consecuencia: la línea no cuadra (F-106 R14) y la ficha ofrece «Recalcular importe» y «Recalcular precio». El humano: por defecto debería recalcular el importe, porque el precio es en general el unitario. Hoy salen los dos porque F-106 R14 no decide cuál de los dos está mal. A RESOLVER EN LA SPEC: (1) extracción (sv2, prompt de IA1): distinguir la columna de precio neto unitario de la de importe; (2) detección determinista: si I ≈ P × (1 − d) sin la cantidad y Q ≠ 1, o si recalculando I la suma de líneas cuadra con la base del pie, corregir el importe (o proponerlo) con motivo de revisión; ver el aviso `line_net_mismatch` que ya calcula sv3 (albaran_confidence_service.py); (3) sv4: «Recalcular importe» como opción por defecto o destacada; decidir si «Recalcular precio» se queda como alternativa secundaria o se quita; (4) medir en producción (solo lectura) cuántas filas tienen I ≈ P × (1 − d) con Q ≠ 1. VISTO DE PASO, NO ES ESTA FEATURE: el alta en Sigrid de este albarán falló (dos intentos, 17/11 13:47) porque la partida CI.04.11 no existe en la obra 0711."
+    },
+    {
+      "id": "F-122",
+      "title": "La suite de tests de la raíz tarda 27 min (era ~8) y sus tests con timeout fijo de subproceso fallan con la máquina cargada: invalidan campañas de mutación",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 4,
+      "servicios": [
+        "harness",
+        "tests"
+      ],
+      "branch": "feature/F-122-suite-raiz-lenta-timeouts-fijos",
+      "description": "ORIGEN: la mutación de la parte B de F-100 (2026-11-15/17). SÍNTOMAS: (1) la suite de `tests/` de la raíz tarda ~27 min con la máquina libre y 45–55 min con otras campañas en marcha; en F-084 tardaba ~8 min. Con 4 workers la línea base y el mapa de cobertura de `harness.mutacion` agotaron dos veces los 2400 s; hubo que bajar a 2 workers con `--timeout 3000`. (2) Tests que lanzan un subproceso con un timeout fijo (`escalar_timeout(120)`) fallan cuando la máquina va cargada y no por un defecto: `test_f059_r19_pytest_no_colecta_nada_del_payload` y `test_f059_r7_…TIMEOUT`. El primero puso en rojo la línea base al cierre y la campaña salió NO VÁLIDA: hubo que repetirla de noche, con la máquina libre. A RESOLVER EN LA SPEC: (a) medir qué ficheros se llevan el tiempo (`--durations`) y por qué ha crecido ×3; (b) que los timeouts de subproceso escalen con la carga o con el `--timeout` de la campaña, o que esos tests no entren en la línea base de mutación; (c) qué parte es genérica (los timeouts fijos, `escalar_timeout`, la holgura de la línea base) y se porta a `arnes-base` en el mismo trabajo (regla de propagación)."
+    },
+    {
+      "id": "F-123",
+      "title": "Arnés, mejoras salidas de la review de F-100: veredicto «PENDIENTE DE REPETIR» en el inventario de mutación, informe también con salida 3 y RM2 con --con-seleccion",
+      "status": "pending",
+      "sdd": false,
+      "rigor": "estandar",
+      "priority": 5,
+      "servicios": [
+        "harness"
+      ],
+      "branch": "feature/F-123-mejoras-arnes-review-f100",
+      "description": "ORIGEN: automejora propuesta por el revisor de F-100 (pasada 4, `progress/review_F-100_B.md` en su rama) y lo visto por el líder en la campaña; necesita el OK del humano. (1) DEL PROYECTO: añadir el veredicto `PENDIENTE DE REPETIR` al vocabulario de `progress/inventario_mutacion_F-039.md` y a `VEREDICTOS` de `tests/test_f039_r1_r2_r23_r25_documentos.py`. Así no hace falta escribir `VÁLIDA` sobre una campaña que la herramienta invalidó mientras se repite: hoy `test_f039_r2` exige un veredicto cerrado para cada `progress/mutacion_*.md` y deja `init.sh` en rojo. (2) GENÉRICO, se porta a `arnes-base`: `harness.mutacion` escribe su informe también cuando sale con código 3 (campaña NO VÁLIDA), para no perder los mutantes ya juzgados. (3) GENÉRICO: `reviewer.md` RM2 debe decir que, con `--con-seleccion`, lo que se compara con la línea base es la «media por mutante juzgado con la suite entera» y no la media global. Los subconjuntos de tests hunden la media global por debajo de 1/10 sin que haya fraude. (4) GENÉRICO: `CHECKPOINTS.md` C4 bis, cuando una feature diga «X no cambia `review_required`», pedir un test por cada vía que lo toque.",
+      "acceptance": [
+        "El inventario y `test_f039` aceptan `PENDIENTE DE REPETIR`, y `init.sh` sigue en verde.",
+        "Una campaña que sale con código 3 deja escrito su informe, marcado NO VÁLIDA, y hay un test que lo comprueba.",
+        "RM2 y C4 bis reescritos; (2)–(4) portados a `arnes-base` con su versión."
+      ]
+    },
+    {
+      "id": "F-124",
+      "title": "IA4 sin propuesta de IA3: comparar el precio también en la unidad de cada línea de contrato candidata",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 14,
+      "servicios": [
+        "sv6-valoracion-persist"
+      ],
+      "branch": "feature/F-124-prefiltro-unidad-linea-contrato",
+      "description": "ORIGEN: O2 de la review de la parte B de F-100 y `progress/comparar_modelos_F-100.md` (O1) en su rama. Con F-100, el prefiltro de candidatas compara el precio unitario (±0,01 €) en la unidad de la línea valorada. Cuando IA3 da un precio pero no propone línea de contrato, una línea de contrato en otra unidad (p. ej. t frente a m³) se cae del lote aunque sea la buena. En el techo del banco fueron 10 casadas `SI` (es un efecto del banco: si IA3 propone la línea verdadera, entran las 10). A DECIDIR, POR EL HUMANO Y TRAS EL DESPUÉS DE F-100 (T21): si merece la pena convertir el precio a la unidad de cada línea de contrato candidata y con qué conversiones (las de F-084/F-100). Se mide con el banco VAL (de pago, lo lanza el humano). Depende de que F-100 esté en `dev`."
     }
   ]
 }
