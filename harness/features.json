@@ -1585,6 +1585,20 @@
         "sv6-valoracion-persist"
       ],
       "branch": "feature/F-126-carga-incompleta-suma-albaran"
+    },
+    {
+      "id": "F-127",
+      "title": "Aviso cuando el nº de albarán leído no tiene el formato habitual de ese proveedor (p. ej. le falta el primer dígito)",
+      "description": "ORIGEN (dos correos de administración, 2026-11-18 y 2026-11-19): en albaranes de un proveedor cuyos números son siempre de 7 cifras con separador de miles, el escaneo deja el primer dígito tenue o pegado al borde de la casilla y la extracción lee 6 cifras (le falta el primero). Las dos IAs de sv2 coinciden en la lectura mala, así que la revisión cruzada no lo detecta; en el escaneo del 19-11 falló 1 de 5 albaranes de ese proveedor y el 18-11 otros 2. Hoy nadie compara el número con el histórico del proveedor y el error solo se ve si alguien lo mira a mano. REGLA NUEVA: tras la extracción, comparar el patrón del nº leído (longitud de dígitos, separadores, prefijo fijo) con el de los albaranes anteriores del mismo proveedor (BBDD de albaranes; opcionalmente Sigrid vía sigrid-api, solo lectura). Si difiere del patrón dominante, el albarán va a revisión con el aviso «nº de albarán con formato distinto al habitual del proveedor» y sv4 lo muestra junto al campo. Es un AVISO: nunca se corrige ni se inventa un dígito automáticamente. A RESOLVER EN LA SPEC: (1) dónde vive el chequeo (sv3 al persistir, que ya tiene la BBDD y el proveedor resuelto, o sv2); (2) cómo se define el patrón dominante y el mínimo de histórico para fiarse (proveedores nuevos o con pocos albaranes ⇒ sin aviso); (3) proveedores con varias series o formatos legítimos; (4) si se añade además una pista genérica en el prompt de extracción sobre dígitos tenues al borde de la casilla (sin nombrar proveedores); (5) si el aviso bloquea el aprobar o solo informa. Casos de prueba: el número de 6 cifras de un proveedor de 7 (aviso), el correcto de 7 (sin aviso) y un proveedor sin histórico (sin aviso).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "estandar",
+      "priority": 2,
+      "servicios": [
+        "sv3-persistencia",
+        "sv4-front"
+      ],
+      "branch": "feature/F-127-aviso-formato-numero-albaran"
     }
   ]
 }
