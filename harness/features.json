@@ -1613,6 +1613,20 @@
         "sv4-front"
       ],
       "branch": "feature/F-128-iva-alta-sigrid"
+    },
+    {
+      "id": "F-129",
+      "title": "Estudiar cómo resolver el IVA mal puesto en el alta a Sigrid (paso previo a F-128)",
+      "description": "ESTUDIO, sin código de producción: decide cómo se arregla F-128 antes de especificarla. Hoy sv9 no manda IVA y sigrid-api copia a las líneas sin vincular el IVA de la última dcapro del mismo producto y proveedor (L8b, o L8 de cualquier proveedor), que puede ser una previsión o proforma al 0 %; el error se contagia a la siguiente alta. PREGUNTAS: (1) MEDIR, de solo lectura: cuántas altas de la app desde que se activó el alta real tienen un IVA distinto al del pie del albarán, por vinculadas y sin vincular, y cuántas líneas de previsión o proforma al 0 % son hoy la última de su producto y proveedor (riesgo vivo); entregar la lista de las mal registradas para corregirlas a mano en Sigrid; (2) qué IVA es el bueno y de dónde sale: el pie leído (uno o varios tipos), el de la línea si el albarán lo trae, la ficha del producto en Sigrid, el del proveedor; casos de IVA 0 legítimo (inversión del sujeto pasivo, exentos) y de tipo reducido; (3) opciones y su coste: (a) solo aviso en albaranes cuando la previa no cuadra con el pie; (b) cambio en sigrid-api para que la plantilla del IVA se salte previsiones, proformas e IVA 0; (c) que la petición de alta acepte el IVA por línea y sv9 lo mande; combinaciones; (4) qué pide cada opción a sigrid-api (otro proyecto: se propone y se coordina con su sesión, no se edita desde aquí) y su impacto en otros clientes de ese endpoint (consultar azure-apps); (5) si el aviso bloquea el aprobar. ENTREGABLE: progress/explore_F-129.md con la medida, las opciones y una recomendación para el humano; con su decisión se redacta la spec de F-128.",
+      "status": "pending",
+      "sdd": false,
+      "rigor": "estandar",
+      "priority": 1,
+      "servicios": [
+        "sv9-alta-sigrid",
+        "sv4-front"
+      ],
+      "branch": "feature/F-129-estudio-iva-alta-sigrid"
     }
   ]
 }
