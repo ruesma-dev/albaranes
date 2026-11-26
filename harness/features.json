@@ -1599,6 +1599,20 @@
         "sv4-front"
       ],
       "branch": "feature/F-127-aviso-formato-numero-albaran"
+    },
+    {
+      "id": "F-128",
+      "title": "Alta en Sigrid con el IVA mal puesto: las líneas sin vincular copian el IVA de la última línea del producto (p. ej. una previsión al 0 %)",
+      "description": "ORIGEN (aviso del humano, 2026-11-26): un albarán sin contrato aplicado, con todas sus líneas sin vincular al producto genérico de suministro y un pie que dice IVA 21 %, se registró en Sigrid con IVA 0 %. CAUSA (medida): sv9 no manda IVA a sigrid-api (la petición de alta no tiene ese campo); para una línea sin vincular, sigrid-api toma el IVA de la ÚLTIMA dcapro del mismo producto y el mismo proveedor (L8b; sin ella, la última de cualquier proveedor, L8), y esa última era una previsión de cierre de mes (referencia PREV_…) registrada a 0 %. Las vinculadas toman el del ctrpro y no están afectadas. EFECTOS: (1) SE CONTAGIA: el alta mal hecha pasa a ser la última línea de ese producto y proveedor, y la siguiente alta sin vincular vuelve a salir al 0 % hasta que alguien la corrija en Sigrid; (2) a final de mes se registran muchas previsiones y proformas (PREV…, PROF…) al 0 %, así que cualquier proveedor puede quedar contaminado; (3) la ficha ya enseñaba «Total de la previa … (con IVA: …)» igual a la base, frente a un pie con IVA 21 %, y nada lo marcó; sigrid-api tampoco avisó. PROPUESTA: (a) en albaranes, SIEMPRE: aviso en la ficha y en el alta cuando el IVA de la previa no cuadra con el leído en el pie del albarán (tipo o cuota), decidiendo en la spec si bloquea el aprobar; (b) en sigrid-api (otro proyecto: se propone y se coordina con su sesión, no se edita desde aquí): que la plantilla del IVA se salte las líneas de previsión o proforma y las de IVA 0, o mejor, que la petición de alta acepte el IVA por línea; (c) si (b) acepta IVA por línea, sv9 manda el tipo leído del pie (o el de la línea si el albarán lo trae por línea). A RESOLVER EN LA SPEC: el tipo cuando el pie trae varios IVAs o no lo trae; tolerancia del cuadre; qué hacer con las altas ya registradas (medir de solo lectura cuántas altas de la app desde que se activó el alta real tienen un IVA distinto al del pie y entregar la lista para corregirlas a mano en Sigrid). Casos de prueba: sin vincular con última línea al 0 % y pie al 21 % (aviso, y con (c) alta al 21 %), sin vincular con última al 21 % (sin aviso), vinculada (IVA del ctrpro, sin cambios).",
+      "status": "pending",
+      "sdd": true,
+      "rigor": "critico",
+      "priority": 1,
+      "servicios": [
+        "sv9-alta-sigrid",
+        "sv4-front"
+      ],
+      "branch": "feature/F-128-iva-alta-sigrid"
     }
   ]
 }
