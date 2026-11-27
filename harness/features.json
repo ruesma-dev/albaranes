@@ -1489,7 +1489,7 @@
       "id": "F-074",
       "title": "Un albarán de varias páginas es UN albarán: sv1 pide a la IA dónde empieza cada albarán de un PDF multipágina y entrega un documento por grupo de páginas",
       "description": "RESCATADA A DEV (2026-11-17): la ficha y la spec solo vivían en su rama (commits bf86747, 2ce9f93 y 5270e01, PARADA 1 aprobada el 2026-10-15, prioridad 12 el 2026-10-20) y nunca llegaron a dev, así que no salía en BACKLOG.md. El humano la marca como importante el 2026-11-17 («también es importante») y pasa a prioridad 1. La spec está en la rama feature/F-074-albaran-varias-paginas; es del 2026-10-15 y, antes de implementar, el spec-author la contrasta con sv1 de hoy.\n\nORIGEN (incidencia real, 2026-10-15, correo de Lourdes, obra 0686): doc01930920261015121724.pdf (2 páginas, un único albarán DISCOIN DISTRIBUCIONES Y SUMINISTROS n.º 2613570) se trocea por páginas en sv1 (directos=1 paginas_aceptadas=2) y la bandeja enseña dos albaranes con el mismo número, proveedor y fecha (merges dfdc8aab-08e1-49f0-978d-bb906515e748 y 5dea6509-4a81-4192-b8b0-3a21041931ca). El 2026-10-14 pasó lo mismo con «ALBARAN DISCOIN» (2 páginas, enviado tres veces). El troceo por páginas existe a propósito (el escáner junta albaranes distintos en un PDF): falta reconocer las páginas de CONTINUACIÓN. EVIDENCIA (spec 2026-10-15, progress/spec_F-074.md): logs de sv1 de 30 días, 12 de 33 correos traen PDF multipágina (2, 3, 6 y 23 páginas); el banco de evals tiene 8 PDF de 2 páginas (HOR-005..011, MOR-003, todos B04685541) cuya página 2 son las condiciones generales de venta, que en producción salen como documento aparte. ALCANCE: antes de extraer, en sv1 (ingesta), UNA llamada de IA (Gemini, puerto LlmVisionClient de comun) por PDF de 2+ páginas devuelve por página si inicia albarán; la IA decide qué se junta y el código solo separa (confianza < 80, número distinto, grupo > 10 páginas) o vuelve al troceo por páginas si la IA falla o responde mal. Un documento por grupo (`__pages_desde-hasta_of_N`, page_number = desde), bytes deterministas para que la dedup de sv1 y sv3 siga funcionando. Apagada por defecto (SEGMENTACION_ENABLED); infra añade a ca-sv1-intake el secreto gemini-key y un script para encenderla. NO cambian sv2, sv3, sv4, sv5, sv6, sv9 ni comun. Sin backfill: los documentos ya creados no se tocan. Descartado juntar después en sv3 (detalle en el informe §3).",
-      "status": "spec_ready",
+      "status": "in_progress",
       "sdd": true,
       "rigor": "critico",
       "priority": 1,
@@ -1497,7 +1497,8 @@
         "sv1-email",
         "infra"
       ],
-      "branch": "feature/F-074-albaran-varias-paginas"
+      "branch": "feature/F-074-albaran-varias-paginas",
+      "spec_aprobada": "2026-11-27"
     },
     {
       "id": "F-121",

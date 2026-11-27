@@ -3,7 +3,7 @@
 
 **Fichero generado por `harness/backlog.py` a partir de `harness/features.json`. No lo edites a mano**: edita el JSON y vuelve a generarlo (lo hace solo `bash harness/init.sh`).
 
-Resumen: **127 features**, 82 abiertas y 45 terminadas. Por columna: 0 en Review, 6 en Blocked, 0 en In progress, 7 en Spec aprobada, 0 en To do, 69 en Backlog y 45 en Done.
+Resumen: **127 features**, 82 abiertas y 45 terminadas. Por columna: 0 en Review, 6 en Blocked, 1 en In progress, 6 en Spec aprobada, 0 en To do, 69 en Backlog y 45 en Done.
 
 ## Review
 
@@ -22,13 +22,14 @@ _Nada esperando revisión._
 
 ## In progress
 
-_Ninguna feature en implementación._
+| # | Feature | La tiene | Prioridad | Rigor | Rama |
+|---|---|---|---|---|---|
+| F-074 | Un albarán de varias páginas es UN albarán: sv1 pide a la IA dónde empieza cada albarán de un PDF multipágina y entrega un documento por grupo de páginas | implementer | 1 | critico | `feature/F-074-albaran-varias-paginas` |
 
 ## Spec aprobada
 
 | # | Feature | Spec aprobada | Prioridad | Rigor | Rama |
 |---|---|---|---|---|---|
-| F-074 | Un albarán de varias páginas es UN albarán: sv1 pide a la IA dónde empieza cada albarán de un PDF multipágina y entrega un documento por grupo de páginas | pendiente de tu aprobación | 1 | critico | `feature/F-074-albaran-varias-paginas` |
 | F-128 | Alta en Sigrid: IVA por línea decidido por la app (21 % por defecto, 10 % residuos y agua, editable en la ficha) y sin arrastrar la medición desglosada de otra línea | pendiente de tu aprobación | 1 | critico | `feature/F-128-iva-alta-sigrid` |
 | F-047 | El banco de evals recorre el CICLO COMPLETO: cada IA se alimenta de la salida real de la anterior | pendiente de tu aprobación | 43 | critico |  |
 | F-003 | Tanda 2 — Albaranes valorados, match estricto y coherencia (G3+G4+G5) | pendiente de tu aprobación | 59 | estandar | `feature/F-003-valorados-match-estricto` |
@@ -168,7 +169,7 @@ _Nada comprometido._
 
 ### F-074 · Un albarán de varias páginas es UN albarán: sv1 pide a la IA dónde empieza cada albarán de un PDF multipágina y entrega un documento por grupo de páginas
 
-estado **spec lista** · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-074-albaran-varias-paginas`
+estado **en curso** · spec aprobada el 2026-11-27 · prioridad 1 · rigor `critico` · SDD sí · rama `feature/F-074-albaran-varias-paginas`
 
 RESCATADA A DEV (2026-11-17): la ficha y la spec solo vivían en su rama (commits bf86747, 2ce9f93 y 5270e01, PARADA 1 aprobada el 2026-10-15, prioridad 12 el 2026-10-20) y nunca llegaron a dev, así que no salía en BACKLOG.md. El humano la marca como importante el 2026-11-17 («también es importante») y pasa a prioridad 1. La spec está en la rama feature/F-074-albaran-varias-paginas; es del 2026-10-15 y, antes de implementar, el spec-author la contrasta con sv1 de hoy.
 
